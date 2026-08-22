@@ -11,23 +11,24 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Project Agent Rules: Daejeon Random Trip MVP
 
 ## 1. Repository Purpose
-This repository hosts the **Daejeon Random Trip** MVP — a performance-marketing-driven web landing page that recommends day-trip itineraries in Daejeon using Controlled Random Travel mechanics and tracks user conversion via GA4.
+This repository hosts the **Daejeon Random Trip** MVP — a performance-marketing-driven web landing page that recommends coherent short-trip routes within Daejeon (local itinerary for time spent in Daejeon) using Controlled Random Travel mechanics and tracks user conversion via GA4.
 
 ## 2. Core Documentation Reading
-Before implementing changes, always consult the project control-plane documents:
-- `docs/PRODUCT.md`: Mission, user problem, scope, interaction flow, and hypotheses.
-- `docs/ARCHITECTURE.md`: Module boundaries, data flow, config/engine separation, and guardrails.
+Before implementing changes, consult the project control-plane documents relevant to the task:
+- `docs/PRODUCT.md`: Mission, problem framing, scope, interaction flow, and hypotheses.
+- `docs/ARCHITECTURE.md`: Planned module boundaries, data flow, config/engine separation, and guardrails.
 - `docs/DECISIONS.md`: Architecture Decision Records (ADRs) with Fixed vs. Tentative statuses.
 - `docs/ANALYTICS.md`: GA4 event funnel, allowed parameters, proxy conversion metric, and privacy rules.
 
 ## 3. Engineering & Collaboration Guardrails
-- **Module Boundaries**: Respect the separation of concerns:
-  - `src/lib/random`: Recommendation logic & template matching (deterministic; no UI or runtime LLM dependencies).
+- **Planned Module Boundaries**: Respect the separation of concerns across planned directories:
+  - `src/lib/random`: Controlled recommendation logic, candidate filtering, random selection, template matching, and route validation (no UI or runtime LLM dependencies; randomness may be seedable/injectable in tests).
   - `src/components`: UI presentation and animated slot machine reel visuals.
-  - `src/config` & `src/data`: Modifiable product policies and seed data.
-  - `src/lib/analytics`: GA4 event dispatchers (no PII / free-text transmission).
+  - `src/config` & `src/data`: Modifiable product policies and candidate/template seed data.
+  - `src/content`: Static copy and user-facing text strings.
+  - `src/lib/analytics`: GA4 event dispatchers and sanitizers (no PII / free-text transmission).
 - **No UI Hard-coding**: Prefer config and data modifications over hard-coding business constants into React components.
-- **Data Integrity**: Do not invent fake Daejeon tourism datasets or places outside verified project data.
+- **Data Integrity**: Do not present invented places, facts, or metrics as real production data. Clearly labeled mocks and fixtures are explicitly permitted for tests and local development.
 - **Task Scope**: Keep unrelated changes out of task scope. Strictly respect the allowed-file boundaries given in task prompts.
 - **Version Control**: Do not commit changes to git unless explicitly requested by the user.
 

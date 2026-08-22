@@ -7,7 +7,7 @@ This document tracks fundamental product and architectural decisions for the Dae
 ### ADR-001: Controlled Random Travel vs. Pure Independent Randomness
 - **Status**: **Fixed**
 - **Decision**: Route generation follows a structured funnel (`Preference -> Zone -> Candidate Filtering -> Route Template -> Place Selection -> Coherent Route`) rather than independently selecting unrelated random spots.
-- **Why**: Pure randomness produces nonsensical itineraries (e.g., three consecutive cafes or distant stops across the city). Controlled randomness ensures physical plausibility and high-quality user experience while preserving the excitement of surprise.
+- **Why**: Pure randomness produces nonsensical itineraries (e.g., three consecutive cafes or distant stops across the city). Controlled randomness ensures physical plausibility and structured routing while preserving the excitement of surprise. (Note: Adopting this product mechanism is a fixed decision, but whether it drives higher marketing conversion than alternative models is an open hypothesis to measure via live campaign telemetry).
 - **Revisit when**: If user feedback demands fully open-ended exploration across unlimited categories.
 
 ---
@@ -15,14 +15,14 @@ This document tracks fundamental product and architectural decisions for the Dae
 ### ADR-002: Separation of Recommendation Engine and Visual Slot Animation
 - **Status**: **Fixed**
 - **Decision**: The recommendation engine (`src/lib/random`) computes the complete `RouteResult` first; the slot machine UI is solely an animated presentation layer that stops on the computed result.
-- **Why**: Decoupling prevents visual rendering bugs from corrupting itinerary logic and ensures deterministic, testable route calculations.
+- **Why**: Decoupling prevents visual rendering bugs from corrupting itinerary logic and ensures independently testable route logic (where randomness can be seeded or injected for automated testing).
 - **Revisit when**: Never for the core engine separation; visual interaction styles may evolve independently.
 
 ---
 
 ### ADR-003: No Runtime LLM for Route Generation
 - **Status**: **Fixed**
-- **Decision**: The MVP uses static curated templates and candidate place data with deterministic matching logic instead of calling runtime LLM APIs.
+- **Decision**: The MVP uses static curated templates, candidate place data, and controlled random selection/validation logic instead of calling runtime LLM APIs.
 - **Why**: Eliminates runtime API costs, latency (crucial for quick slot spin feel), hallucinated locations, and rate-limiting failure modes during marketing campaigns.
 - **Revisit when**: Future phases require dynamic natural-language storytelling or personalized multi-city generative guides.
 
@@ -38,8 +38,8 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ### ADR-005: Strict PII and Free-Text Prohibition in Analytics
 - **Status**: **Fixed**
-- **Decision**: Never send guestbook nicknames, message strings, or arbitrary user input to Google Analytics 4.
-- **Why**: Adherence to privacy standards, GDPR/PIPA compliance, and prevention of accidental PII leakage into analytics pipelines.
+- **Decision**: Do not explicitly collect or send guestbook nicknames, message strings, IP addresses, or arbitrary user input to Google Analytics 4 as custom parameters or user properties.
+- **Why**: Implements a privacy-by-design architecture to reduce accidental PII leakage and support legal compliance obligations (such as PIPA and GDPR).
 - **Revisit when**: Never (permanent privacy rule).
 
 ---
@@ -71,8 +71,8 @@ This document tracks fundamental product and architectural decisions for the Dae
 ### ADR-009: Target Audience Assumption (20–30s)
 - **Status**: **Tentative**
 - **Decision**: Treat the 20–30s demographic as a working marketing campaign segment rather than a hard product constraint.
-- **Why**: Marketing copy and visual motifs (Y2K retro) appeal strongly to this group, but the underlying product value (effortless travel discovery) applies to wider audiences.
-- **Revisit when**: Post-campaign GA4 demographics and conversion reports reveal actual visitor distribution.
+- **Why**: Marketing copy and visual motifs (Y2K retro) are hypothesized to appeal to this segment, but the underlying product value (effortless local travel discovery) may resonate across wider audiences.
+- **Revisit when**: Post-campaign audience insights, channel engagement, and conversion evidence reveal actual visitor distribution.
 
 ---
 
@@ -94,6 +94,6 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ### ADR-012: DOM Code vs. Static Pixel Asset Boundary
 - **Status**: **Tentative**
-- **Decision**: Render layout, responsive structures, interactive reels, and typography in semantic DOM/Tailwind; reserve static image assets (`public/`) for character art (Dreamdori/Kkumdori), complex illustrations, and stickers.
-- **Why**: Balances the nostalgic pixel-art visual identity with accessibility, fast loading, and responsive layouts across screen sizes.
+- **Decision**: Render layout, responsive structures, interactive reels, and typography in semantic DOM/Tailwind; reserve static image assets (`public/`) for character art (Dreamdori/Kkumdori), complex illustrations, and stickers. Any public production use of protected character assets requires appropriate approval or licensing.
+- **Why**: Balances retro pixel-art visual identity with accessibility, fast loading, and responsive layouts across screen sizes, while safeguarding intellectual property compliance.
 - **Revisit when**: Design team delivers finalized asset packages and art direction.

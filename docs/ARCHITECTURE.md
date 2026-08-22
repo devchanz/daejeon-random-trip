@@ -14,7 +14,9 @@
 
 ---
 
-## 2. Module Responsibilities & Directory Blueprint
+## 2. Planned Module Responsibilities & Directory Blueprint
+
+The directory structure below reflects the planned architectural boundaries for the project:
 
 ```
 src/
@@ -38,7 +40,7 @@ public/                   # Static media: pixel art, character illustrations, au
 ```typescript
 interface RouteResult {
   id: string;
-  zone: string;
+  zoneId: string;
   durationType: 'half' | 'full';
   preference: 'anything' | 'food' | 'walk' | 'photo';
   stops: RouteStop[];
@@ -62,12 +64,12 @@ interface PlaceCandidate {
   zoneId: string;
   durationMin: number;
   tags: string[];
-  soloFriendly: boolean;
   address?: string;
   mapUrl?: string;
   image?: string;
   description?: string;
   active: boolean;
+  // soloFriendly?: boolean; // Future-only: companion preference is not part of MVP setup
 }
 ```
 
@@ -84,8 +86,8 @@ sequenceDiagram
     
     User->>UI: Selects Q1 (Duration) & Q2 (Preference)
     UI->>Engine: generateRoute({ duration, preference })
-    Engine->>Engine: Match Zone -> Filter Candidates -> Apply Template
-    Engine-->>UI: Return deterministic RouteResult
+    Engine->>Engine: Match Zone -> Filter Candidates -> Apply Template -> Randomize & Validate
+    Engine-->>UI: Return validated RouteResult
     UI->>Reel: Start spin animation (target: RouteResult stops)
     Reel-->>UI: Spin animation complete
     UI->>User: Display RouteResult inline below slot
@@ -96,7 +98,7 @@ sequenceDiagram
 ## 4. Key Architectural Boundaries & Guardrails
 
 ### 1. Engine vs. Visual Reel Separation
-- The `lib/random` engine calculates the logical `RouteResult` independently of any animations.
+- The `lib/random` engine calculates the logical `RouteResult` via candidate filtering, random selection, template matching, and route validation independently of any UI animations (randomness can be seeded or injected for automated testing).
 - The slot component receives the computed outcome and orchestrates the visual spinning animation to align with the result.
 - The UI reveals the detailed itinerary only after the reels come to a stop.
 
@@ -111,16 +113,17 @@ sequenceDiagram
 
 ### 3. Analytics & Privacy Boundary
 - Telemetry helpers reside solely in `src/lib/analytics/`.
-- **Absolute Rule**: Free-text fields (guestbook nicknames, messages) and personal information must never pass into GA4 events.
+- **Absolute Rule**: Do not explicitly collect or pass free-text fields (guestbook nicknames, messages), IP addresses, or personal information into GA4 custom event parameters or user properties.
 
 ### 4. Persistence Layer (Supabase Future Boundary)
 - Data interactions (guestbook entries, saved route snapshots) will be encapsulated within `src/lib/database/`.
 - Components must never issue raw database queries directly; they interact through structured access functions.
 
 ### 5. Design & Asset Implementation Boundary
-- **Code / DOM Responsibilities**: Layout structure (retro 3-column desktop layout), typography, buttons, interactive reel windows, route stops, guestbook form, dynamic state.
-- **Static Assets (`public/`)**: Character artwork (Dreamdori/Kkumdori), pixel-art scenery/skyline, decorative stickers, complex illustrations, and audio effects.
-- Visual dimensions and layout remains flexible to accommodate incoming design refinements.
+- **Code / DOM Responsibilities**: Layout structure (the retro 3-column desktop composition is the current design direction, not an immutable architectural constraint), typography, buttons, interactive reel windows, route stops, guestbook form, dynamic state.
+- **Static Assets (`public/`)**: Pixel-art scenery/skyline, decorative stickers, complex illustrations, and audio effects.
+- **Character Asset Guardrail**: Only approved and properly licensed character assets (e.g., Dreamdori/Kkumdori) may be included in public production builds. Placeholder or mockup assets must be verified prior to public release.
+- Visual dimensions and layout remain flexible to accommodate incoming design refinements.
 
 ---
 
