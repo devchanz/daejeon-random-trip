@@ -14,9 +14,9 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ### ADR-002: Separation of Recommendation Engine and Visual Slot Animation
 - **Status**: **Fixed**
-- **Decision**: The recommendation engine (`src/lib/random`) computes the complete `RouteResult` first; the slot machine UI is solely an animated presentation layer that stops on the computed result.
-- **Why**: Decoupling prevents visual rendering bugs from corrupting itinerary logic and ensures independently testable route logic (where randomness can be seeded or injected for automated testing).
-- **Revisit when**: Never for the core engine separation; visual interaction styles may evolve independently.
+- **Decision**: The recommendation engine (`src/lib/random`) computes the complete `RouteResult` first; an adapter layer maps the variable-stop route to the visual slot reel display format. The slot machine UI is solely an animated presentation layer that stops on the computed result.
+- **Why**: Decoupling prevents visual rendering bugs from corrupting itinerary logic, keeps stop counts independent of visual reel counts, and ensures independently testable route logic (where randomness can be seeded or injected for automated testing). READY reels display presentation-only placeholder items without exposing itinerary data early.
+- **Revisit when**: Never for the core engine separation; visual interaction styles and adapter mapping may evolve independently.
 
 ---
 
@@ -38,7 +38,7 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ### ADR-005: Strict PII and Free-Text Prohibition in Analytics
 - **Status**: **Fixed**
-- **Decision**: Do not explicitly collect or send guestbook nicknames, message strings, IP addresses, or arbitrary user input to Google Analytics 4 as custom parameters or user properties.
+- **Decision**: Do not explicitly collect or send RANDOM LOG nicknames, message strings, IP addresses, or arbitrary user input to Google Analytics 4 as custom parameters or user properties.
 - **Why**: Implements a privacy-by-design architecture to reduce accidental PII leakage and support legal compliance obligations (such as PIPA and GDPR).
 - **Revisit when**: Never (permanent privacy rule).
 
@@ -52,18 +52,18 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ---
 
-### ADR-007: Two-Question Interaction Flow (v0.4)
+### ADR-007: Two-Question Interaction Flow & State Progression (v0.4)
 - **Status**: **Tentative**
-- **Decision**: Present two sequential setup questions (Q1: Half day / Full day, Q2: Anything / Food / Walk / Photo) before transitioning to the READY and SPIN states.
-- **Why**: Minimizes setup friction while capturing the minimum essential parameters needed for route template selection.
-- **Revisit when**: Analytics show significant drop-off between Q1 and Q2, or user testing demonstrates a need for budget or transportation filters.
+- **Decision**: Present two sequential setup questions (`Q1`: Duration, `Q2`: Preference) before transitioning through `READY` → `SPIN` → `RESULT`. Primary Spin Action is `“여행 뽑기!”`. The slot lever is strictly a visual feedback/interaction mechanism and must not become a required separate action or secondary primary CTA.
+- **Why**: Minimizes setup friction while capturing the minimum essential parameters needed for route template selection. Keeps the core interaction functional regardless of lever animation support.
+- **Revisit when**: Analytics show significant drop-off between Q1 and Q2, or user testing demonstrates a need for alternative filter flows.
 
 ---
 
-### ADR-008: CTA Hierarchy and Inline Result Presentation
+### ADR-008: CTA Hierarchy, Layout Anchor, and Inline Result Presentation
 - **Status**: **Tentative**
-- **Decision**: Primary CTA is `“이 코스로 가보기”`, Secondary is `“내 루트 공유하기”`, Tertiary is `“다시 뽑기”`. Result unfolds inline below the slot rather than inside a blocking modal.
-- **Why**: Directs users toward the main conversion action while keeping the screen accessible without modal trap frustration.
+- **Decision**: Primary CTA is `“이 코스로 가보기”`, Secondary is `“내 루트 공유하기”`, Tertiary is `“다시 뽑기”`. Layout follows `Setup Area` → `Slot Anchor` → `Result Area`. The Slot Anchor remains visually stable across states, and results unfold inline below the anchor rather than inside a blocking modal.
+- **Why**: Directs users toward the main conversion action while minimizing layout shift and eliminating modal trap frustration.
 - **Revisit when**: Stakeholder reviews or A/B testing show modal layouts or alternate CTA copy yield higher engagement.
 
 ---
@@ -84,16 +84,16 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ---
 
-### ADR-011: Guestbook Route Snapshot Model
+### ADR-011: RANDOM LOG & Shared Route Snapshot Model
 - **Status**: **Tentative**
-- **Decision**: Allow users to post a guestbook note with nickname, short message, and an automatically attached `RouteResult` snapshot without requiring account signup.
-- **Why**: Keeps friction low and social proof high, connecting visitor commentary directly with generated itineraries.
+- **Decision**: Implement RANDOM LOG as a shared-route snapshot mechanism using neutral domain terminology (not a new feed product, operator curation, or recommendation algorithm). User clicks `“내 루트 공유하기”` to open/activate the composer (presentation is flexible by viewport/layout, e.g. desktop activation vs. mobile scroll/open, and is not constrained to a modal or drawer); submitting attaches the active `RouteResult` snapshot alongside a nickname and short message. Likes/reactions are omitted for MVP. GA4 telemetry event names (`guestbook_open`, `guestbook_submit`) remain governed by `docs/ANALYTICS.md`.
+- **Why**: Keeps friction low and social proof high without interrupting the primary travel funnel or adding backend feed complexity.
 - **Revisit when**: Spam/moderation issues arise, or Supabase persistence requirements shift.
 
 ---
 
-### ADR-012: DOM Code vs. Static Pixel Asset Boundary
-- **Status**: **Tentative**
-- **Decision**: Render layout, responsive structures, interactive reels, and typography in semantic DOM/Tailwind; reserve static image assets (`public/`) for character art (Dreamdori/Kkumdori), complex illustrations, and stickers. Any public production use of protected character assets requires appropriate approval or licensing.
-- **Why**: Balances retro pixel-art visual identity with accessibility, fast loading, and responsive layouts across screen sizes, while safeguarding intellectual property compliance.
-- **Revisit when**: Design team delivers finalized asset packages and art direction.
+### ADR-012: Approved Visual v4 Base & Visual Skin / Asset Boundaries
+- **Status**: **Tentative (Approved Visual Base)**
+- **Decision**: Adopt Visual v4 ("Korean Y2K Personal Web × Random Travel Toy" structure: Header `DAEJEON RANDOM TRIP`, Left Sidebar `DAEJEON GUIDE` / `TRIP MIX`, Center `Setup Area` → `Slot Anchor` → `Result Area`, Right Sidebar `DAEJEON PICK` / `RANDOM LOG`) as the approved visual base for implementation. Visual skin styling (colors, typography, borders, shadows, paper textures, stickers, slot chassis, reel easing) must remain decoupled via semantic tokens. Direct legacy vocabulary (`Profile`, `BGM`, `Guestbook`, `Minihome`, `TODAY / TOTAL`) is explicitly avoided. Dreamdori/Kkumdori must remain an independent image asset/component (using the approved provided PNG as truth, to be integrated into `public/` when the asset package is added). Full-screen image slicing is prohibited.
+- **Why**: Allows continuous visual polish and responsive adaptations without tangling presentation details with underlying route engine logic, accessibility, or asset licensing.
+- **Revisit when**: Design team delivers future theme skins or asset updates.
