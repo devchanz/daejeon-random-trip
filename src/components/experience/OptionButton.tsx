@@ -13,8 +13,9 @@ export interface OptionButtonProps<T extends string> {
 }
 
 /**
- * Reusable OptionButton component for Q1 & Q2 option selections.
- * Uses semantic <button> and preserves standard keyboard interactions.
+ * Visual V4 OptionButton component for Q1 & Q2 option selections.
+ * Features tactile 3D retro paper button styling, distinct selected/active/disabled states,
+ * and maintains full keyboard accessibility.
  */
 export function OptionButton<T extends string>({
   value,
@@ -38,12 +39,12 @@ export function OptionButton<T extends string>({
       onClick={handleClick}
       aria-pressed={isSelected}
       aria-label={ariaLabel || label}
-      className={`relative flex flex-1 items-center justify-center rounded-xl py-3 px-4 text-sm font-semibold transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 focus-visible:ring-offset-2 ${
+      className={`relative flex flex-1 items-center justify-center rounded-xl py-3 px-4 text-sm font-black transition-all outline-none focus-visible:ring-2 focus-visible:ring-[#2b2520] focus-visible:ring-offset-2 ${
         isSelected
-          ? 'border-2 border-zinc-900 bg-zinc-900 text-white shadow-sm dark:border-zinc-100 dark:bg-zinc-100 dark:text-zinc-900'
+          ? 'border-2 border-[#2b2520] bg-[#2b2520] text-[#fffdf8] shadow-none translate-x-[2px] translate-y-[2px] ring-2 ring-[#ff5555]'
           : isActive
-          ? 'border-2 border-zinc-200 bg-zinc-50 text-zinc-800 hover:border-zinc-400 hover:bg-zinc-100 cursor-pointer active:scale-95 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:border-zinc-500'
-          : 'border-2 border-zinc-100 bg-zinc-50/60 text-zinc-400 cursor-not-allowed dark:border-zinc-800/60 dark:bg-zinc-900/60 dark:text-zinc-600'
+          ? 'border-2 border-[#2b2520] bg-[#fffef9] text-[#2b2520] shadow-retro hover:bg-[#fff9e6] hover:-translate-y-0.5 hover:shadow-[4.5px_4.5px_0px_#2b2520] cursor-pointer active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
+          : 'border-2 border-[#d8d0c2] bg-[#f5efe3] text-[#a89f91] cursor-not-allowed shadow-none'
       } ${className}`}
     >
       {label}

@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f7f3ea;
+  --foreground: #2b2520;
+  --paper-cream: #fffef9;
+  --paper-card: #faf6ee;
+  --retro-dark: #2b2520;
+  --retro-coral: #ff5555;
+  --retro-amber: #ffb800;
+  --retro-emerald: #10b981;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Subtle retro paper background dot grid */
+.bg-retro-dots {
+  background-color: #f7f3ea;
+  background-image: radial-gradient(#ded5c2 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+
+/* Notebook grid pattern for log & scrapbook */
+.bg-notebook-grid {
+  background-color: #faf6ee;
+  background-image: linear-gradient(#e5dbca 1px, transparent 1px),
+    linear-gradient(90deg, #e5dbca 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Retro shadow presets */
+.shadow-retro-xs {
+  box-shadow: 1.5px 1.5px 0px #2b2520;
+}
+
+.shadow-retro-sm {
+  box-shadow: 2px 2px 0px #2b2520;
+}
+
+.shadow-retro {
+  box-shadow: 3.5px 3.5px 0px #2b2520;
+}
+
+.shadow-retro-lg {
+  box-shadow: 5px 5px 0px #2b2520;
+}
+
+.shadow-retro-xl {
+  box-shadow: 7px 7px 0px #2b2520;
+}
+
+/* Tactile button press simulation */
+.btn-press:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px #2b2520;
+}
+
+/* Washi tape decoration */
+.washi-tape {
+  background-color: rgba(254, 240, 138, 0.85);
+  border: 1px dashed rgba(43, 37, 32, 0.2);
+  box-shadow: 0 1px 2px rgba(43, 37, 32, 0.1);
+}
+
+.washi-tape-pink {
+  background-color: rgba(254, 205, 211, 0.85);
+  border: 1px dashed rgba(43, 37, 32, 0.2);
+  box-shadow: 0 1px 2px rgba(43, 37, 32, 0.1);
 }
