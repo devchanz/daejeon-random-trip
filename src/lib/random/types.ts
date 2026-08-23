@@ -21,7 +21,7 @@ export interface RouteStop {
   name: string;
   category: string;
   durationMin: number;
-  travelMin: number;
+  travelMin?: number;
 }
 
 /**
@@ -48,9 +48,36 @@ export interface PlaceCandidate {
   zoneId: string;
   durationMin: number;
   tags: string[];
+  roles?: CandidateRole[];
   address?: string;
   mapUrl?: string;
   image?: string;
   description?: string;
   active: boolean;
+}
+
+/**
+ * Conceptual role assigned to a slot in a route template.
+ */
+export type CandidateRole = 'anchor' | 'meal' | 'discovery' | 'stay-extender';
+
+/**
+ * Definition of a structured route template composed of ordered role slots.
+ */
+export interface RouteTemplate {
+  id: string;
+  duration: DurationType;
+  targetPreference?: PreferenceType;
+  slots: CandidateRole[];
+}
+
+/**
+ * Input options for generating a controlled random route.
+ */
+export interface GenerateRouteOptions {
+  durationType: DurationType;
+  preference: PreferenceType;
+  zones: Zone[];
+  candidates: PlaceCandidate[];
+  random?: () => number;
 }
