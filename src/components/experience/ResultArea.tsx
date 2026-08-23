@@ -1,27 +1,62 @@
 'use client';
 
+import React from 'react';
 import type { ExperienceState } from '../../lib/experience';
+import { ResultSheet } from './ResultSheet';
 
-interface ResultAreaProps {
+/**
+ * Overlap offset class applied to the ResultSheet wrapper.
+ *
+ * Spacing / offset configurations for quick comparison:
+ * - No overlap:       'mt-0' (Result sits 24px below SlotAnchor due to parent gap-6)
+ * - Flush:            '-mt-6' (Result touches the bottom edge of SlotAnchor)
+ * - Slight overlap:   '-mt-8 sm:-mt-10' (Default: pulls sheet ~8px-16px over SlotAnchor's lower chassis)
+ * - Stronger overlap: '-mt-14 sm:-mt-16' (Pulls sheet ~32px-40px over SlotAnchor's lower chassis)
+ *
+ * Note: MainExperience has `gap-6` (24px) between child elements.
+ * A negative top margin of `-mt-8` on mobile offsets the 24px gap by 8px,
+ * creating a safe, subtle 8px overlap. On desktop (`sm:-mt-10`), it offsets by 16px.
+ * This ensures the top of ResultSheet visually overlaps only the bottom chassis edge
+ * while keeping all reel windows and slot buttons fully accessible and visible.
+ */
+export const RESULT_OVERLAP_CLASS = '-mt-8 sm:-mt-10';
+
+export interface ResultAreaProps {
   state?: ExperienceState;
   className?: string;
+  overlapClass?: string;
 }
 
 /**
  * ResultArea layout boundary.
- * Provides a minimal mount boundary for the upcoming Overlapping Inline Result Sheet
- * without rendering premature result UI, mock stops, or actions.
+ * Renders the Overlapping Inline Result Sheet once the state transitions to RESULT.
+ * Sits directly following SlotAnchor in DOM flow while visually overlapping its lower chassis.
  */
-export function ResultArea({ state, className = '' }: ResultAreaProps) {
-  const isResult = state?.phase === 'result';
+export function ResultArea({
+  state,
+  className = '',
+  overlapClass = RESULT_OVERLAP_CLASS,
+}: ResultAreaProps) {
+  const isResult = state?.phase === 'result' && Boolean(state.result);
+
+  if (!isResult || !state.result) {
+    return (
+      <section
+        aria-label="추천 결과 영역 (Result Area)"
+        data-testid="result-area-boundary"
+        className={`hidden ${className}`}
+        aria-hidden="true"
+      />
+    );
+  }
 
   return (
     <section
       aria-label="추천 결과 영역 (Result Area)"
       data-testid="result-area-boundary"
-      className={`w-full ${isResult ? 'block' : 'hidden'} ${className}`}
+      className={`relative z-10 w-full ${overlapClass} ${className}`}
     >
-      {/* Layout boundary reserved for the overlapping inline result sheet in PR #8 */}
+      <ResultSheet result={state.result} />
     </section>
   );
 }
