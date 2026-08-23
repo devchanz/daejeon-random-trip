@@ -18,8 +18,10 @@ import {
 import { SetupArea } from './SetupArea';
 import { SlotAnchor } from './SlotAnchor';
 import { ResultArea } from './ResultArea';
-
-const DEFAULT_SPIN_DURATION_MS = 1200;
+import {
+  MOTION_TIMINGS,
+  usePrefersReducedMotion,
+} from './motionConfig';
 
 export interface MainExperienceProps {
   initialState?: ExperienceState;
@@ -35,13 +37,14 @@ export interface MainExperienceProps {
 /**
  * MainExperience orchestration layer.
  * Coordinates Q1 -> Q2 -> READY -> SPINNING -> RESULT lifecycle.
- * Manages pending RouteResult during spin animation without polluting domain state models.
+ * Manages lever visual feedback, sequential reel stops, pending RouteResult,
+ * temporary reveal emphasis, and user-triggered viewport choreography without polluting domain state models.
  */
 export function MainExperience({
   initialState = INITIAL_EXPERIENCE_STATE,
   zones = [],
   candidates = [],
-  spinDurationMs = DEFAULT_SPIN_DURATION_MS,
+  spinDurationMs = MOTION_TIMINGS.TOTAL_SPIN_MS,
   random,
   onSpinStart,
   onSpinComplete,
@@ -50,32 +53,120 @@ export function MainExperience({
   const [state, dispatch] = useReducer(experienceReducer, initialState);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
 
-  // UI orchestration refs: hold pending result and timer safely outside domain models
-  const pendingResultRef = useRef<RouteResult | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Presentation-only local state
+  const [pendingResult, setPendingResult] = useState<RouteResult | null>(null);
+  const [spinningStoppedReelCount, setSpinningStoppedReelCount] = useState<number>(0);
+  const [isLeverActive, setIsLeverActive] = useState<boolean>(false);
+  const [isRevealEmphasis, setIsRevealEmphasis] = useState<boolean>(false);
 
-  // Handle spin presentation lifecycle completion
+  // User motion preference
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  // Viewport & trigger tracking refs
+  const isUserTriggeredSpinRef = useRef<boolean>(false);
+  const resultAreaRef = useRef<HTMLElement | null>(null);
+
+  // Derived stopped reel count: 3 when in result, spinningStoppedReelCount when spinning, 0 otherwise
+  const stoppedReelCount =
+    state.phase === 'result' ? 3 : state.phase === 'spinning' ? spinningStoppedReelCount : 0;
+
+  // Handle spin presentation lifecycle & sequential reel stops
   useEffect(() => {
-    if (state.phase === 'spinning' && pendingResultRef.current) {
-      timerRef.current = setTimeout(() => {
-        if (pendingResultRef.current) {
-          const result = pendingResultRef.current;
-          pendingResultRef.current = null;
-          dispatch(completeSpin(result));
-          onSpinComplete?.(result);
-        }
-      }, spinDurationMs);
+    if (state.phase !== 'spinning' || !pendingResult) {
+      return;
+    }
+
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+    const schedule = (fn: () => void, delayMs: number) => {
+      const id = setTimeout(fn, delayMs);
+      timeouts.push(id);
+      return id;
+    };
+
+    if (prefersReducedMotion) {
+      // Reduced motion: fast sequence
+      schedule(() => {
+        setIsLeverActive(false);
+        setSpinningStoppedReelCount(3);
+        dispatch(completeSpin(pendingResult));
+        onSpinComplete?.(pendingResult);
+      }, MOTION_TIMINGS.REDUCED_MOTION_TOTAL_MS);
+    } else {
+      // Standard motion sequence: Lever pull -> Reel 1 stop -> Reel 2 stop -> Reel 3 stop -> Complete
+      // Guard: Spin completion delay must never fire before all reels have stopped plus final beat
+      const minSpinDurationMs =
+        MOTION_TIMINGS.REEL_3_STOP_MS + MOTION_TIMINGS.FINAL_BEAT_MS;
+      const effectiveSpinDurationMs = Math.max(spinDurationMs, minSpinDurationMs);
+
+      // 1. Lever returns to rest position
+      schedule(() => {
+        setIsLeverActive(false);
+      }, MOTION_TIMINGS.LEVER_PULL_MS);
+
+      // 2. Reel 1 stops
+      schedule(() => {
+        setSpinningStoppedReelCount(1);
+      }, MOTION_TIMINGS.REEL_1_STOP_MS);
+
+      // 3. Reel 2 stops
+      schedule(() => {
+        setSpinningStoppedReelCount(2);
+      }, MOTION_TIMINGS.REEL_2_STOP_MS);
+
+      // 4. Reel 3 stops
+      schedule(() => {
+        setSpinningStoppedReelCount(3);
+      }, MOTION_TIMINGS.REEL_3_STOP_MS);
+
+      // 5. Short final beat -> Complete spin & trigger reveal emphasis
+      schedule(() => {
+        dispatch(completeSpin(pendingResult));
+        onSpinComplete?.(pendingResult);
+        setIsRevealEmphasis(true);
+      }, effectiveSpinDurationMs);
     }
 
     return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
+      timeouts.forEach((id) => clearTimeout(id));
     };
-  }, [state.phase, spinDurationMs, onSpinComplete]);
+  }, [state.phase, pendingResult, spinDurationMs, onSpinComplete, prefersReducedMotion]);
 
-  // Spin action triggered from SlotAnchor
+  // Reveal emphasis duration auto-dismiss
+  useEffect(() => {
+    if (isRevealEmphasis) {
+      const timer = setTimeout(() => {
+        setIsRevealEmphasis(false);
+      }, MOTION_TIMINGS.REVEAL_EMPHASIS_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [isRevealEmphasis]);
+
+  // Viewport choreography: Natural auto-scroll only on user-triggered spin transition to RESULT
+  useEffect(() => {
+    if (state.phase === 'result' && isUserTriggeredSpinRef.current) {
+      isUserTriggeredSpinRef.current = false;
+
+      const timer = setTimeout(() => {
+        if (resultAreaRef.current) {
+          const rect = resultAreaRef.current.getBoundingClientRect();
+          // Avoid jarring jump if Result is already comfortably visible in upper viewport
+          const isAlreadyComfortablyVisible =
+            rect.top >= 60 && rect.top <= window.innerHeight * 0.4;
+
+          if (!isAlreadyComfortablyVisible) {
+            resultAreaRef.current.scrollIntoView({
+              behavior: prefersReducedMotion ? 'auto' : 'smooth',
+              block: 'start',
+            });
+          }
+        }
+      }, 50);
+
+      return () => clearTimeout(timer);
+    }
+  }, [state.phase, prefersReducedMotion]);
+
+  // Primary Spin action triggered from SlotAnchor
   const handleSpin = () => {
     if (state.phase !== 'ready' || !state.duration || !state.preference) {
       return;
@@ -99,8 +190,11 @@ export function MainExperience({
         random,
       });
 
-      // 2. Hold pending RouteResult in UI orchestration layer
-      pendingResultRef.current = generated;
+      // 2. Prepare pending presentation state and record user-triggered flag
+      setPendingResult(generated);
+      isUserTriggeredSpinRef.current = true;
+      setSpinningStoppedReelCount(0);
+      setIsLeverActive(true);
 
       // 3. Dispatch START_SPIN to initiate spinning presentation
       dispatch(startSpin());
@@ -118,8 +212,17 @@ export function MainExperience({
   return (
     <div
       data-testid="main-experience"
-      className={`flex w-full max-w-2xl flex-col items-center gap-6 ${className}`}
+      className={`relative z-30 flex w-full max-w-2xl flex-col items-center gap-6 ${className}`}
     >
+      {/* Temporary Reveal Emphasis Backdrop (subtle dim + backdrop-blur, pointer-events-none) */}
+      {isRevealEmphasis && (
+        <div
+          aria-hidden="true"
+          data-testid="reveal-emphasis-overlay"
+          className="pointer-events-none fixed inset-0 z-20 bg-[#2b2520]/15 backdrop-blur-[1.5px] transition-opacity duration-700 animate-reveal-fade-in motion-reduce:hidden"
+        />
+      )}
+
       {/* 1. Setup Area: Q1 -> Q2 -> READY */}
       <SetupArea state={state} dispatch={dispatch} />
 
@@ -128,10 +231,13 @@ export function MainExperience({
         state={state}
         onSpin={handleSpin}
         errorMessage={state.phase === 'ready' ? recommendationError : null}
+        stoppedReelCount={stoppedReelCount}
+        pendingResult={pendingResult}
+        isLeverActive={isLeverActive}
       />
 
-      {/* 3. Result Area: Inline presentation boundary below slot */}
-      <ResultArea state={state} />
+      {/* 3. Result Area: Inline presentation boundary below slot with responsive scroll anchor */}
+      <ResultArea ref={resultAreaRef} state={state} />
     </div>
   );
 }

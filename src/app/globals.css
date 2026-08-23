@@ -83,3 +83,125 @@ body {
   border: 1px dashed rgba(43, 37, 32, 0.2);
   box-shadow: 0 1px 2px rgba(43, 37, 32, 0.1);
 }
+
+/* Slot Reel Rolling Animation */
+@keyframes reel-roll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-reel-roll-0 {
+  animation: reel-roll 0.38s linear infinite;
+}
+
+.animate-reel-roll-1 {
+  animation: reel-roll 0.44s linear infinite;
+}
+
+.animate-reel-roll-2 {
+  animation: reel-roll 0.35s linear infinite;
+}
+
+/* Slot Reel Settle Animation */
+@keyframes reel-settle {
+  0% {
+    transform: translateY(-12px) scale(0.95);
+    filter: brightness(1.25);
+  }
+  60% {
+    transform: translateY(3px) scale(1.02);
+    filter: brightness(1.1);
+  }
+  85% {
+    transform: translateY(-1px) scale(0.99);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    filter: brightness(1);
+  }
+}
+
+.animate-reel-settle {
+  animation: reel-settle 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Lever Pull & Return Animation */
+@keyframes lever-pull {
+  0% {
+    transform: rotate(0deg) translateY(0) scaleY(1);
+    transform-origin: bottom center;
+  }
+  35% {
+    transform: rotate(38deg) translateY(22px) scaleY(0.72);
+    transform-origin: bottom center;
+  }
+  65% {
+    transform: rotate(-6deg) translateY(-3px) scaleY(1.04);
+    transform-origin: bottom center;
+  }
+  85% {
+    transform: rotate(2deg) translateY(0) scaleY(0.99);
+    transform-origin: bottom center;
+  }
+  100% {
+    transform: rotate(0deg) translateY(0) scaleY(1);
+    transform-origin: bottom center;
+  }
+}
+
+.animate-lever-pull {
+  animation: lever-pull 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  transform-origin: bottom center;
+}
+
+/* Result Ticket Entrance Animation */
+@keyframes ticket-entrance {
+  0% {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.005);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-ticket-entrance {
+  animation: ticket-entrance 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Reveal Backdrop Subtle Fade In */
+@keyframes reveal-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+.animate-reveal-fade-in {
+  animation: reveal-fade-in 0.25s ease-out forwards;
+}
+
+/* Prefers Reduced Motion overrides */
+@media (prefers-reduced-motion: reduce) {
+  .animate-reel-roll-0,
+  .animate-reel-roll-1,
+  .animate-reel-roll-2,
+  .animate-reel-settle,
+  .animate-lever-pull,
+  .animate-ticket-entrance,
+  .animate-reveal-fade-in {
+    animation: none !important;
+    transition: none !important;
+  }
+}
