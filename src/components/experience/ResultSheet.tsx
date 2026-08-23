@@ -32,7 +32,7 @@ export function ResultSheet({ result, className = '' }: ResultSheetProps) {
   return (
     <article
       data-testid="result-sheet"
-      className={`relative w-full rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] p-5 sm:p-7 shadow-retro-xl overflow-hidden ${className}`}
+      className={`relative w-full rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] p-5 sm:p-7 shadow-retro-xl overflow-hidden animate-ticket-entrance ${className}`}
     >
       {/* Top Printed Ticket Perforation / Notches */}
       <div

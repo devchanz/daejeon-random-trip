@@ -4,43 +4,49 @@ import React from 'react';
 import type { ExperienceState } from '../../lib/experience';
 import {
   getPreSpinReelDisplay,
-  getSpinningReelDisplay,
   mapRouteToReelDisplay,
   type ReelDisplayModel,
+  type RouteResult,
 } from '../../lib/random';
+import { NEUTRAL_ROLLING_SYMBOLS } from './motionConfig';
 
-interface SlotAnchorProps {
+export interface SlotAnchorProps {
   state: ExperienceState;
   onSpin?: () => void;
   errorMessage?: string | null;
   className?: string;
+  stoppedReelCount?: number;
+  pendingResult?: RouteResult | null;
+  isLeverActive?: boolean;
 }
 
 /**
  * Visual V4 SlotAnchor component.
  * Physical arcade random travel machine chassis with layered cream frame,
  * corner mechanical rivets, decorative marquee lights, dark navy inset reel chamber,
- * decorative lever, coin slot detail, and prominent tactile primary Spin CTA.
+ * animated decorative lever, coin slot detail, and prominent tactile primary Spin CTA.
  */
 export function SlotAnchor({
   state,
   onSpin,
   errorMessage,
   className = '',
+  stoppedReelCount = 0,
+  pendingResult = null,
+  isLeverActive = false,
 }: SlotAnchorProps) {
   const isReady = state.phase === 'ready';
   const isSpinning = state.phase === 'spinning';
   const isResult = state.phase === 'result';
 
-  // Resolve visual reel display model based on current experience phase
-  let reelDisplay: ReelDisplayModel;
-  if (isResult) {
-    reelDisplay = mapRouteToReelDisplay(state.result);
-  } else if (isSpinning) {
-    reelDisplay = getSpinningReelDisplay();
-  } else {
-    reelDisplay = getPreSpinReelDisplay();
-  }
+  // Target reel model for stopped reels or final result
+  const targetReelDisplay: ReelDisplayModel = isResult && state.result
+    ? mapRouteToReelDisplay(state.result)
+    : pendingResult
+    ? mapRouteToReelDisplay(pendingResult)
+    : getPreSpinReelDisplay();
+
+  const preSpinDisplay = getPreSpinReelDisplay();
 
   // Header status copy and visual indicator
   const getStatusDisplay = () => {
@@ -52,8 +58,12 @@ export function SlotAnchor({
       };
     }
     if (isSpinning) {
+      const stoppingText =
+        stoppedReelCount > 0
+          ? `STOPPING (${stoppedReelCount}/3)...`
+          : 'SPINNING...';
       return {
-        label: 'SPINNING...',
+        label: stoppingText,
         dotClass: 'bg-[#ffb800] motion-safe:animate-ping',
         pillClass: 'bg-[#fffbeb] text-[#92400e] border-[#ffb800]',
       };
@@ -111,7 +121,7 @@ export function SlotAnchor({
   return (
     <section
       aria-label="슬롯머신 영역 (Slot Anchor)"
-      className={`relative w-full rounded-3xl border-3 border-[#2b2520] bg-[#efe8db] p-5 sm:p-7 text-[#2b2520] shadow-retro-xl select-none ${className}`}
+      className={`relative z-30 w-full rounded-3xl border-3 border-[#2b2520] bg-[#efe8db] p-5 sm:p-7 text-[#2b2520] shadow-retro-xl select-none ${className}`}
     >
       {/* 4 Mechanical Corner Rivets / Screws */}
       <span
@@ -139,15 +149,22 @@ export function SlotAnchor({
         +
       </span>
 
-      {/* Decorative Slot Machine Lever (Desktop Only, purely visual affordance) */}
+      {/* Decorative Slot Machine Lever (Desktop Only, purely visual feedback affordance) */}
       <div
         aria-hidden="true"
         className="hidden md:flex flex-col items-center absolute -right-7 top-16 select-none pointer-events-none"
       >
-        {/* Lever Ball Knob */}
-        <div className="h-8 w-8 rounded-full border-2 border-[#2b2520] bg-[#ff5555] shadow-retro-xs" />
-        {/* Lever Metallic Shaft */}
-        <div className="h-16 w-3 rounded-b border-x-2 border-b-2 border-[#2b2520] bg-gradient-to-b from-[#e5decb] to-[#b8b0a2] shadow-inner" />
+        {/* Animated Lever Arm */}
+        <div
+          className={`flex flex-col items-center origin-bottom ${
+            isLeverActive ? 'animate-lever-pull' : ''
+          }`}
+        >
+          {/* Lever Ball Knob */}
+          <div className="h-8 w-8 rounded-full border-2 border-[#2b2520] bg-[#ff5555] shadow-retro-xs" />
+          {/* Lever Metallic Shaft */}
+          <div className="h-16 w-3 rounded-b border-x-2 border-b-2 border-[#2b2520] bg-gradient-to-b from-[#e5decb] to-[#b8b0a2] shadow-inner" />
+        </div>
         {/* Lever Base Bracket */}
         <div className="h-6 w-8 rounded-r-lg border-2 border-[#2b2520] bg-[#a89f91] shadow-xs flex items-center justify-center">
           <span className="h-1.5 w-1.5 rounded-full bg-[#2b2520]" />
@@ -180,61 +197,108 @@ export function SlotAnchor({
 
         {/* 3 Reel Windows (Recessed Arcade Display Bay) */}
         <div className="relative grid w-full grid-cols-3 gap-2.5 sm:gap-4 rounded-2xl border-2 border-[#2b2520] bg-[#121720] p-3.5 sm:p-4 shadow-[inset_0_4px_12px_rgba(0,0,0,0.6)]">
-          {reelDisplay.reels.map((reel, index) => (
-            <div
-              key={`reel-window-${index}`}
-              className="relative flex h-28 sm:h-32 flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-[#2c3545] bg-[#1e2533] p-2 text-center shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] transition-all duration-200"
-            >
-              {/* Glossy glass reflection overlay */}
-              <div
-                aria-hidden="true"
-                className="absolute inset-0 bg-gradient-to-b from-white/15 via-white/5 to-transparent pointer-events-none"
-              />
+          {[0, 1, 2].map((index) => {
+            const isReelStopped = isResult || (isSpinning && stoppedReelCount > index);
+            const targetReel = targetReelDisplay.reels[index];
+            const preSpinReel = preSpinDisplay.reels[index];
 
-              {isSpinning ? (
-                // Spinning Presentation: Animated motion placeholder
-                <div className="flex flex-col items-center justify-center gap-1 motion-safe:animate-pulse">
-                  <span className="text-xl sm:text-2xl font-black tracking-widest text-[#ffb800]">
-                    &bull; &bull; &bull;
-                  </span>
-                  <span className="text-[10px] font-mono font-black text-[#9ca3af] tracking-wider">
-                    SPINNING
-                  </span>
-                </div>
-              ) : isResult ? (
-                // Result Presentation: Visual stop preview via ReelDisplayModel
-                reel.isPlaceholder ? (
-                  <span className="text-2xl font-black text-[#6b7280]" aria-hidden="true">
-                    -
-                  </span>
-                ) : (
-                  <div className="flex flex-col items-center justify-center gap-1 px-1">
-                    <span className="rounded bg-[#ffb800]/20 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-[#ffb800]">
-                      Stop {reel.label}
-                    </span>
-                    <span className="text-xs sm:text-sm font-black text-[#fffdf8] line-clamp-2 leading-tight">
-                      {reel.value}
-                    </span>
-                    {reel.category && (
-                      <span className="text-[9px] text-[#9ca3af] truncate max-w-full font-medium">
-                        {reel.category}
+            return (
+              <div
+                key={`reel-window-${index}`}
+                role="region"
+                aria-label={`슬롯 릴 ${index + 1}: ${
+                  isResult
+                    ? targetReel.value
+                    : isSpinning
+                    ? isReelStopped
+                      ? targetReel.value
+                      : '회전 중'
+                    : '대기 중'
+                }`}
+                className="relative flex h-28 sm:h-32 flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-[#2c3545] bg-[#1e2533] p-2 text-center shadow-[inset_0_2px_8px_rgba(0,0,0,0.5)] transition-all duration-200"
+              >
+                {/* Glossy glass reflection overlay */}
+                <div
+                  aria-hidden="true"
+                  className="absolute inset-0 bg-gradient-to-b from-white/15 via-white/5 to-transparent pointer-events-none z-20"
+                />
+
+                {isSpinning && !isReelStopped ? (
+                  // Active Rolling Presentation: fast vertical translate of neutral symbols
+                  <>
+                    {/* Top and bottom shadow masks for 3D barrel depth */}
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-[#121720] via-[#121720]/80 to-transparent z-10"
+                    />
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#121720] via-[#121720]/80 to-transparent z-10"
+                    />
+
+                    {/* Rolling symbols track */}
+                    <div
+                      aria-hidden="true"
+                      className={`absolute inset-x-0 flex flex-col items-center justify-around py-2 animate-reel-roll-${index}`}
+                    >
+                      {NEUTRAL_ROLLING_SYMBOLS.concat(NEUTRAL_ROLLING_SYMBOLS).map(
+                        (symbol, sIdx) => (
+                          <span
+                            key={`roll-sym-${index}-${sIdx}`}
+                            className="text-2xl sm:text-3xl select-none py-1.5 opacity-90 drop-shadow-sm"
+                          >
+                            {symbol}
+                          </span>
+                        )
+                      )}
+                    </div>
+                  </>
+                ) : isReelStopped ? (
+                  // Stopped Reel Presentation: Final preview with subtle settle feedback
+                  <div
+                    key={`stopped-reel-${index}-${targetReel.value}`}
+                    className="relative z-10 flex flex-col items-center justify-center gap-1 px-1 animate-reel-settle"
+                  >
+                    {targetReel.isPlaceholder ? (
+                      <span
+                        className="text-2xl font-black text-[#6b7280]"
+                        aria-hidden="true"
+                      >
+                        -
                       </span>
+                    ) : (
+                      <>
+                        <span className="rounded bg-[#ffb800]/20 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-mono font-bold uppercase tracking-wider text-[#ffb800]">
+                          Stop {targetReel.label}
+                        </span>
+                        <span className="text-xs sm:text-sm font-black text-[#fffdf8] line-clamp-2 leading-tight">
+                          {targetReel.value}
+                        </span>
+                        {targetReel.category && (
+                          <span className="text-[9px] text-[#9ca3af] truncate max-w-full font-medium">
+                            {targetReel.category}
+                          </span>
+                        )}
+                      </>
                     )}
                   </div>
-                )
-              ) : (
-                // Pre-spin Presentation: Question mark placeholder
-                <div className="flex flex-col items-center justify-center">
-                  <span className="text-3xl sm:text-4xl font-black text-[#ffb800] drop-shadow-md" aria-hidden="true">
-                    ?
-                  </span>
-                  <span className="text-[9px] font-mono font-bold text-[#6b7280]">
-                    REEL {index + 1}
-                  </span>
-                </div>
-              )}
-            </div>
-          ))}
+                ) : (
+                  // Pre-spin Presentation: Question mark placeholder (? / ? / ?)
+                  <div className="relative z-10 flex flex-col items-center justify-center">
+                    <span
+                      className="text-3xl sm:text-4xl font-black text-[#ffb800] drop-shadow-md"
+                      aria-hidden="true"
+                    >
+                      {preSpinReel.value}
+                    </span>
+                    <span className="text-[9px] font-mono font-bold text-[#6b7280]">
+                      REEL {index + 1}
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Control Apron: Primary Spin CTA Button & Feedback */}

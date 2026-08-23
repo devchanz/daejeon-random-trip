@@ -25,38 +25,43 @@ export interface ResultAreaProps {
   state?: ExperienceState;
   className?: string;
   overlapClass?: string;
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
  * ResultArea layout boundary.
  * Renders the Overlapping Inline Result Sheet once the state transitions to RESULT.
  * Sits directly following SlotAnchor in DOM flow while visually overlapping its lower chassis.
+ * Provides a dedicated responsive scroll-margin-top for viewport choreography after user-triggered spin.
  */
-export function ResultArea({
-  state,
-  className = '',
-  overlapClass = RESULT_OVERLAP_CLASS,
-}: ResultAreaProps) {
-  const isResult = state?.phase === 'result' && Boolean(state.result);
+export const ResultArea = React.forwardRef<HTMLElement, ResultAreaProps>(
+  function ResultArea(
+    { state, className = '', overlapClass = RESULT_OVERLAP_CLASS },
+    ref
+  ) {
+    const isResult = state?.phase === 'result' && Boolean(state.result);
 
-  if (!isResult || !state.result) {
+    if (!isResult || !state.result) {
+      return (
+        <section
+          ref={ref}
+          aria-label="추천 결과 영역 (Result Area)"
+          data-testid="result-area-boundary"
+          className={`hidden ${className}`}
+          aria-hidden="true"
+        />
+      );
+    }
+
     return (
       <section
+        ref={ref}
         aria-label="추천 결과 영역 (Result Area)"
         data-testid="result-area-boundary"
-        className={`hidden ${className}`}
-        aria-hidden="true"
-      />
+        className={`relative z-40 w-full scroll-mt-20 sm:scroll-mt-24 ${overlapClass} ${className}`}
+      >
+        <ResultSheet result={state.result} />
+      </section>
     );
   }
-
-  return (
-    <section
-      aria-label="추천 결과 영역 (Result Area)"
-      data-testid="result-area-boundary"
-      className={`relative z-10 w-full ${overlapClass} ${className}`}
-    >
-      <ResultSheet result={state.result} />
-    </section>
-  );
-}
+);
