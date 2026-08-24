@@ -21,10 +21,15 @@ export interface SlotAnchorProps {
 }
 
 /**
- * Visual V4 SlotAnchor component.
- * Physical arcade random travel machine chassis with layered cream frame,
- * corner mechanical rivets, decorative marquee lights, dark navy inset reel chamber,
- * animated decorative lever, coin slot detail, and prominent tactile primary Spin CTA.
+ * Visual Master SlotAnchor component.
+ * Features a cute physical toy-like arcade chassis referenced from Primary Visual Master & Result Detail Master.
+ * Highlights:
+ * - Rounded cream/beige body with pink/gold trims
+ * - Prominent retro marquee with pixel stars & LED indicator lights
+ * - Recessed dark reel bay with glossy glass reflections & 3D barrel depth
+ * - Right-side mechanical lever with pink ball knob and pull motion
+ * - Tactile primary pink "여행 뽑기!" CTA button
+ * - Decorative vintage travel stickers ("GOOD TRIP! 🍀", "LET'S TRIP! ✈️")
  */
 export function SlotAnchor({
   state,
@@ -71,8 +76,8 @@ export function SlotAnchor({
     if (isReady) {
       return {
         label: 'READY TO SPIN',
-        dotClass: 'bg-[#ff5555] motion-safe:animate-pulse',
-        pillClass: 'bg-[#fef2f2] text-[#991b1b] border-[#ff5555]',
+        dotClass: 'bg-[#ff5577] motion-safe:animate-pulse',
+        pillClass: 'bg-[#fff0f3] text-[#be123c] border-[#ff5577]',
       };
     }
     return {
@@ -100,7 +105,7 @@ export function SlotAnchor({
     }
     if (isReady) {
       return {
-        text: '🎰 여행 뽑기!',
+        text: '✨ 여행 뽑기! ✨',
         hint: '👇 버튼을 누르면 대전 랜덤 코스가 즉시 완성됩니다',
       };
     }
@@ -121,7 +126,7 @@ export function SlotAnchor({
   return (
     <section
       aria-label="슬롯머신 영역 (Slot Anchor)"
-      className={`relative z-30 w-full rounded-3xl border-3 border-[#2b2520] bg-[#efe8db] p-5 sm:p-7 text-[#2b2520] shadow-retro-xl select-none ${className}`}
+      className={`relative z-30 w-full rounded-3xl border-3 border-[#2b2520] bg-[#f5ede0] p-5 sm:p-7 text-[#2b2520] shadow-retro-xl select-none ${className}`}
     >
       {/* 4 Mechanical Corner Rivets / Screws */}
       <span
@@ -161,7 +166,7 @@ export function SlotAnchor({
           }`}
         >
           {/* Lever Ball Knob */}
-          <div className="h-8 w-8 rounded-full border-2 border-[#2b2520] bg-[#ff5555] shadow-retro-xs" />
+          <div className="h-8 w-8 rounded-full border-2 border-[#2b2520] bg-[#ff5577] shadow-retro-xs" />
           {/* Lever Metallic Shaft */}
           <div className="h-16 w-3 rounded-b border-x-2 border-b-2 border-[#2b2520] bg-gradient-to-b from-[#e5decb] to-[#b8b0a2] shadow-inner" />
         </div>
@@ -171,18 +176,20 @@ export function SlotAnchor({
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-5">
+      <div className="flex flex-col items-center gap-4 sm:gap-5">
         {/* Machine Top Marquee / Status Header */}
         <div className="flex w-full items-center justify-between border-b-2 border-[#2b2520] pb-3 text-xs">
-          {/* Glowing LED Bulbs & Title */}
+          {/* Glowing LED Bulbs & Marquee Title */}
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 rounded-full border border-[#2b2520] bg-[#2b2520] px-2 py-0.5 shadow-inner">
-              <span className="h-2 w-2 rounded-full bg-[#ff5555] motion-safe:animate-pulse" />
+              <span className="h-2 w-2 rounded-full bg-[#ff5577] motion-safe:animate-pulse" />
               <span className="h-2 w-2 rounded-full bg-[#ffb800]" />
               <span className="h-2 w-2 rounded-full bg-[#10b981]" />
             </div>
-            <span className="font-mono font-black tracking-wider text-[#2b2520]">
-              DAEJEON RANDOM TRIP
+            <span className="font-mono font-black tracking-wider text-[#2b2520] flex items-center gap-1">
+              <span>🍀</span>
+              <span>DAEJEON RANDOM TRIP</span>
+              <span>🍀</span>
             </span>
           </div>
 
@@ -196,7 +203,7 @@ export function SlotAnchor({
         </div>
 
         {/* 3 Reel Windows (Recessed Arcade Display Bay) */}
-        <div className="relative grid w-full grid-cols-3 gap-2.5 sm:gap-4 rounded-2xl border-2 border-[#2b2520] bg-[#121720] p-3.5 sm:p-4 shadow-[inset_0_4px_12px_rgba(0,0,0,0.6)]">
+        <div className="relative grid w-full grid-cols-3 gap-2.5 sm:gap-4 rounded-2xl border-2 border-[#2b2520] bg-[#121722] p-3 sm:p-4 shadow-[inset_0_4px_12px_rgba(0,0,0,0.6)]">
           {[0, 1, 2].map((index) => {
             const isReelStopped = isResult || (isSpinning && stoppedReelCount > index);
             const targetReel = targetReelDisplay.reels[index];
@@ -229,11 +236,11 @@ export function SlotAnchor({
                     {/* Top and bottom shadow masks for 3D barrel depth */}
                     <div
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-[#121720] via-[#121720]/80 to-transparent z-10"
+                      className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-[#121722] via-[#121722]/80 to-transparent z-10"
                     />
                     <div
                       aria-hidden="true"
-                      className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#121720] via-[#121720]/80 to-transparent z-10"
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-[#121722] via-[#121722]/80 to-transparent z-10"
                     />
 
                     {/* Rolling symbols track */}
@@ -310,9 +317,9 @@ export function SlotAnchor({
             aria-busy={isSpinning}
             className={`w-full max-w-sm rounded-2xl py-3.5 sm:py-4 px-6 text-base sm:text-lg font-black tracking-wide transition-all ${
               isReady
-                ? 'border-2 border-[#2b2520] bg-[#ff5555] text-white shadow-retro hover:bg-[#ff3b3b] cursor-pointer active:translate-x-[2px] active:translate-y-[2px] active:shadow-retro-xs'
+                ? 'border-2 border-[#2b2520] bg-[#ff5577] text-white shadow-retro hover:bg-[#ff3e64] cursor-pointer active:translate-x-[2px] active:translate-y-[2px] active:shadow-retro-xs'
                 : isSpinning
-                ? 'border-2 border-[#2b2520] bg-[#ffa8a8] text-[#782424] cursor-wait motion-safe:animate-pulse shadow-none'
+                ? 'border-2 border-[#2b2520] bg-[#ffa8bc] text-[#782436] cursor-wait motion-safe:animate-pulse shadow-none'
                 : 'border-2 border-[#b8b0a2] bg-[#dcd5c7] text-[#8e8477] cursor-not-allowed shadow-none'
             }`}
           >
@@ -334,7 +341,7 @@ export function SlotAnchor({
         {/* Bottom Dispenser Slit (Visual connection to ResultSheet) */}
         <div
           aria-hidden="true"
-          className="w-32 h-1.5 rounded-full bg-[#2b2520]/20 -mb-2"
+          className="w-36 h-2 rounded-full bg-[#2b2520]/25 -mb-2 border border-[#2b2520]/40 shadow-inner"
         />
       </div>
     </section>
