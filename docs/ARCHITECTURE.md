@@ -8,167 +8,210 @@
 - **Linter**: ESLint 9
 - **Package Manager**: pnpm (tracked via `pnpm-workspace.yaml`, `packageManager`)
 - **Runtime Target**: Node.js (tracked via `.node-version`)
-- **Hosting Target**: Vercel (future)
-- **Persistence Target**: Supabase (future)
+- **Hosting Target**: Vercel
+- **Persistence Target**: Supabase (PostgreSQL)
 - **Telemetry**: Google Analytics 4 (GA4)
 
 ---
 
-## 2. Planned Module Responsibilities & Directory Blueprint
-
-The directory structure below reflects the planned architectural boundaries for the project:
+## 2. Directory Blueprint & Routing Architecture
 
 ```
 src/
-├── app/                  # Next.js App Router pages, layouts, and route handlers
-├── components/           # Reusable UI components (Slot, Layout, RouteView, RandomLog)
+├── app/
+│   ├── layout.tsx                # Global root layout, font tokens, metadata
+│   ├── page.tsx                  # Main Landing (IA: Left, Center Experience, Right)
+│   ├── guestbook/
+│   │   └── page.tsx              # Full Visitor Log community stream (read-only archive)
+│   ├── r/
+│   │   └── [shareCode]/
+│   │       └── page.tsx          # Dedicated shared route view (noindex)
+│   ├── pick/
+│   │   └── [slug]/
+│   │       └── page.tsx          # Today's Pick detail page
+│   └── api/                      # Route handlers for share snapshot & guestbook API boundaries
+│       ├── guestbook/
+│       │   └── route.ts          # Input validation, sanitization & DB insert
+│       └── share/
+│           └── route.ts          # Snapshot validation, shareCode generation & DB insert
+├── components/
+│   ├── experience/               # Core slot machine, setup, result modal, route guide
+│   │   ├── SetupArea.tsx         # Q1, Q2, and READY status
+│   │   ├── SlotAnchor.tsx        # Stationary slot chassis & animated reels
+│   │   ├── ResultModal.tsx       # Centered focus Result Card overlay
+│   │   └── RouteGuide.tsx        # In-app structured route breakdown
+│   ├── guestbook/                # Visitor log preview, composer, and full list
+│   │   ├── VisitorLogPreview.tsx # Right sidebar 3-item preview
+│   │   ├── GuestbookComposer.tsx # In-flow modal/section with Kkumssi family avatars (Result Card flow)
+│   │   └── GuestbookList.tsx     # /guestbook archive feed presentation
+│   ├── pick/                     # Today's Pick preview and detail views
+│   │   ├── TodaysPickWidget.tsx  # Right sidebar pixel preview with Kkumssi frame
+│   │   └── PickDetail.tsx        # /pick/[slug] photography view & CTA
+│   └── layout/                   # Global shell, sidebar widgets, retro header
+│       ├── Header.tsx            # Clean brand bar (top tabs eliminated)
+│       ├── SidebarLeft.tsx       # MY PROFILE, TODAY IS…, BGM PLAYING widgets
+│       └── SidebarRight.tsx      # TODAY’S PICK and VISITOR LOG containers
 ├── lib/
-│   ├── random/           # Controlled Random Travel engine & candidate matching logic
-│   ├── analytics/        # GA4 event tracking helpers and parameter sanitizers
-│   └── database/         # Data access layer & Supabase client wrapper (future)
-├── config/               # Modifiable product policies (reroll limits, options, weighting)
-├── data/                 # Seed data: Zones, route templates, candidate place data
-└── content/              # Static copy, descriptions, and user-facing text strings
-public/                   # Static media: pixel art, character illustrations, audio
+│   ├── random/                   # Controlled Random Travel engine, duration budgeting & template matching
+│   ├── database/                 # Supabase client wrapper & server data access layer
+│   └── analytics/                # GA4 event tracking helpers and parameter sanitizers
+├── config/                       # Modifiable policies, avatar definitions, duration budgets
+├── data/                         # Static seed data: picks.ts, places.ts, zones.ts, templates.ts
+└── content/                      # Static copy, descriptions, and user-facing strings
+public/                           # Static assets: pixel art, character illustrations, audio
 ```
 
 ---
 
-## 3. Conceptual Data Models & Recommendation Flow
+## 3. Data Tiering & Persistence Architecture
 
-### Data Models (Conceptual Contract)
-```typescript
-interface RouteResult {
-  id: string;
-  zoneId: string;
-  durationType: 'half' | 'full';
-  preference: 'anything' | 'food' | 'walk' | 'photo';
-  stops: RouteStop[];
-  mission?: string;
-  createdAt: string;
-}
-
-interface RouteStop {
-  order: number;
-  placeId: string;
-  name: string;
-  category: string;
-  durationMin: number;
-  travelMin: number;
-}
-
-interface PlaceCandidate {
-  id: string;
-  name: string;
-  category: string;
-  zoneId: string;
-  durationMin: number;
-  tags: string[];
-  address?: string;
-  mapUrl?: string;
-  image?: string;
-  description?: string;
-  active: boolean;
-  // soloFriendly?: boolean; // Future-only: companion preference is not part of MVP setup
-}
-```
-
-> **Important**: Route stop count is variable across templates and durations. It is completely independent of the visual reel count in the slot component. Do not make a 3-reel visual layout an architectural requirement of `RouteResult`.
-
-### Visual Reel Decoupling & Display Flow
-The product separates logical itinerary calculation from visual reel presentation through a visual adapter layer:
+The data architecture strictly separates ephemeral session computations from persistent community assets:
 
 ```
-RouteResult (variable stops) ──► Visual Adapter / Reel Display Model ──► Slot Presentation
+┌──────────────────────────────────────────────────────────────────────────┐
+│ STATIC DATA TIER (src/data/, src/config/)                                │
+│ - 7-Day Today's Pick (picks.ts) evaluated against Asia/Seoul             │
+│ - Place Candidates, Zones, and Route Templates                           │
+│ - Product Policies (Duration budgets, reroll limits, weights)            │
+├──────────────────────────────────────────────────────────────────────────┤
+│ CLIENT / ANONYMOUS SESSION TIER (sessionStorage / Browser Session)       │
+│ - Q1 Duration & Q2 Preference State                                      │
+│ - Active RouteResult (Variable 1–4 stops, duration calculation)          │
+│ - In-App Route Guide State                                               │
+│ - Reroll Reward State (locked → available → consumed)                    │
+│   (Maintained across tab refreshes during active session; no user login) │
+├──────────────────────────────────────────────────────────────────────────┤
+│ PERSISTENT DATABASE TIER (Supabase via Server/API Boundary)              │
+│ - guestbook_entries (Community logs + moderation status: visible/hidden) │
+│ - shared_routes (Immutable snapshots referenced by /r/[shareCode])       │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
+> **Formal Data Contract**: Detailed entity definitions and database schemas are formally specified in [`docs/DATA_MODEL.md`](./DATA_MODEL.md).
+
+---
+
+## 4. Sequence & Growth Loop Flows
+
+### 4.1 Core Conversion & Route Guide Flow
 ```mermaid
 sequenceDiagram
     autonumber
     actor User
-    participant UI as UI Layer (components)
-    participant Engine as Recommendation Engine (lib/random)
+    participant UI as Landing UI
+    participant Engine as lib/random (Engine)
     participant Adapter as Visual Reel Adapter
-    participant Slot as Slot Visuals & Output Slit
-    participant Overlay as Result Modal Overlay
+    participant Slot as Slot Visuals & Slit
+    participant Modal as Result Card Modal
+    participant Guide as In-App Route Guide
     
-    User->>UI: Selects Q1 (Duration) & Q2 (Preference)
-    UI->>Slot: Show idle/placeholder READY reels (no route data leaked)
-    User->>UI: Triggers Spin Action ("여행 뽑기!")
+    User->>UI: Select Q1 (Duration) & Q2 (Preference)
+    UI->>Slot: Show placeholder READY reels (no route data leaked)
+    User->>UI: Click "여행 뽑기!"
     UI->>Engine: generateRoute({ duration, preference })
-    Engine->>Engine: Match Zone -> Filter Candidates -> Apply Template -> Randomize & Validate
-    Engine-->>UI: Return validated RouteResult (variable stops)
-    UI->>Adapter: Map RouteResult to Reel Display Model
-    Adapter-->>UI: Formatted reel target frames
-    UI->>Slot: Start spin animation (Reel 1, 2, 3 sequential stops + final beat)
+    Engine->>Engine: Filter Places -> Match Template -> Validate Duration Budget
+    Engine-->>Adapter: Ephemeral RouteResult (variable stops)
+    Adapter-->>UI: Mapped 3-reel visual display data
+    UI->>Slot: Start reel spin → Reel 1 / Reel 2 / Reel 3 sequential stops → final beat
     Slot->>Slot: Trigger short ticket/paper peek cue at output slit
-    UI->>Overlay: Slight dim + subtle backdrop blur (300–500ms after peek cue is triggered)
-    Overlay-->>User: Display front-facing centered Result Card overlay
+    UI->>Modal: Slight dim + subtle blur (300–500ms after the peek cue is triggered)
+    Modal-->>User: Display centered Result Card (3 CTAs)
+    User->>Modal: Click Primary CTA ("이 코스로 가보기")
+    Modal->>Guide: Transition to In-App Route Guide
+    Guide-->>User: Display timeline, stay durations, transit times, and map links
+    User->>Guide: Click outbound place map link (place_map_click)
+```
+
+### 4.2 Participation & 1-Time Reroll Reward Flow
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Modal as Result Card
+    participant Comp as Visitor Log Composer
+    participant API as Server API (/api/guestbook)
+    participant DB as Supabase (guestbook_entries)
+    participant Session as Client Reroll State (sessionStorage)
+    participant Slot as Slot Machine
+
+    User->>Modal: Click "랜덤 로그 남기고 1회 더 뽑기"
+    Modal->>Comp: Open Composer (Avatar, Nickname, Message, Auto-attached Route)
+    User->>Comp: Select Kkumssi Avatar, enter Nickname & Message
+    Comp->>API: POST /api/guestbook (Payload)
+    API->>API: Server validation & content sanitization
+    API->>DB: INSERT guestbook_entries
+    DB-->>API: Insertion OK
+    API-->>Comp: Success Response (201 Created)
+    Comp->>Session: Unlock Reroll Reward (locked -> available)
+    Session-->>Slot: Update Spin Button to Active Reroll State
+    User->>Slot: Click Reroll Spin (route_reroll)
+    Slot->>Session: Mark Reroll Consumed (available -> consumed)
+    Slot->>Slot: Execute 2nd Spin (Final route generated)
+```
+
+### 4.3 Referral Share Loop
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    actor Friend
+    participant Modal as Result Card
+    participant API as Server API (/api/share)
+    participant DB as Supabase (shared_routes)
+    participant Share as Web Share / Clipboard
+    participant Page as /r/[shareCode] Page
+    participant Landing as Main Landing
+
+    User->>Modal: Click "내 루트 공유하기"
+    Modal->>API: POST /api/share (Route Snapshot)
+    API->>API: Validate Route Snapshot schema
+    API->>API: Generate unique shareCode (e.g., "F7k2Ma9Q")
+    API->>DB: INSERT shared_routes (id: UUID, share_code: "F7k2Ma9Q", snapshot)
+    DB-->>API: Insertion OK
+    API-->>Modal: Return share URL (/r/F7k2Ma9Q)
+    Modal->>Share: Trigger Web Share API (fallback: link copy)
+    Share-->>Friend: Friend receives URL https://domain/r/F7k2Ma9Q
+    Friend->>Page: Visit /r/[shareCode]
+    Page-->>Friend: Display shared route, stops, mission, and CTAs
+    Friend->>Page: Click Primary CTA ("나도 여행 뽑아보기")
+    Page->>Landing: Navigate to Main Landing (Referral Acquisition)
 ```
 
 ---
 
-## 4. Key Architectural Boundaries & Guardrails
+## 5. Key Architectural Boundaries & Guardrails
 
-### 1. Engine, Visual Adapter, and READY Reel Separation
-- The `lib/random` engine calculates the logical `RouteResult` via candidate filtering, random selection, template matching, and route validation independently of any UI animations (randomness can be seeded or injected for automated testing).
-- An adapter layer maps variable-stop `RouteResult` data into the visual reel display format consumed by the slot presentation.
+### 1. Engine, Visual Reel Adapter, and READY Reel Separation
+- The `lib/random` engine calculates the logical `RouteResult` independently of UI animations (randomness can be seeded or injected for automated testing).
+- A visual adapter layer maps variable-stop `RouteResult` data into the visual reel display format consumed by the slot presentation.
 - **READY State Guardrail**: Content displayed on reels in the READY state is presentation-only idle/placeholder content. It must **never** expose or leak the generated `RouteResult` before spin completion.
 - The UI reveals the detailed itinerary via a 2-stage presentation only after all reels stop and the final beat finishes: (1) a brief ticket/paper peek cue at the slot output slit, followed (300–500ms after the peek cue is triggered) by (2) the front-facing centered Result Card overlay against a lightly dimmed/blurred backdrop.
 
 ### 2. Spin Action vs. Visual Lever Mechanism
 - The fixed product behavior is the **Spin Action** (`“여행 뽑기!”`) and its corresponding state transition (`READY` → `SPIN` → `RESULT`).
 - The lever is strictly an engaging visual interaction / feedback mechanism.
-- The application must function reliably if:
-  - lever animation fails or is disabled,
-  - lever visual assets are changed,
-  - lever is removed entirely in a future skin.
+- The application must function reliably if lever animation fails, lever assets are changed, or the lever is removed in a future skin.
 - The lever must **never** become a separate required action, a blocking prerequisite, or a second primary CTA.
 
-### 3. Layout Stability & Result Presentation Boundary
-- The page follows a clear sectional hierarchy: `Setup Area` → `Slot Anchor` + `Result Overlay` (modal layer).
-- **Stationary Slot Anchor**: The Slot Anchor remains completely stationary across `Q1`, `Q2`, `READY`, `SPIN`, and `RESULT` states with zero layout shifting or vertical document pushdown.
-- **Centered Focus Overlay (No Long Receipt Pushdown)**: The long vertical paper receipt pushdown model is explicitly deprecated. The result is presented as a front-facing `Result Card` in a centered focus overlay with a subtle backdrop blur. The slot's output slit functions strictly as an interactive physical reveal cue rather than an in-flow expanding document container.
+### 3. Stationary Slot Anchor Boundary
+- The Slot Anchor remains **completely stationary** across all lifecycle states (`Q1`, `Q2`, `READY`, `SPIN`, `RESULT`, `ROUTE_GUIDE`).
+- No vertical translation, DOM pushing, or layout displacement occurs upon result generation.
+- The output slit serves strictly as a physical reveal cue (a brief peek animation).
 
-### 4. Visual Skin Boundary & Design Tokens
-- Visual v4 ("Korean Y2K Personal Web × Random Travel Toy") serves as the approved visual base for implementation, but is subject to ongoing styling and polish refinements. Structural and product logic must remain independent of its visual skin.
-- **Visual v4 Structure & Naming**:
-  - **Header / Brand**: `DAEJEON RANDOM TRIP`
-  - **Left Sidebar**: `DAEJEON GUIDE` (Dreamdori guide / world-building widget), `TRIP MIX` (music / ambient world-building widget), small memo/world-building content
-  - **Center Main Experience**: `Setup Area` (Q1 / Q2 / READY status) → `Slot Anchor` (Slot Machine / "여행 뽑기" hero) → `Result Overlay` (front-facing Result Card modal with output slit peek cue)
-  - **Right Sidebar**: `DAEJEON PICK` (featured Daejeon destination/spot content), `RANDOM LOG` (shared route / social-proof presentation)
-  - *Legacy Vocabulary to Avoid*: Do not use direct legacy terms (`Profile`, `BGM`, `Guestbook`, `Minihome`, `TODAY / TOTAL`). Neutral domain naming is preferred for application/backend models.
-- The following are presentation concerns and must remain cleanly replaceable:
-  - Color palettes and theme tokens
-  - Typography and font choices
-  - Borders, corner radii, and drop shadows
-  - Paper textures and background patterns
-  - Decorative stickers, tapes, stamps, and doodles
-  - Slot chassis exterior appearance
-  - Lever animation style and motion curves
-  - Reel spin easing and blur effects
-  - Decorative static illustrations
-- **Implementation Rules**:
-  - Prefer semantic design tokens (via Tailwind CSS utility classes and CSS variables) and independent assets.
-  - **Result Card DOM Architecture**: The Result Card body must be constructed in semantic React / DOM / CSS (never a monolithic image asset) to guarantee accessibility, responsiveness, dynamic typography, and crisp rendering.
-  - **No Glassmorphism**: The Result Card overlay must preserve the tactile retro / Korean Y2K / paper / arcade design language (solid borders, tactile shadows, retro paper textures, stamps, washi tape). Modern glassmorphism (heavy frosted glass, borderless translucency) is strictly prohibited. Backdrop blur is applied subtly and lightly (`backdrop-blur-sm` / slight dim) to the background landing page solely to focus visual attention on the Result Card.
-  - Do **not** implement full screens as sliced JPG/PNG images.
-  - Do **not** merge dynamic text, buttons, character illustrations, and UI panels into monolithic image assets.
+### 4. Result Card & Route Guide DOM Architecture
+- All modal dialogs (`Result Card`, `Guestbook Composer`) and views (`Route Guide`, `/guestbook`, `/r/[shareCode]`, `/pick/[slug]`) must be constructed in **semantic React / DOM / CSS**. Monolithic sliced image layouts are strictly prohibited.
+- **Glassmorphism Prohibition**: Modals and cards must retain the approved retro / Korean Y2K / paper / arcade aesthetic (solid borders, tactile shadows, retro paper textures, stamps, washi tape). Modern frosted glassmorphism is prohibited.
+- Backdrop blur is applied subtly and lightly (`backdrop-blur-sm` / slight dim) solely to direct visual focus.
 
 ### 5. Character Asset Boundary
-- Character illustrations (e.g., Dreamdori/Kkumdori) must remain **independent image assets/components**.
+- Character illustrations (e.g., Kkumdori / 꿈돌이 and Kkumssi Family) must remain **independent image assets/components**.
 - Do **not** bake character artwork directly into panel, slot chassis, or background wallpaper artwork.
-- The approved provided character PNG asset is the authoritative implementation source of truth (to be added to `public/` when the official asset package is integrated).
+- The approved character assets in `public/` are the authoritative source of truth.
 
-### 6. RANDOM LOG & Shared Route Boundary
-- `RANDOM LOG` implements the shared-route snapshot mechanism using neutral domain terminology (decoupled from legacy "guestbook" or feed architectures).
-- It is **not** a new feed product, operator-curated list, or automatic recommendation feed.
-- Route result generation must **not** automatically open the composer.
-- The composer opens / becomes active only when the user explicitly clicks the secondary CTA `“내 루트 공유하기”`.
-- Presentation of the composer is flexible across viewports and layouts (e.g., activating/focusing the composer on desktop or scrolling/opening on mobile; not hard-coded as a modal or drawer).
-- The user provides a nickname and short message; the active `RouteResult` snapshot is attached automatically upon submission.
-- **Analytics Event Contract**: `RANDOM LOG` is a user-facing visual/presentation rename of the existing shared-route / guestbook concept. This visual rename must **not** implicitly rename existing GA4 telemetry events (such as `guestbook_open`, `guestbook_submit`), which remain governed by `docs/ANALYTICS.md` and require a separate analytics decision to change.
-- Reactions/likes are out of scope for the MVP.
+### 6. Duration Budgeting & Recommendation Engine Guardrails
+- `src/lib/random` enforces duration budgets connected to Q1 choices (`half` vs. `full`).
+- Route total travel time is calculated conceptually as: `∑ (Place Stay Durations) + ∑ (Inter-stop Travel Times)` and presented in casual, human-readable strings (`“약 4시간”`).
+- Specific duration budget bounds are configurable in `src/config/` rather than hardcoded in engine logic; exact hour ranges will be calibrated once candidate place data is compiled.
 
 ### 7. Policy & Data Decoupling (No UI Hard-coding)
 - **Product Policies** live in `src/config/`:
@@ -176,30 +219,22 @@ sequenceDiagram
   - Available duration and preference choices
   - Zone eligibility rules
   - Special inclusion/weighting policies (e.g., Seongsimdang inclusion frequency)
+  - Avatar list and duration budget thresholds
 - **Places & Templates** live in `src/data/`.
 - UI components must strictly consume configs and props; business constants must not be embedded directly into React components.
 
-### 8. Analytics & Privacy Boundary
-- Telemetry helpers reside solely in `src/lib/analytics/`.
-- **Absolute Rule**: Do not explicitly collect or pass free-text fields (RANDOM LOG nicknames, messages), IP addresses, or personal information into GA4 custom event parameters or user properties.
+### 8. Persistence Layer & Server/API Access Boundary
+- Persistent data interactions (`guestbook_entries`, `shared_routes`) are strictly encapsulated behind Server/API route handlers (`/api/guestbook`, `/api/share`) and `src/lib/database/`.
+- UI components must **never** execute direct database writes or issue raw database queries.
+- Reward rerolls are unlocked only after verified server-side validation and database insert success.
 
-### 9. Persistence Layer (Supabase Future Boundary)
-- Data interactions (shared route snapshot entries, saved routes) will be encapsulated within `src/lib/database/`.
-- Components must never issue raw database queries directly; they interact through structured access functions.
+### 9. Today's Pick Static Boundary
+- Managed entirely in static data (`src/data/picks.ts`).
+- Evaluated against `Asia/Seoul` calendar date without dynamic server-side CMS dependencies.
+- Date-based Pixel Artwork and Kkumssi Family character combinations are modifiable across campaign days.
+- Primary CTA (`“이 분위기로 여행 뽑기”`) passes `recommendedPreference` to Landing Q2 state without guaranteeing fixed place inclusion.
 
----
-
-## 5. Dependency Flow
-```mermaid
-graph TD
-    App[src/app] --> Components[src/components]
-    Components --> Config[src/config]
-    Components --> Content[src/content]
-    Components --> RandomEngine[src/lib/random]
-    Components --> Analytics[src/lib/analytics]
-    Components --> DB[src/lib/database]
-    RandomEngine --> Config
-    RandomEngine --> Data[src/data]
-```
-- Core engine (`lib/random`) has zero dependency on React DOM or UI components.
-- No runtime LLM dependency is used or required for route generation.
+### 10. Analytics & Privacy Boundary
+- Telemetry helpers in `src/lib/analytics/` sanitize and enforce safe non-PII parameters.
+- Free-text strings (visitor nicknames, messages) and personal information (email, phone, demographics) are **never** transmitted to GA4.
+- The application database does not collect or store persistent user IP profiles (while allowing transient infrastructure metadata processing for security and rate limiting).
