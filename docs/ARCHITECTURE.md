@@ -89,19 +89,21 @@ sequenceDiagram
     participant UI as UI Layer (components)
     participant Engine as Recommendation Engine (lib/random)
     participant Adapter as Visual Reel Adapter
-    participant Reel as Slot Visuals (Reel Animation)
+    participant Slot as Slot Visuals & Output Slit
+    participant Overlay as Result Modal Overlay
     
     User->>UI: Selects Q1 (Duration) & Q2 (Preference)
-    UI->>Reel: Show idle/placeholder READY reels (no route data leaked)
+    UI->>Slot: Show idle/placeholder READY reels (no route data leaked)
     User->>UI: Triggers Spin Action ("여행 뽑기!")
     UI->>Engine: generateRoute({ duration, preference })
     Engine->>Engine: Match Zone -> Filter Candidates -> Apply Template -> Randomize & Validate
     Engine-->>UI: Return validated RouteResult (variable stops)
     UI->>Adapter: Map RouteResult to Reel Display Model
     Adapter-->>UI: Formatted reel target frames
-    UI->>Reel: Start spin animation towards target frames
-    Reel-->>UI: Spin animation complete
-    UI->>User: Display RouteResult inline below slot anchor
+    UI->>Slot: Start spin animation (Reel 1, 2, 3 sequential stops + final beat)
+    Slot->>Slot: Trigger short ticket/paper peek cue at output slit
+    UI->>Overlay: Slight dim + subtle backdrop blur (300–500ms after peek cue is triggered)
+    Overlay-->>User: Display front-facing centered Result Card overlay
 ```
 
 ---
@@ -112,7 +114,7 @@ sequenceDiagram
 - The `lib/random` engine calculates the logical `RouteResult` via candidate filtering, random selection, template matching, and route validation independently of any UI animations (randomness can be seeded or injected for automated testing).
 - An adapter layer maps variable-stop `RouteResult` data into the visual reel display format consumed by the slot presentation.
 - **READY State Guardrail**: Content displayed on reels in the READY state is presentation-only idle/placeholder content. It must **never** expose or leak the generated `RouteResult` before spin completion.
-- The UI reveals the detailed itinerary inline below the slot anchor only after the reels come to a full stop.
+- The UI reveals the detailed itinerary via a 2-stage presentation only after all reels stop and the final beat finishes: (1) a brief ticket/paper peek cue at the slot output slit, followed (300–500ms after the peek cue is triggered) by (2) the front-facing centered Result Card overlay against a lightly dimmed/blurred backdrop.
 
 ### 2. Spin Action vs. Visual Lever Mechanism
 - The fixed product behavior is the **Spin Action** (`“여행 뽑기!”`) and its corresponding state transition (`READY` → `SPIN` → `RESULT`).
@@ -123,17 +125,17 @@ sequenceDiagram
   - lever is removed entirely in a future skin.
 - The lever must **never** become a separate required action, a blocking prerequisite, or a second primary CTA.
 
-### 3. Layout Stability Boundary
-- The page follows a clear sectional hierarchy: `Setup Area` → `Slot Anchor` → `Result Area`.
-- **Slot Anchor Stability**: The Slot Anchor should remain visually stable across `Q1`, `Q2`, `READY`, `SPIN`, and `RESULT` states to minimize layout shift.
-- Layout stability is an architectural objective to prevent jarring visual jumps, not a requirement for rigid fixed-pixel coordinates.
+### 3. Layout Stability & Result Presentation Boundary
+- The page follows a clear sectional hierarchy: `Setup Area` → `Slot Anchor` + `Result Overlay` (modal layer).
+- **Stationary Slot Anchor**: The Slot Anchor remains completely stationary across `Q1`, `Q2`, `READY`, `SPIN`, and `RESULT` states with zero layout shifting or vertical document pushdown.
+- **Centered Focus Overlay (No Long Receipt Pushdown)**: The long vertical paper receipt pushdown model is explicitly deprecated. The result is presented as a front-facing `Result Card` in a centered focus overlay with a subtle backdrop blur. The slot's output slit functions strictly as an interactive physical reveal cue rather than an in-flow expanding document container.
 
 ### 4. Visual Skin Boundary & Design Tokens
 - Visual v4 ("Korean Y2K Personal Web × Random Travel Toy") serves as the approved visual base for implementation, but is subject to ongoing styling and polish refinements. Structural and product logic must remain independent of its visual skin.
 - **Visual v4 Structure & Naming**:
   - **Header / Brand**: `DAEJEON RANDOM TRIP`
   - **Left Sidebar**: `DAEJEON GUIDE` (Dreamdori guide / world-building widget), `TRIP MIX` (music / ambient world-building widget), small memo/world-building content
-  - **Center Main Experience**: `Setup Area` (Q1 / Q2 / READY status) → `Slot Anchor` (Slot Machine / "여행 뽑기" hero) → `Result Area` (inline generated route result)
+  - **Center Main Experience**: `Setup Area` (Q1 / Q2 / READY status) → `Slot Anchor` (Slot Machine / "여행 뽑기" hero) → `Result Overlay` (front-facing Result Card modal with output slit peek cue)
   - **Right Sidebar**: `DAEJEON PICK` (featured Daejeon destination/spot content), `RANDOM LOG` (shared route / social-proof presentation)
   - *Legacy Vocabulary to Avoid*: Do not use direct legacy terms (`Profile`, `BGM`, `Guestbook`, `Minihome`, `TODAY / TOTAL`). Neutral domain naming is preferred for application/backend models.
 - The following are presentation concerns and must remain cleanly replaceable:
@@ -148,6 +150,8 @@ sequenceDiagram
   - Decorative static illustrations
 - **Implementation Rules**:
   - Prefer semantic design tokens (via Tailwind CSS utility classes and CSS variables) and independent assets.
+  - **Result Card DOM Architecture**: The Result Card body must be constructed in semantic React / DOM / CSS (never a monolithic image asset) to guarantee accessibility, responsiveness, dynamic typography, and crisp rendering.
+  - **No Glassmorphism**: The Result Card overlay must preserve the tactile retro / Korean Y2K / paper / arcade design language (solid borders, tactile shadows, retro paper textures, stamps, washi tape). Modern glassmorphism (heavy frosted glass, borderless translucency) is strictly prohibited. Backdrop blur is applied subtly and lightly (`backdrop-blur-sm` / slight dim) to the background landing page solely to focus visual attention on the Result Card.
   - Do **not** implement full screens as sliced JPG/PNG images.
   - Do **not** merge dynamic text, buttons, character illustrations, and UI panels into monolithic image assets.
 

@@ -60,11 +60,22 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ---
 
-### ADR-008: CTA Hierarchy, Layout Anchor, and Inline Result Presentation
-- **Status**: **Tentative**
-- **Decision**: Primary CTA is `“이 코스로 가보기”`, Secondary is `“내 루트 공유하기”`, Tertiary is `“다시 뽑기”`. Layout follows `Setup Area` → `Slot Anchor` → `Result Area`. The Slot Anchor remains visually stable across states, and results unfold inline below the anchor rather than inside a blocking modal.
-- **Why**: Directs users toward the main conversion action while minimizing layout shift and eliminating modal trap frustration.
-- **Revisit when**: Stakeholder reviews or A/B testing show modal layouts or alternate CTA copy yield higher engagement.
+### ADR-008: CTA Hierarchy and Centered Focus Result Card Overlay (Superseding Inline Result Sheet)
+- **Status**: **Fixed**
+- **Decision**: The inline long vertical receipt/paper pushdown model is explicitly deprecated. Result presentation adopts a 2-stage reveal flow:
+  1. **Physical Peek Cue**: When sequential reel spin finishes (Reel 1 → Reel 2 → Reel 3 → short final beat), a short ticket/paper peek animation emerges from the slot output slit as a tactile dispensing cue. The slot machine itself remains completely stationary.
+  2. **Centered Focus Overlay**: 300–500ms after the peek cue is triggered, the landing page receives a slight dim and subtle backdrop blur, and the front-facing **Result Card** (modal overlay) appears centered in the viewport.
+  - **Result Card Contents**: Route title (e.g., `“오늘은 대흥동 먹방 코스!”`), STOP 1~4 details, and optional mission memo.
+  - **CTA Hierarchy**:
+    - **Primary CTA**: `“이 코스로 가보기”` (Map / Navigation link — primary proxy conversion).
+    - **Secondary CTA**: `“내 루트 공유하기”` (Opens RANDOM LOG note composer).
+    - **Tertiary CTA**: `“다시 뽑기”` (Reroll).
+  - **Visual & Engineering Guardrails**:
+    - Result Card body must be constructed in semantic React / DOM / CSS (never an image asset).
+    - **No Glassmorphism**: Preserves the tactile retro / Korean Y2K / paper / arcade aesthetic (solid borders, tactile shadows, retro paper textures, stamps, washi tape). Modern translucent frosted glassmorphism is strictly prohibited.
+    - Backdrop blur is applied subtly and lightly to the background page solely to focus visual attention on the Result Card.
+- **Why**: Long vertical receipt extrusion pushed the slot machine out of the viewport, created awkward scroll jumps, and degraded mobile usability. The centered focus overlay brings immediate, crisp legibility to the generated itinerary and high-intent CTAs. The output slit peek cue retains the physical "ticket dispensing" metaphor without in-flow document expansion.
+- **Revisit when**: Post-launch campaign analytics or A/B testing suggest refinements to overlay dismissal/docking behavior or revised CTA copy.
 
 ---
 
@@ -94,6 +105,6 @@ This document tracks fundamental product and architectural decisions for the Dae
 
 ### ADR-012: Approved Visual v4 Base & Visual Skin / Asset Boundaries
 - **Status**: **Tentative (Approved Visual Base)**
-- **Decision**: Adopt Visual v4 ("Korean Y2K Personal Web × Random Travel Toy" structure: Header `DAEJEON RANDOM TRIP`, Left Sidebar `DAEJEON GUIDE` / `TRIP MIX`, Center `Setup Area` → `Slot Anchor` → `Result Area`, Right Sidebar `DAEJEON PICK` / `RANDOM LOG`) as the approved visual base for implementation. Visual skin styling (colors, typography, borders, shadows, paper textures, stickers, slot chassis, reel easing) must remain decoupled via semantic tokens. Direct legacy vocabulary (`Profile`, `BGM`, `Guestbook`, `Minihome`, `TODAY / TOTAL`) is explicitly avoided. Dreamdori/Kkumdori must remain an independent image asset/component (using the approved provided PNG as truth, to be integrated into `public/` when the asset package is added). Full-screen image slicing is prohibited.
+- **Decision**: Adopt Visual v4 ("Korean Y2K Personal Web × Random Travel Toy" structure: Header `DAEJEON RANDOM TRIP`, Left Sidebar `DAEJEON GUIDE` / `TRIP MIX`, Center `Setup Area` → `Slot Anchor` → `Result Overlay`, Right Sidebar `DAEJEON PICK` / `RANDOM LOG`) as the approved visual base for implementation. Visual skin styling (colors, typography, borders, shadows, paper textures, stickers, slot chassis, reel easing) must remain decoupled via semantic tokens. Direct legacy vocabulary (`Profile`, `BGM`, `Guestbook`, `Minihome`, `TODAY / TOTAL`) is explicitly avoided. Dreamdori/Kkumdori must remain an independent image asset/component (using the approved provided PNG as truth, to be integrated into `public/` when the asset package is added). Full-screen image slicing is prohibited.
 - **Why**: Allows continuous visual polish and responsive adaptations without tangling presentation details with underlying route engine logic, accessibility, or asset licensing.
 - **Revisit when**: Design team delivers future theme skins or asset updates.
