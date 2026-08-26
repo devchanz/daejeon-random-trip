@@ -32,7 +32,7 @@ flowchart TD
 | `setup_complete` | All required preferences answered, transition to READY | `duration_type`, `preference_type` |
 | `slot_start` | Slot machine spin animation starts | `duration_type`, `preference_type` |
 | `route_generated` | Recommendation engine produces a route result | `route_id`, `zone_id`, `stop_count` |
-| `route_view` | Visual reels stop and route itinerary is displayed inline | `route_id`, `zone_id`, `duration_type`, `preference_type` |
+| `route_view` | Result Card overlay is displayed and becomes visible to the user | `route_id`, `zone_id`, `duration_type`, `preference_type` |
 | `route_map_click` | **Primary Proxy Conversion**: User clicks `“이 코스로 가보기”` (Map / Navigation link) | `route_id`, `zone_id`, `reroll_count` |
 | `route_share_click` | User clicks `“내 루트 공유하기”` | `route_id`, `share_method` (`link_copy`, `kakao`, `system_share`, etc.) |
 | `route_reroll` | User clicks `“다시 뽑기”` | `route_id`, `reroll_count` |

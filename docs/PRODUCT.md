@@ -38,26 +38,30 @@ flowchart LR
 - **Current Naming & Layout Structure (v4)**:
   - **Header / Brand**: `DAEJEON RANDOM TRIP`
   - **Left Sidebar**: `DAEJEON GUIDE` (Dreamdori guide / world-building widget), `TRIP MIX` (music / ambient world-building widget), small memo/world-building content
-  - **Center Main Experience**: `Setup Area` (Q1 / Q2 / READY status) → `Slot Anchor` (Slot Machine / "여행 뽑기" hero) → `Result Area` (inline generated route result)
+  - **Center Main Experience**: `Setup Area` (Q1 / Q2 / READY status) → `Slot Anchor` (Slot Machine / "여행 뽑기" hero) → `Result Overlay` (centered focus Result Card modal with output slit peek cue)
   - **Right Sidebar**: `DAEJEON PICK` (featured Daejeon destination/spot content), `RANDOM LOG` (shared route / social-proof presentation)
   - *Naming Guidance*: Neutral domain terminology is preferred for architectural and data models. Avoid direct legacy vocabulary (`Profile`, `BGM`, `Guestbook`, `Minihome`, `TODAY / TOTAL`).
   - *Analytics Contract*: `RANDOM LOG` is a user-facing visual/presentation rename of the existing shared-route / guestbook concept. This visual rename does not change existing GA4 telemetry event names (e.g., `guestbook_open`, `guestbook_submit`), which remain governed by `docs/ANALYTICS.md`.
 
-### Setup & Interaction Flow (Tentative)
+### Setup & Interaction Flow
 1. **Q1 (Duration)**: Local travel time in Daejeon (`Half Day` / `Full Day` — representing local time in Daejeon, not origin travel time).
 2. **Q2 (Preference)**: Travel preference (`Anything` / `Food` / `Walk` / `Photo`).
 3. **READY**: Transition into spin-ready state with placeholder idle reels. Primary Spin Action: `“여행 뽑기!”`.
-4. **SLOT SPIN**: Visual reel animation matching the selected criteria. The lever serves as an optional visual interaction/feedback mechanism; the spin action and state transition remain fully functional regardless of lever presence or animation state.
-5. **RESULT**: Appears **inline below the slot anchor** once reels finish spinning.
-6. **CTA Hierarchy**:
-   - **Primary**: `“이 코스로 가보기”` (Start / Map / Go with this course — high-intent proxy)
-   - **Secondary**: `“내 루트 공유하기”` (Share my route — opens RANDOM LOG note composer)
-   - **Tertiary**: `“다시 뽑기”` (Reroll)
+4. **SLOT SPIN**: Visual reel animation matching the selected criteria (sequential reel stop: Reel 1 → Reel 2 → Reel 3 → short final beat). The lever serves as an optional visual interaction/feedback mechanism; the spin action and state transition remain fully functional regardless of lever presence or animation state.
+5. **PEEK CUE & RESULT REVEAL**:
+   - **Physical Peek Cue**: Immediately following the final beat after Reel 3 stops, a short ticket/paper peek animation appears at the slot output slit as a physical dispensing affordance. (The slot machine itself remains completely stationary).
+   - **Centered Focus Overlay**: 300–500ms after the peek cue is triggered, the background landing page is slightly dimmed with a subtle backdrop blur, and the front-facing **Result Card** appears in the center of the viewport.
+6. **Result Card Content & CTA Hierarchy**:
+   - **Content**: Route title (e.g., `“오늘은 대흥동 먹방 코스!”`), STOP 1~4 details, and optional mission memo.
+   - **Primary CTA**: `“이 코스로 가보기”` (Start / Map / Go with this course — high-intent proxy conversion).
+   - **Secondary CTA**: `“내 루트 공유하기”` (Share my route — opens RANDOM LOG note composer).
+   - **Tertiary CTA**: `“다시 뽑기”` (Reroll).
 
 ### Layout Concept & Visual Stability
-- **Layout Concept**: `Setup Area` → `Slot Anchor` → `Result Area`
-- **Slot Stability**: The Slot Anchor remains visually stable across Q1, Q2, READY, SPIN, and RESULT states to minimize layout shift (without imposing rigid pixel-coordinate constraints).
-- **Inline Presentation**: The result unfolds inline below the slot rather than locking the screen with a permanent blocking modal.
+- **Layout Concept**: `Setup Area` → `Slot Anchor` + `Result Overlay` (centered modal layer).
+- **Slot Stability**: The Slot Anchor remains completely stationary across Q1, Q2, READY, SPIN, and RESULT states with zero layout shifting or vertical document pushdown.
+- **Centered Focus Overlay Contract**: Replaces the deprecated long inline paper receipt. The result is presented as a front-facing Result Card in a centered focus overlay with a lightweight backdrop blur, directing user attention immediately to the itinerary and conversion CTAs without pushing page content or causing disruptive scrolling jumps.
+- **Tactile Visual Language**: Result Card is constructed in semantic React / DOM / CSS (never an image asset) adhering strictly to the retro / Korean Y2K / paper / arcade aesthetic (solid borders, tactile shadows, paper textures, stamps, washi tape). Modern glassmorphism (heavy frosted glass, borderless translucency) is strictly prohibited. Backdrop blur is applied subtly and lightly to the background page solely to focus visual hierarchy.
 
 ### RANDOM LOG (Shared Route Stream)
 - **Concept**: RANDOM LOG is the existing shared-route note concept presented through the v4 visual language, **not** a new feed product, operator-curated feed, or automatic recommendation feed.
@@ -79,7 +83,8 @@ flowchart LR
 - Controlled random route generation engine (candidate filtering, random selection, template matching, route validation).
 - Interactive slot machine reel animation with variable-stop adapter and placeholder READY reels.
 - Primary spin action (`“여행 뽑기!”`) with optional visual lever feedback.
-- Dynamic route display with stop details and mission, mounting inline below the slot.
+- Physical output slit peek cue emerging from the slot after spin completion.
+- Dynamic route display with route title, stop details (1~4), mission, and 3 CTAs presented in a front-facing centered Result Card overlay over a lightly dimmed/blurred backdrop.
 - RANDOM LOG shared-route notes (nickname + short message + auto-attached route snapshot; no user signup).
 - GA4 event tracking and campaign parameter collection.
 - Primary proxy conversion CTA linking out to navigation/maps.
@@ -89,7 +94,9 @@ flowchart LR
 - User account creation, authentication, or profile management.
 - Direct physical GPS check-in or visit verification.
 - Citywide comprehensive tourism database (initial focus limited to key clusters).
-- Whole-screen image slicing (UI elements, text, buttons, and characters must remain semantic DOM/code and independent modular assets).
+- Whole-screen image slicing (UI elements, text, buttons, and Result Card body must remain semantic DOM/code and independent modular assets; image-based result body is prohibited).
+- Long vertical receipt / long paper pushdown layout (deprecated in favor of output slit peek cue + centered Result Card overlay).
+- Modern glassmorphism styling on result card / modal (prohibited; tactile retro/paper/arcade visual language is mandatory).
 - Manual route transcription in RANDOM LOG (must be automated via snapshot).
 - Operator-curated feeds, automatic recommendation feeds, or like/reaction counters in RANDOM LOG.
 
