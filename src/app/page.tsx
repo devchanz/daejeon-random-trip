@@ -4,8 +4,21 @@ import { Footer } from '../components/layout/Footer';
 import { LeftSidebar } from '../components/sidebar/LeftSidebar';
 import { RightSidebar } from '../components/sidebar/RightSidebar';
 import { MainExperience } from '../components/experience';
+import {
+  DEMO_ZONES,
+  DEMO_CANDIDATES,
+  DEMO_INITIAL_STATE,
+} from '../lib/demo/fixture';
 
-export default function Home() {
+interface HomePageProps {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export default async function Home({ searchParams }: HomePageProps) {
+  const resolvedParams = searchParams ? await searchParams : undefined;
+  const isDemo =
+    resolvedParams?.demo === '1' || resolvedParams?.demo === 'true';
+
   return (
     <div className="flex min-h-screen flex-col bg-retro-dots text-[#2b2520]">
       {/* 1. Visual V4 Header */}
@@ -21,7 +34,11 @@ export default function Home() {
 
           {/* Center Column: Hero Main Experience (Setup -> Slot -> Result) */}
           <main className="order-1 flex w-full flex-col items-center lg:order-2 lg:col-span-6">
-            <MainExperience />
+            <MainExperience
+              zones={isDemo ? DEMO_ZONES : []}
+              candidates={isDemo ? DEMO_CANDIDATES : []}
+              initialState={isDemo ? DEMO_INITIAL_STATE : undefined}
+            />
           </main>
 
           {/* Right Sidebar: DAEJEON PICK, RANDOM LOG */}
