@@ -1,124 +1,201 @@
 # Product Contract: Daejeon Random Trip
 
-## 1. Mission & Objective
+## 1. Mission & Product Positioning
 - **Mission**: Help move people to Daejeon through a real performance-marketing campaign.
-- **Project Scope**: A lightweight MVP to deploy a live landing page, acquire real marketing traffic, measure user behavior with GA4, and analyze campaign conversion.
-- **Core Value Proposition**: Reduce travel-planning friction by offering **Controlled Random Travel** that generates coherent short-trip routes within Daejeon (local itinerary for time spent in Daejeon).
+- **Core Message**: **“계획하지 말고, 대전에서 여행을 뽑아보자.”** (Don't plan, draw a trip in Daejeon!)
+- **Service Identity**: This product is **not** a general tourism portal, restaurant ranking directory, or travel scrapbook ("내 보관함"). It avoids shifting the burden of planning back onto the user.
+- **Four Value Pillars**: Every feature must contribute to at least one of the following:
+  1. **Spin Conversion**: Quick progression through Q1/Q2 into slot spin.
+  2. **Real Travel Intent**: Guiding the user from a coherent route result to tangible travel actions via Route Guide and map links.
+  3. **Participation & Social Proof**: Lowering psychological barriers via Visitor Logs and rewarding participation with a 1-time reroll unlock.
+  4. **Referral Acquisition**: Organic virality through immutable route snapshots shared directly with friends (`/r/[shareCode]`).
 
 ---
 
-## 2. Problem Statement (Synthesized Framing)
-**Synthesized Problem Hypothesis**:
+## 2. Problem Statement & Mechanism
+
+### Problem Framing
 Potential visitors often experience decision fatigue when planning short trips—sorting through numerous recommendations, coordinating schedules, and assembling individual stops into a coherent route. The product hypothesis is that providing a low-friction, curated random route generator reduces planning hesitation and encourages spontaneous local exploration in Daejeon.
 
----
-
-## 3. Product Mechanism: Controlled Random Travel
-This product does not generate pure, unconstrained random noise. Instead, it follows a structured recommendation flow:
-
+### Product Mechanism: Controlled Random Travel
 ```mermaid
 flowchart LR
-    A[User Preference] --> B[Zone Selection]
+    A[User Preference: Duration + Vibe] --> B[Zone Selection]
     B --> C[Zone Candidate Filtering]
-    C --> D[Route Template Selection]
+    C --> D[Route Template Selection & Budgeting]
     D --> E[Place Selection & Randomization]
     E --> F[Coherent Route Result]
 ```
 
-- **Zone**: A walkable/travelable neighborhood or tourism cluster (initial focus centered around Daejeon Station / old downtown).
-- **Engine vs. UI**: The **Recommendation Engine** handles filtering, random selection, template matching, and route validation. The **Slot Machine** is solely an engaging visual interaction layer.
-- **Flexible Stops**: Route stop count is flexible across templates rather than hard-coded to a fixed number.
+- **Zone**: Walkable/travelable neighborhood cluster (initial focus centered around Daejeon Station / old downtown: Eunhaeng-dong & Daeheung-dong).
+- **Engine vs. UI**: The **Recommendation Engine** (`src/lib/random`) handles candidate filtering, random selection, duration budgeting, template matching, and route validation. The **Slot Machine** is solely an animated visual interaction layer.
+- **Flexible Stops**: Route stop count (1–4 stops) is dynamically governed by route templates rather than hard-coded to a fixed reel count.
 
 ---
 
-## 4. Current UX & Visual Direction (Visual v4 Base)
+## 3. Four Core Growth Loops
 
-### Visual Identity Base
-- **Visual Direction**: "Korean Y2K Personal Web × Random Travel Toy" — an approved visual implementation base (subject to styling and polish refinements; structural product logic remains independent from visual skinning).
-- **Current Naming & Layout Structure (v4)**:
-  - **Header / Brand**: `DAEJEON RANDOM TRIP`
-  - **Left Sidebar**: `DAEJEON GUIDE` (Dreamdori guide / world-building widget), `TRIP MIX` (music / ambient world-building widget), small memo/world-building content
-  - **Center Main Experience**: `Setup Area` (Q1 / Q2 / READY status) → `Slot Anchor` (Slot Machine / "여행 뽑기" hero) → `Result Overlay` (centered focus Result Card modal with output slit peek cue)
-  - **Right Sidebar**: `DAEJEON PICK` (featured Daejeon destination/spot content), `RANDOM LOG` (shared route / social-proof presentation)
-  - *Naming Guidance*: Neutral domain terminology is preferred for architectural and data models. Avoid direct legacy vocabulary (`Profile`, `BGM`, `Guestbook`, `Minihome`, `TODAY / TOTAL`).
-  - *Analytics Contract*: `RANDOM LOG` is a user-facing visual/presentation rename of the existing shared-route / guestbook concept. This visual rename does not change existing GA4 telemetry event names (e.g., `guestbook_open`, `guestbook_submit`), which remain governed by `docs/ANALYTICS.md`.
+```
+1. CORE CONVERSION LOOP
+   Landing (Q1/Q2) ──► Slot Spin ──► Result Card ──► Route Guide ──► Outbound Map Action
 
-### Setup & Interaction Flow
-1. **Q1 (Duration)**: Local travel time in Daejeon (`Half Day` / `Full Day` — representing local time in Daejeon, not origin travel time).
-2. **Q2 (Preference)**: Travel preference (`Anything` / `Food` / `Walk` / `Photo`).
-3. **READY**: Transition into spin-ready state with placeholder idle reels. Primary Spin Action: `“여행 뽑기!”`.
-4. **SLOT SPIN**: Visual reel animation matching the selected criteria (sequential reel stop: Reel 1 → Reel 2 → Reel 3 → short final beat). The lever serves as an optional visual interaction/feedback mechanism; the spin action and state transition remain fully functional regardless of lever presence or animation state.
+2. PARTICIPATION & REWARD LOOP
+   Result Card ──► Visitor Log Composer ──► Server Validation & DB Save ──► Reroll Unlocked ──► Second Spin
+
+3. REFERRAL LOOP
+   Result Card ──► Share Route ──► /r/[shareCode] ──► Friend Reads ──► "나도 여행 뽑아보기" ──► New Landing User
+
+4. CONTENT-TO-SPARK LOOP
+   Landing Today's Pick ──► /pick/[slug] ──► "이 분위기로 여행 뽑기" ──► Q2 Preference Pre-seeded ──► Slot Spin
+```
+
+---
+
+## 4. Main Landing Information Architecture (IA)
+
+### Layout Overview (Visual v4 Base)
+- **Top Navigation Elimination**: Legacy top navigation/tabs (`여행 뽑기`, `가이드`, `맛집 리스트`, `내 보관함`) are **deleted**. Eliminating tabs recovers vertical space, allowing the `Setup Area` and `Slot Anchor` to sit prominently in the initial viewport.
+- **Section Roles**:
+  - **LEFT SIDEBAR (World-building & Retro Y2K Widgets)**:
+    - `MY PROFILE`: Kkumdori (꿈돌이) character identity & world-building note.
+    - `TODAY IS…`: Playful daily mood memo.
+    - `BGM PLAYING`: Retro web player widget (purely ambient; no standalone subpage).
+  - **CENTER (Core Conversion Engine)**:
+    - `Setup Area` (Q1 Duration → Q2 Preference → READY state).
+    - `Slot Anchor` (Stationary slot machine hero & reel animation).
+    - `Result Overlay` (Front-facing centered Result Card modal triggered post-spin).
+    - `Route Guide` (In-app itinerary breakdown viewed upon clicking `“이 코스로 가보기”`).
+  - **RIGHT SIDEBAR (Content Discovery & Social Proof)**:
+    - `TODAY’S PICK`: 7-day rotating curated spot preview with pixel artwork & Kkumssi family frame.
+    - `VISITOR LOG`: Preview showing the latest ~3 visible Visitor Log entries with a link to `/guestbook`.
+
+---
+
+## 5. Interaction & Experience Contracts
+
+### 5.1 Spin & Result Reveal Sequence
+1. **Q1 (Duration)**: Local Daejeon travel time (`Half Day` / `Full Day` — time spent in Daejeon).
+2. **Q2 (Preference)**: Travel vibe (`Anything` / `Food` / `Walk` / `Photo`).
+3. **READY**: Idle placeholder reels; primary CTA activates `“여행 뽑기!”`.
+4. **SPINNING**: Reels roll concurrently; sequential stop (`Reel 1` → `Reel 2` → `Reel 3` → short final beat).
 5. **PEEK CUE & RESULT REVEAL**:
-   - **Physical Peek Cue**: Immediately following the final beat after Reel 3 stops, a short ticket/paper peek animation appears at the slot output slit as a physical dispensing affordance. (The slot machine itself remains completely stationary).
+   - **Physical Peek Cue**: Immediately following the final beat after Reel 3 stops, a short ticket/paper peek animation appears at the stationary slot output slit as a physical dispensing affordance.
    - **Centered Focus Overlay**: 300–500ms after the peek cue is triggered, the background landing page is slightly dimmed with a subtle backdrop blur, and the front-facing **Result Card** appears in the center of the viewport.
-6. **Result Card Content & CTA Hierarchy**:
-   - **Content**: Route title (e.g., `“오늘은 대흥동 먹방 코스!”`), STOP 1~4 details, and optional mission memo.
-   - **Primary CTA**: `“이 코스로 가보기”` (Start / Map / Go with this course — high-intent proxy conversion).
-   - **Secondary CTA**: `“내 루트 공유하기”` (Share my route — opens RANDOM LOG note composer).
-   - **Tertiary CTA**: `“다시 뽑기”` (Reroll).
 
-### Layout Concept & Visual Stability
-- **Layout Concept**: `Setup Area` → `Slot Anchor` + `Result Overlay` (centered modal layer).
-- **Slot Stability**: The Slot Anchor remains completely stationary across Q1, Q2, READY, SPIN, and RESULT states with zero layout shifting or vertical document pushdown.
-- **Centered Focus Overlay Contract**: Replaces the deprecated long inline paper receipt. The result is presented as a front-facing Result Card in a centered focus overlay with a lightweight backdrop blur, directing user attention immediately to the itinerary and conversion CTAs without pushing page content or causing disruptive scrolling jumps.
-- **Tactile Visual Language**: Result Card is constructed in semantic React / DOM / CSS (never an image asset) adhering strictly to the retro / Korean Y2K / paper / arcade aesthetic (solid borders, tactile shadows, paper textures, stamps, washi tape). Modern glassmorphism (heavy frosted glass, borderless translucency) is strictly prohibited. Backdrop blur is applied subtly and lightly to the background page solely to focus visual hierarchy.
+### 5.2 Result Card Action Hierarchy
+The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 코스!”`), STOP 1~4 details, and optional mission. It offers three distinct action paths:
 
-### RANDOM LOG (Shared Route Stream)
-- **Concept**: RANDOM LOG is the existing shared-route note concept presented through the v4 visual language, **not** a new feed product, operator-curated feed, or automatic recommendation feed.
-- **Submission Flow**:
-  1. User views generated Route Result.
-  2. User clicks `“내 루트 공유하기”` (result generation does **not** automatically open the composer).
-  3. Note composer opens / becomes active (presentation depends on viewport/layout, e.g. activating/focusing the composer on desktop or scrolling/opening on mobile; not hard-coded as a modal or drawer).
-  4. User enters nickname + short message.
-  5. Current `RouteResult` snapshot is automatically attached.
-  6. On submit, the shared route card + message appears in the `RANDOM LOG` list.
-- **Feature Scope & Analytics**: GA4 telemetry event names (such as `guestbook_open`, `guestbook_submit`) remain governed by `docs/ANALYTICS.md`. Reactions/likes are explicitly out of MVP scope.
+1. **Conversion (Primary)**: `“이 코스로 가보기”`
+   - Transitions directly to the in-app **Route Guide** for structured itinerary guidance.
+2. **Referral (Secondary)**: `“내 루트 공유하기”`
+   - Generates an immutable snapshot in `shared_routes`, generates a short lookup code (`/r/[shareCode]`), and triggers Web Share API (with clipboard copy fallback).
+3. **Participation / Reward (Tertiary)**: `“랜덤 로그 남기고 1회 더 뽑기”`
+   - Opens the Visitor Log composer in-flow. Upon successful server validation and DB save, unlocks 1 reward reroll.
 
 ---
 
-## 5. Scope Boundaries
+## 6. Feature Specifications
+
+### 6.1 In-App Route Guide
+- **Concept**: Rather than immediately tossing users out to an external map, clicking `“이 코스로 가보기”` opens the in-app Route Guide to provide structured route context.
+- **Route Guide Content**:
+  - Route title & stop count summary.
+  - **Total Estimated Travel Time**: Formatted casually (e.g., `“약 4시간”`, `“약 5시간 30분”`), calculated conceptually as: `∑ (Place Stay Durations) + ∑ (Inter-stop Travel Times)`.
+  - **Duration Budget Enforcement**: The recommendation engine validates duration bounds (`half_day` vs. `full_day` budgets configured in policy files) to maintain realistic travel times.
+  - **STOP 1–4 Timeline**: Place name, category, estimated stay time, inter-stop transit mode & time, playful tips/cautions, and individual outbound map links (`mapLinks` for Naver / Kakao Map).
+- **Explicit Exclusions**: Embedded map SDKs, real-time GPS turn-by-turn navigation, real-time wait times, and place-swapping customization are omitted to prevent decision fatigue.
+
+### 6.2 Guestbook / Visitor Log & 1-Time Reroll Reward
+- **Visitor Log Role**: Delivers social proof and incentivizes participation.
+- **Composer UX**: Opens exclusively within the Result Card flow (`“랜덤 로그 남기고 1회 더 뽑기”`). `/guestbook` serves as the dedicated social proof archive and full log stream (read-only archive, no standalone composer on `/guestbook`).
+- **Input Fields & Constraints**:
+  - **Avatar**: Selectable Kkumssi Family avatar (mandatory; shared asset IDs across preview and `/guestbook`).
+  - **Nickname**: 2–12 characters (sanitized).
+  - **Message**: Max 50 characters (one-liner, sanitized).
+  - **Route Info**: Automatically attached route reference metadata from active `RouteResult` (`route_id`, `zone_id`, `duration_type`, `preference_type`).
+  - **PII Prohibition**: No phone, email, age, or gender fields.
+- **Reroll Reward Lifecycle**:
+  - Replaces the deprecated "1 free reroll for everyone" policy.
+  - Lifecycle: `locked` → `available` → `consumed`.
+  - **Unlock Rule**: Unlocks **only** after server validation and successful DB insertion into `guestbook_entries`.
+  - **Cap & Persistence**: Maximum 1 reward reroll per travel session, backed by browser `sessionStorage`. Additional guestbook submissions never grant additional rerolls.
+
+### 6.3 Referral Share & Shared Route Page (`/r/[shareCode]`)
+- **Referral Mechanism**:
+  - Generates an immutable snapshot in `shared_routes` via server API and yields a clean URL (e.g., `https://domain/r/F7k2Ma9Q`). Full route data is **never** serialized into URL query strings.
+  - Repeated share clicks on the same result reuse the generated `shareCode`.
+  - Sharing invokes native `navigator.share` (Web Share API) where supported, falling back to clipboard link copying. Kakao SDK / Login is omitted.
+- **Shared Route View (`/r/[shareCode]`)**:
+  - Standalone dedicated view optimized for friends receiving a route.
+  - Header hook: `“누군가 대전 여행을 보냈어요!”` + Route Title + STOP sequence + Mission.
+  - **Primary CTA**: `“나도 여행 뽑아보기”` (Redirects to Main Landing to acquire new user).
+  - **Secondary CTA**: `“이 코스 그대로 가보기”` (Opens Route Guide).
+  - **SEO & Fallback**: Marked `noindex` by default. Invalid/missing codes present a friendly fallback with `“내가 새 여행 뽑기”`.
+- **Open Graph Protocol**:
+  - Referral MVP sequence: 1. DB snapshot save, 2. `/r/[shareCode]`, 3. Web Share + copy fallback, 4. Default OG meta tags.
+  - Dynamic OG image generation is a high-priority non-blocking enhancement within MVP scope.
+
+### 6.4 Today's Pick (7-Day Rotating Spotlight)
+- **Schedule**: 7 static curated picks active across the 7-day campaign schedule, evaluated against `Asia/Seoul` calendar date.
+- **Landing Preview Widget**:
+  - Uses Pixel Artwork and rotating Kkumssi Family character frames (combining modifiable daily pixel art with Kkumssi characters; no realistic photos on landing widget).
+  - Pre-campaign shows Pick 1; post-campaign retains Pick 7.
+- **Detail Page (`/pick/[slug]`)**:
+  - Features real photography, curated recommendation reason, stay duration, recommended visiting hours, transit access, and map links.
+  - **Primary CTA**: `“이 분위기로 여행 뽑기”` (Draw a trip with this vibe!).
+  - **Preference Seeding**: Clicking the CTA navigates to Landing with Q2 pre-seeded to the pick's `recommendedPreference` (`food`, `walk`, `photo`, `anything`). (It does **not** guarantee the specific pick place appears in the random route).
+- **Data Management**: 100% static TypeScript data (`src/data/picks.ts`); no Supabase or CMS overhead.
+
+---
+
+## 7. Scope Boundaries
 
 ### In-Scope (MVP)
-- Landing page built upon the approved Visual v4 Base ("Korean Y2K Personal Web × Random Travel Toy").
-- Controlled random route generation engine (candidate filtering, random selection, template matching, route validation).
-- Interactive slot machine reel animation with variable-stop adapter and placeholder READY reels.
-- Primary spin action (`“여행 뽑기!”`) with optional visual lever feedback.
-- Physical output slit peek cue emerging from the slot after spin completion.
-- Dynamic route display with route title, stop details (1~4), mission, and 3 CTAs presented in a front-facing centered Result Card overlay over a lightly dimmed/blurred backdrop.
-- RANDOM LOG shared-route notes (nickname + short message + auto-attached route snapshot; no user signup).
-- GA4 event tracking and campaign parameter collection.
-- Primary proxy conversion CTA linking out to navigation/maps.
+- Main Landing page built on the approved Visual v4 Base without top navigation tabs.
+- Controlled random route generation engine with duration budgeting.
+- Stationary slot machine animation with output slit peek cue.
+- Centered focus Result Card overlay with 3-action hierarchy.
+- In-app Route Guide with duration calculations and outbound place map links.
+- Visitor Log (Landing preview + `/guestbook` read-only archive + in-flow composer with Kkumssi family avatars).
+- 1-Time Reroll Reward unlocked via successful server validation and guestbook DB submission.
+- Referral Share with server snapshot storage and dedicated `/r/[shareCode]` page.
+- 7-Day Today's Pick (Landing pixel widget + `/pick/[slug]` detail page + Q2 vibe seeding).
+- GA4 telemetry tracking across all 4 growth loops with strict PII prohibition.
 
 ### Explicitly Out-of-Scope (MVP)
-- Runtime LLM / AI-generated travel routes.
-- User account creation, authentication, or profile management.
-- Direct physical GPS check-in or visit verification.
-- Citywide comprehensive tourism database (initial focus limited to key clusters).
-- Whole-screen image slicing (UI elements, text, buttons, and Result Card body must remain semantic DOM/code and independent modular assets; image-based result body is prohibited).
-- Long vertical receipt / long paper pushdown layout (deprecated in favor of output slit peek cue + centered Result Card overlay).
-- Modern glassmorphism styling on result card / modal (prohibited; tactile retro/paper/arcade visual language is mandatory).
-- Manual route transcription in RANDOM LOG (must be automated via snapshot).
-- Operator-curated feeds, automatic recommendation feeds, or like/reaction counters in RANDOM LOG.
+- Top navigation tabs (`가이드`, `맛집 리스트`, `내 보관함`).
+- User account creation, authentication, login systems, or persistent user profiles.
+- Runtime LLM / AI route generation.
+- Embedded interactive map SDKs (Naver/Kakao Maps JS SDKs) and real-time GPS navigation.
+- Real-time business hours, dynamic table booking, or live wait-time checking.
+- Itinerary spot swapping or custom route editing (prevents decision fatigue).
+- Kakao SDK, Kakao Login, or Kakao Talk messaging API integration.
+- CMS / Supabase storage for Today's Pick (must remain static TS data).
+- Full-screen image slicing (all UI panels and Result Card body must remain semantic React/DOM/CSS).
 
 ---
 
-## 6. Decisions & Hypotheses Status
+## 8. Decisions & Hypotheses Status
 
 | Item | Status | Details |
 | :--- | :--- | :--- |
-| **Controlled Random Travel** | **Fixed Product Decision** | Structured recommendation flow separated from visual reel animation. (Mechanism choice is fixed; conversion effectiveness is an unvalidated hypothesis to measure via campaign). |
-| **Proxy Conversion Model** | **Fixed Measurement Decision** | Map navigation click (`route_map_click`) serves as high-intent proxy metric for physical travel interest. |
-| **No Runtime LLM** | **Fixed Architecture Decision** | Static curated templates, candidate place data, and controlled random selection for speed, cost control, and reliability. |
-| **Visual v4 Base** | **Approved Visual Base** | "Korean Y2K Personal Web × Random Travel Toy" base identity; subject to ongoing styling/polish refinements while decoupling structural logic from visual skins. |
-| **Target Demographic (20–30s)** | *Working Hypothesis* | Operational target for marketing copy/ads; not a validated product constraint. |
-| **v0.4 2-Question Flow** | *Tentative* | Subject to adjustment based on user testing and campaign funnel drop-off data. |
+| **Controlled Random Travel** | **Fixed Product Decision** | Structured recommendation flow separated from visual slot animation. |
+| **Four Growth Loops** | **Fixed Growth Decision** | Core Conversion, Participation & Reward, Referral, and Content-to-Spark. |
+| **In-App Route Guide** | **Fixed Product Decision** | Result CTA opens in-app Route Guide before external map redirection. |
+| **1-Time Reroll Reward** | **Fixed Product Decision** | Replaces free reroll; unlocks 1 reroll upon guestbook DB submission. |
+| **Referral Snapshot Model** | **Fixed Architecture Decision** | Immutable snapshots in `shared_routes` accessed via `/r/[shareCode]`. |
+| **Static 7-Day Today's Pick** | **Fixed Content Decision** | Static TS data with `“이 분위기로 여행 뽑기”` Q2 preference seeding. |
+| **Top Nav Elimination** | **Fixed Layout Decision** | Top tabs removed to maximize viewport priority for Setup & Slot Anchor. |
+| **Proxy Conversion Model** | **Fixed Measurement Decision** | Route Guide map clicks (`place_map_click`) serve as primary high-intent proxy metric (`pick_map_click` as secondary intent signal). |
+| **No Runtime LLM / No PII** | **Fixed Engineering Decision** | Curated static seed templates; zero PII or free-text in GA4. |
+| **Target Demographic (20–30s)** | *Working Hypothesis* | Operational target for marketing copy/ads; not a rigid product limit. |
 | **Initial Zone Coverage** | *Tentative* | Centered on Daejeon Station / old downtown; expandable post-MVP. |
-| **RANDOM LOG Snapshot Model** | *Tentative* | Secondary engagement feature for sharing route snapshots with a message; no separate feed or user accounts. |
 
 ---
 
-## 7. Success Behavior & Measurable Signals
-- **Setup Funnel**: User progression through Q1/Q2 to READY produces measurable completion and drop-off rates in GA4.
-- **Perceived Latency**: The recommendation engine and slot animation deliver a coherent route with acceptable perceived latency without blocking runtime delays.
-- **Primary Conversion Proxy**: The rate of clicks on the primary CTA (`route_map_click` / `“이 코스로 가보기”`) provides an actionable signal of travel intent to evaluate performance marketing campaigns.
-- **Social Engagement & Privacy**: Route sharing (`route_share_click`) and RANDOM LOG submissions operate smoothly with zero PII or free-text leakage into analytics.
+## 9. Success Behavior & Measurable Signals
+- **Setup Funnel Progression**: User progression through Q1/Q2 to READY produces clear completion and drop-off metrics in GA4.
+- **Recommendation & Spin Experience**: The recommendation engine and slot animation deliver a coherent itinerary with acceptable perceived latency without blocking runtime delays.
+- **Primary Proxy Conversion**: Clicks on outbound map links within the in-app Route Guide (`place_map_click`) serve as the primary proxy conversion indicating high travel intent. Clicks on Today's Pick map links (`pick_map_click`) provide secondary content/travel-intent signals to evaluate performance marketing campaign efficiency.
+- **Participation & Referral Loops**: Visitor log submissions (`guestbook_submit`) and route sharing completions (`route_share_complete`) operate seamlessly with zero PII or free-text leakage into analytics.
+- **Honest Metric Evaluation**: Map clicks represent high-intent interest and are not conflated with guaranteed physical travel attendance.
