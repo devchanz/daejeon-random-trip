@@ -33,11 +33,11 @@ export interface DatabaseClientContract {
 
 /**
  * Database environment configuration.
- * Server database operations require server-only SUPABASE_SERVICE_ROLE_KEY.
+ * Server database operations require server-only SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY).
  */
 export interface DatabaseConfig {
   supabaseUrl: string;
-  supabaseServiceRoleKey: string;
+  supabaseSecretKey: string;
 }
 
 /**
@@ -47,12 +47,25 @@ export interface DatabaseConfig {
 export function getDatabaseConfig(): DatabaseConfig {
   const supabaseUrl =
     process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
-  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
+  const supabaseSecretKey =
+    process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
   return {
     supabaseUrl,
-    supabaseServiceRoleKey,
+    supabaseSecretKey,
   };
+}
+
+/**
+ * Helper to safely detect if a key is a legacy JWT service_role key.
+ * Legacy JWTs consist of 3 dot-separated base64 segments and do not use the `sb_secret_` prefix.
+ */
+function isLegacyJwt(key: string): boolean {
+  if (!key || key.startsWith('sb_secret_')) {
+    return false;
+  }
+  const parts = key.split('.');
+  return parts.length === 3 && parts.every((part) => part.length > 0);
 }
 
 /**
@@ -62,31 +75,36 @@ export function getDatabaseConfig(): DatabaseConfig {
  */
 export class SupabaseRestClient implements DatabaseClientContract {
   private url: string;
-  private serviceRoleKey: string;
+  private supabaseSecretKey: string;
 
   constructor(config?: Partial<DatabaseConfig>) {
     const resolvedConfig = { ...getDatabaseConfig(), ...config };
     this.url = resolvedConfig.supabaseUrl.replace(/\/+$/, '');
-    this.serviceRoleKey = resolvedConfig.supabaseServiceRoleKey;
+    this.supabaseSecretKey = resolvedConfig.supabaseSecretKey;
   }
 
   private get headers(): Record<string, string> {
-    return {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      apikey: this.serviceRoleKey,
-      Authorization: `Bearer ${this.serviceRoleKey}`,
+      apikey: this.supabaseSecretKey,
     };
+
+    if (isLegacyJwt(this.supabaseSecretKey)) {
+      headers.Authorization = `Bearer ${this.supabaseSecretKey}`;
+    }
+
+    return headers;
   }
 
   private isConfigured(): boolean {
-    return Boolean(this.url && this.serviceRoleKey);
+    return Boolean(this.url && this.supabaseSecretKey);
   }
 
   async insertGuestbookEntry(
     entry: Omit<GuestbookEntryRecord, 'id' | 'created_at'>
   ): Promise<GuestbookEntryRecord> {
     if (!this.isConfigured()) {
-      throw new Error('Database is not configured. Missing Supabase URL or SUPABASE_SERVICE_ROLE_KEY.');
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
     }
 
     const endpoint = `${this.url}/rest/v1/guestbook_entries`;
@@ -116,7 +134,7 @@ export class SupabaseRestClient implements DatabaseClientContract {
     limit: number
   ): Promise<GuestbookEntryRecord[]> {
     if (!this.isConfigured()) {
-      throw new Error('Database is not configured. Missing Supabase URL or SUPABASE_SERVICE_ROLE_KEY.');
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
     }
 
     const endpoint = `${this.url}/rest/v1/guestbook_entries?status=eq.visible&order=created_at.desc&limit=${limit}`;
@@ -137,7 +155,7 @@ export class SupabaseRestClient implements DatabaseClientContract {
     route: Omit<SharedRouteRecord, 'id' | 'created_at'>
   ): Promise<SharedRouteRecord> {
     if (!this.isConfigured()) {
-      throw new Error('Database is not configured. Missing Supabase URL or SUPABASE_SERVICE_ROLE_KEY.');
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
     }
 
     const endpoint = `${this.url}/rest/v1/shared_routes`;
@@ -167,7 +185,7 @@ export class SupabaseRestClient implements DatabaseClientContract {
     shareCode: string
   ): Promise<SharedRouteRecord | null> {
     if (!this.isConfigured()) {
-      throw new Error('Database is not configured. Missing Supabase URL or SUPABASE_SERVICE_ROLE_KEY.');
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
     }
 
     const sanitizedCode = encodeURIComponent(shareCode);
@@ -190,7 +208,7 @@ export class SupabaseRestClient implements DatabaseClientContract {
     sourceRouteId: string
   ): Promise<SharedRouteRecord | null> {
     if (!this.isConfigured()) {
-      throw new Error('Database is not configured. Missing Supabase URL or SUPABASE_SERVICE_ROLE_KEY.');
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
     }
 
     const sanitizedId = encodeURIComponent(sourceRouteId);
