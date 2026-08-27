@@ -16,7 +16,7 @@ import { selectRouteTemplate, DEFAULT_ROUTE_TEMPLATES } from './templates';
  * Minimum active candidate count required in a zone to construct a valid itinerary.
  */
 export const MIN_STOPS_BY_DURATION: Record<DurationType, number> = {
-  half: 2,
+  half: 3,
   full: 3,
 };
 

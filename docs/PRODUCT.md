@@ -28,8 +28,12 @@ flowchart LR
 ```
 
 - **Zone**: Walkable/travelable neighborhood cluster (initial focus centered around Daejeon Station / old downtown: Eunhaeng-dong & Daeheung-dong).
-- **Engine vs. UI**: The **Recommendation Engine** (`src/lib/random`) handles candidate filtering, random selection, duration budgeting, template matching, and route validation. The **Slot Machine** is solely an animated visual interaction layer.
-- **Flexible Stops**: Route stop count (1–4 stops) is dynamically governed by route templates rather than hard-coded to a fixed reel count.
+- **Engine vs. UI**: The **Recommendation Engine** (`src/lib/random`) handles candidate filtering, random selection, template matching, and route validation. The **Slot Machine** is solely an animated visual interaction layer.
+- **Stop Count Policy**:
+  - **Half-Day (`half`)**: Fixed **3 stops** (2-stop routes are deprecated).
+  - **Full-Day (`full`)**: **3–4 stops** (target/preferred **4 stops** with `stay-extender`; 3-stop template retained as graceful fallback).
+- **Duration Budgeting**: Numeric minute bounds remain unconfigured (TBD) pending transit modeling and verified candidate place data. In provisional MVP data, `estimatedTotalMinutes` represents place stay duration.
+
 
 ---
 
@@ -99,10 +103,9 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 ### 6.1 In-App Route Guide
 - **Concept**: Rather than immediately tossing users out to an external map, clicking `“이 코스로 가보기”` opens the in-app Route Guide to provide structured route context.
 - **Route Guide Content**:
-  - Route title & stop count summary.
-  - **Total Estimated Travel Time**: Formatted casually (e.g., `“약 4시간”`, `“약 5시간 30분”`), calculated conceptually as: `∑ (Place Stay Durations) + ∑ (Inter-stop Travel Times)`.
-  - **Duration Budget Enforcement**: The recommendation engine validates duration bounds (`half_day` vs. `full_day` budgets configured in policy files) to maintain realistic travel times.
-  - **STOP 1–4 Timeline**: Place name, category, estimated stay time, inter-stop transit mode & time, playful tips/cautions, and individual outbound map links (`mapLinks` for Naver / Kakao Map).
+  - Route title & stop count summary (Half-day: fixed 3 stops; Full-day: 3–4 stops).
+  - **Total Estimated Travel Time**: Formatted casually (e.g., `“약 4시간”`, `“약 5시간 30분”`), calculated conceptually as: `∑ (Place Stay Durations) + ∑ (Inter-stop Travel Times)`. (Note: In MVP provisional data, `estimatedTotalMinutes` reflects place stay durations only; numeric duration budget bounds remain unconfigured/TBD pending transit modeling).
+  - **STOP Timeline**: Place name, category, estimated stay time, inter-stop transit mode & time, playful tips/cautions, and individual outbound map links (`mapLinks` for Naver / Kakao Map).
 - **Explicit Exclusions**: Embedded map SDKs, real-time GPS turn-by-turn navigation, real-time wait times, and place-swapping customization are omitted to prevent decision fatigue.
 
 ### 6.2 Guestbook / Visitor Log & 1-Time Reroll Reward
