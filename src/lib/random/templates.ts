@@ -4,22 +4,16 @@ import type { RouteTemplate } from './types';
 /**
  * Curated route templates defining role sequences for different durations and preferences.
  * Variable stop counts:
- * - half: 2 to 3 stops
- * - full: 3 to 4 stops (ending with stay-extender where possible)
+ * - half: fixed 3 stops
+ * - full: 3 to 4 stops (4 stops preferred with stay-extender; 3 stops as graceful fallback)
  */
 export const DEFAULT_ROUTE_TEMPLATES: readonly RouteTemplate[] = [
-  // Half-day templates (2~3 stops)
+  // Half-day templates (fixed 3 stops)
   {
     id: 'half_general_3',
     durationType: 'half',
     preference: 'anything',
     stopRoles: ['anchor', 'meal', 'discovery'],
-  },
-  {
-    id: 'half_general_2',
-    durationType: 'half',
-    preference: 'anything',
-    stopRoles: ['anchor', 'meal'],
   },
   {
     id: 'half_food_3',
@@ -28,34 +22,16 @@ export const DEFAULT_ROUTE_TEMPLATES: readonly RouteTemplate[] = [
     stopRoles: ['meal', 'anchor', 'discovery'],
   },
   {
-    id: 'half_food_2',
-    durationType: 'half',
-    preference: 'food',
-    stopRoles: ['meal', 'anchor'],
-  },
-  {
     id: 'half_walk_3',
     durationType: 'half',
     preference: 'walk',
     stopRoles: ['anchor', 'discovery', 'meal'],
   },
   {
-    id: 'half_walk_2',
-    durationType: 'half',
-    preference: 'walk',
-    stopRoles: ['discovery', 'anchor'],
-  },
-  {
     id: 'half_photo_3',
     durationType: 'half',
     preference: 'photo',
     stopRoles: ['anchor', 'discovery', 'meal'],
-  },
-  {
-    id: 'half_photo_2',
-    durationType: 'half',
-    preference: 'photo',
-    stopRoles: ['anchor', 'discovery'],
   },
 
   // Full-day templates (3~4 stops)

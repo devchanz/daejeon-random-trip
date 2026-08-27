@@ -141,3 +141,14 @@ This document tracks fundamental product, architecture, and growth experience de
 - **Decision**: Limit Supabase persistent storage strictly to `guestbook_entries` and `shared_routes`. General route generation and Q1/Q2 selections are ephemeral; reroll session states are managed in session-scoped browser storage (`sessionStorage`).
 - **Why**: Minimizes database write volume, eliminates latency from the core slot spin interaction, and maintains strict privacy by avoiding storing anonymous browse sessions.
 - **Revisit when**: Persistent user accounts or cross-device itinerary sync are added in future versions.
+
+---
+
+### ADR-018: Route Stop Count and Provisional Duration Policy
+- **Status**: **Fixed**
+- **Decision**:
+  - **Half-Day (`half`)**: Fixed **3 stops** (2-stop half-day templates are deprecated and removed).
+  - **Full-Day (`full`)**: **3–4 stops** (4 stops preferred when `stay-extender` candidates are available; 3 stops retained as graceful fallback).
+  - **Duration Budgets**: Numeric duration bounds (`minMinutes`, `maxMinutes`) remain unconfigured (TBD) in `DURATION_BUDGET_POLICIES`. In provisional MVP data, `estimatedTotalMinutes` strictly represents place stay time ($\sum \text{Place.durationMin}$) without inter-stop transit time.
+- **Why**: 2-stop half-day routes generated insufficiently engaging itineraries with low stay times (min 65m, p10 95m). Fixing half-day to 3 stops naturally lifts the duration floor (min 115m, p10 145m, median 175m) and guarantees 100% route generation success across all 7 active zones without requiring brittle numeric rejection loops on provisional place data.
+- **Revisit when**: Place candidate dataset undergoes full tourism verification and door-to-door transit time modeling is implemented.
