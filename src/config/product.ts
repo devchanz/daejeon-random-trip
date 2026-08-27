@@ -31,3 +31,9 @@ export {
   formatEstimatedDuration,
   type DurationBudgetPolicy,
 } from './durationBudget';
+
+export {
+  GUESTBOOK_AVATARS,
+  DEFAULT_AVATAR_ID,
+  type GuestbookAvatarOption,
+} from './avatars';

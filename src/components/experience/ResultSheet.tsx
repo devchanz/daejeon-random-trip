@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { RouteResult } from '../../lib/random';
+import type { RerollRewardState } from '../../lib/experience';
 import {
   DURATION_DISPLAY_LABELS,
   PREFERENCE_DISPLAY_LABELS,
@@ -9,6 +10,9 @@ import {
 
 export interface ResultSheetProps {
   result: RouteResult;
+  rerollReward?: RerollRewardState;
+  onOpenGuestbook?: () => void;
+  onExecuteReroll?: () => void;
   className?: string;
 }
 
@@ -16,9 +20,15 @@ export interface ResultSheetProps {
  * Visual V4 ResultSheet component.
  * Renders the variable-length RouteResult as an authentic printed paper travel itinerary sheet / receipt ticket.
  * Features tear-line ticket perforation, stamp badges, route timeline with step nodes,
- * pinned mission card with washi tape, and disabled coming-soon action CTAs.
+ * pinned mission card with washi tape, and action CTAs including the Guestbook -> Reroll loop.
  */
-export function ResultSheet({ result, className = '' }: ResultSheetProps) {
+export function ResultSheet({
+  result,
+  rerollReward = 'locked',
+  onOpenGuestbook,
+  onExecuteReroll,
+  className = '',
+}: ResultSheetProps) {
   const durationLabel = result.durationType
     ? DURATION_DISPLAY_LABELS[result.durationType] ?? result.durationType
     : null;
@@ -28,6 +38,46 @@ export function ResultSheet({ result, className = '' }: ResultSheetProps) {
     : null;
 
   const stops = result.stops || [];
+
+  const renderRerollCTA = () => {
+    if (rerollReward === 'available') {
+      return (
+        <button
+          type="button"
+          onClick={onExecuteReroll}
+          aria-label="리워드 1회 더 뽑기 실행"
+          className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#ff5555] hover:bg-[#ff3b3b] py-2.5 px-3 text-center text-xs font-black text-white shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] motion-safe:animate-pulse"
+        >
+          🎰 1회 더 뽑기
+        </button>
+      );
+    }
+
+    if (rerollReward === 'consumed') {
+      return (
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="flex-1 rounded-xl border-2 border-[#d8d0c2] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#8e8477] cursor-not-allowed transition-none"
+        >
+          1회 더 뽑기 완료
+        </button>
+      );
+    }
+
+    // Default: 'locked' -> opens guestbook composer
+    return (
+      <button
+        type="button"
+        onClick={onOpenGuestbook}
+        aria-label="랜덤 로그 남기고 1회 더 뽑기"
+        className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+      >
+        랜덤 로그 남기고 1회 더 뽑기
+      </button>
+    );
+  };
 
   return (
     <article
@@ -168,7 +218,7 @@ export function ResultSheet({ result, className = '' }: ResultSheetProps) {
           </section>
         )}
 
-        {/* 4. CTA Action Layout Boundary (Non-interactive placeholders for future PRs) */}
+        {/* 4. CTA Action Layout Boundary */}
         <div
           data-testid="result-cta-boundary"
           className="flex flex-col gap-2.5 border-t-2 border-[#2b2520] pt-5"
@@ -193,14 +243,7 @@ export function ResultSheet({ result, className = '' }: ResultSheetProps) {
             >
               내 루트 공유하기 (준비 중)
             </button>
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              className="flex-1 rounded-xl border-2 border-[#d8d0c2] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#8e8477] cursor-not-allowed transition-none"
-            >
-              다시 뽑기 (준비 중)
-            </button>
+            {renderRerollCTA()}
           </div>
         </div>
       </div>

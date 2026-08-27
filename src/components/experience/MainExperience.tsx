@@ -7,6 +7,11 @@ import {
   startSpin,
   completeSpin,
   type ExperienceState,
+  createInitialRerollState,
+  getOrCreateRerollSessionState,
+  unlockRerollReward,
+  consumeRerollReward,
+  type RerollSessionState,
 } from '../../lib/experience';
 import {
   generateRoute,
@@ -15,6 +20,8 @@ import {
   type PlaceCandidate,
   type RouteResult,
 } from '../../lib/random';
+import type { GuestbookEntryRecord } from '../../lib/database/types';
+import { GuestbookComposer } from '../guestbook';
 import { SetupArea } from './SetupArea';
 import { SlotAnchor } from './SlotAnchor';
 import { ResultArea } from './ResultArea';
@@ -52,6 +59,20 @@ export function MainExperience({
 }: MainExperienceProps) {
   const [state, dispatch] = useReducer(experienceReducer, initialState);
   const [recommendationError, setRecommendationError] = useState<string | null>(null);
+
+  // Travel session & Reroll reward state (backed by sessionStorage)
+  // Hydration-safe: deterministic initial state for SSR/first render, restored on mount
+  const [rerollState, setRerollState] = useState<RerollSessionState>(() =>
+    createInitialRerollState('')
+  );
+
+  useEffect(() => {
+    // Synchronize client sessionStorage after mount (hydration-safe)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setRerollState(getOrCreateRerollSessionState());
+  }, []);
+
+  const [isGuestbookOpen, setIsGuestbookOpen] = useState<boolean>(false);
 
   // Presentation-only local state
   const [pendingResult, setPendingResult] = useState<RouteResult | null>(null);
@@ -209,6 +230,69 @@ export function MainExperience({
     }
   };
 
+  // Rewarded 1-time reroll action triggered from ResultSheet
+  const handleExecuteReroll = () => {
+    // 1. Verify state.phase === 'result', rerollReward === 'available', and session initialized
+    if (
+      state.phase !== 'result' ||
+      rerollState.rerollReward !== 'available' ||
+      !rerollState.routeSessionId
+    ) {
+      return;
+    }
+
+    setRecommendationError(null);
+
+    // 2. Verify zones/candidates
+    if (!zones || zones.length === 0 || !candidates || candidates.length === 0) {
+      setRecommendationError('추천 데이터를 준비 중이에요.');
+      return;
+    }
+
+    try {
+      // 3. Attempt route generation via Controlled Random Travel engine
+      const generated = generateRoute({
+        durationType: state.duration,
+        preference: state.preference,
+        zones,
+        candidates,
+        random,
+      });
+
+      // 4. ONLY AFTER route generation succeeds:
+      //    Consume reward in session storage (available -> consumed)
+      const nextReroll = consumeRerollReward(rerollState.routeSessionId);
+      if (!nextReroll) {
+        return;
+      }
+
+      // 5. Update reroll state, pending result, and start spin presentation
+      setRerollState(nextReroll);
+      setPendingResult(generated);
+      isUserTriggeredSpinRef.current = true;
+      setSpinningStoppedReelCount(0);
+      setIsLeverActive(true);
+
+      dispatch(startSpin());
+      onSpinStart?.();
+    } catch (err) {
+      // Failed recommendation generation leaves reward as 'available'
+      const message =
+        err instanceof RecommendationEngineError
+          ? '현재 조건으로 추천할 수 있는 코스가 없어요.'
+          : '추천 코스를 생성하지 못했습니다.';
+      setRecommendationError(message);
+    }
+  };
+
+  // Callback when guestbook submission successfully writes to persistent DB
+  const handleGuestbookSuccess = (entry: GuestbookEntryRecord) => {
+    const activeSessionId =
+      rerollState.routeSessionId || getOrCreateRerollSessionState().routeSessionId;
+    const nextState = unlockRerollReward(activeSessionId, entry.route_id);
+    setRerollState(nextState);
+  };
+
   return (
     <div
       data-testid="main-experience"
@@ -237,7 +321,23 @@ export function MainExperience({
       />
 
       {/* 3. Result Area: Inline presentation boundary below slot with responsive scroll anchor */}
-      <ResultArea ref={resultAreaRef} state={state} />
+      <ResultArea
+        ref={resultAreaRef}
+        state={state}
+        rerollReward={rerollState.rerollReward}
+        onOpenGuestbook={() => setIsGuestbookOpen(true)}
+        onExecuteReroll={handleExecuteReroll}
+      />
+
+      {/* 4. Guestbook Composer Modal (In-flow modal triggered from Result Card) */}
+      {isGuestbookOpen && state.phase === 'result' && state.result && (
+        <GuestbookComposer
+          routeResult={state.result}
+          isOpen={isGuestbookOpen}
+          onClose={() => setIsGuestbookOpen(false)}
+          onSuccess={handleGuestbookSuccess}
+        />
+      )}
     </div>
   );
 }

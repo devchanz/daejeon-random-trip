@@ -4,7 +4,11 @@ import type {
   DatabaseResult,
 } from './types';
 import { getDatabaseClient, type DatabaseClientContract } from './client';
-import { SUPPORTED_DURATIONS, SUPPORTED_PREFERENCES } from '../../config/product';
+import {
+  SUPPORTED_DURATIONS,
+  SUPPORTED_PREFERENCES,
+  GUESTBOOK_AVATARS,
+} from '../../config/product';
 
 /**
  * Sanitizes single-line user input by stripping control characters and trimming whitespace.
@@ -17,7 +21,7 @@ function sanitizeText(text: string): string {
 /**
  * Validates and sanitizes guestbook entry submission input.
  * Strict rules:
- * - Avatar ID: Required, 1–32 characters
+ * - Avatar ID: Required, must be one of the configured GUESTBOOK_AVATARS IDs (1–32 characters)
  * - Nickname: Required, 2–12 characters
  * - Message: Required, 1–50 characters
  * - Route Info: routeId (1–64), zoneId (1–32), durationType & preferenceType in supported list
@@ -30,7 +34,12 @@ export function validateAndSanitizeGuestbookInput(
   }
 
   const avatarId = sanitizeText(input.avatarId || '');
-  if (!avatarId || avatarId.length > 32) {
+  const isValidAvatar =
+    Boolean(avatarId) &&
+    avatarId.length <= 32 &&
+    GUESTBOOK_AVATARS.some((avatar) => avatar.id === avatarId);
+
+  if (!isValidAvatar) {
     return { valid: false, error: '올바른 캐릭터 아바타를 선택해주세요.' };
   }
 

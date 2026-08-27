@@ -7,7 +7,7 @@ export const REROLL_SESSION_STORAGE_KEY = 'daejeon_random_trip_reroll_session';
 /**
  * Creates a new initial RerollSessionState with 'locked' reward status.
  */
-export function createInitialRerollState(routeSessionId: string): RerollSessionState {
+export function createInitialRerollState(routeSessionId: string = ''): RerollSessionState {
   return {
     routeSessionId,
     rerollReward: 'locked',
@@ -43,6 +43,26 @@ export function getRerollSessionState(): RerollSessionState | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Helper to ensure a valid reroll session exists in sessionStorage.
+ * Reads existing session or initializes and persists a new one with 'locked' reward status.
+ */
+export function getOrCreateRerollSessionState(): RerollSessionState {
+  const existing = getRerollSessionState();
+  if (existing) {
+    return existing;
+  }
+
+  const sessionId =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+
+  const initial = createInitialRerollState(sessionId);
+  saveRerollSessionState(initial);
+  return initial;
 }
 
 /**
@@ -101,7 +121,7 @@ export function consumeRerollReward(
 ): RerollSessionState | null {
   const current = getRerollSessionState();
 
-  if (!current || current.routeSessionId !== routeSessionId || current.rerollReward !== 'available') {
+  if (!current || !routeSessionId || current.routeSessionId !== routeSessionId || current.rerollReward !== 'available') {
     return null;
   }
 
