@@ -11,102 +11,106 @@ export const DEFAULT_ROUTE_TEMPLATES: readonly RouteTemplate[] = [
   // Half-day templates (2~3 stops)
   {
     id: 'half_general_3',
-    duration: 'half',
-    slots: ['anchor', 'meal', 'discovery'],
+    durationType: 'half',
+    preference: 'anything',
+    stopRoles: ['anchor', 'meal', 'discovery'],
   },
   {
     id: 'half_general_2',
-    duration: 'half',
-    slots: ['anchor', 'meal'],
+    durationType: 'half',
+    preference: 'anything',
+    stopRoles: ['anchor', 'meal'],
   },
   {
     id: 'half_food_3',
-    duration: 'half',
-    targetPreference: 'food',
-    slots: ['meal', 'anchor', 'discovery'],
+    durationType: 'half',
+    preference: 'food',
+    stopRoles: ['meal', 'anchor', 'discovery'],
   },
   {
     id: 'half_food_2',
-    duration: 'half',
-    targetPreference: 'food',
-    slots: ['meal', 'anchor'],
+    durationType: 'half',
+    preference: 'food',
+    stopRoles: ['meal', 'anchor'],
   },
   {
     id: 'half_walk_3',
-    duration: 'half',
-    targetPreference: 'walk',
-    slots: ['anchor', 'discovery', 'meal'],
+    durationType: 'half',
+    preference: 'walk',
+    stopRoles: ['anchor', 'discovery', 'meal'],
   },
   {
     id: 'half_walk_2',
-    duration: 'half',
-    targetPreference: 'walk',
-    slots: ['discovery', 'anchor'],
+    durationType: 'half',
+    preference: 'walk',
+    stopRoles: ['discovery', 'anchor'],
   },
   {
     id: 'half_photo_3',
-    duration: 'half',
-    targetPreference: 'photo',
-    slots: ['anchor', 'discovery', 'meal'],
+    durationType: 'half',
+    preference: 'photo',
+    stopRoles: ['anchor', 'discovery', 'meal'],
   },
   {
     id: 'half_photo_2',
-    duration: 'half',
-    targetPreference: 'photo',
-    slots: ['anchor', 'discovery'],
+    durationType: 'half',
+    preference: 'photo',
+    stopRoles: ['anchor', 'discovery'],
   },
 
   // Full-day templates (3~4 stops)
   {
     id: 'full_general_4',
-    duration: 'full',
-    slots: ['anchor', 'meal', 'discovery', 'stay-extender'],
+    durationType: 'full',
+    preference: 'anything',
+    stopRoles: ['anchor', 'meal', 'discovery', 'stay-extender'],
   },
   {
     id: 'full_general_3',
-    duration: 'full',
-    slots: ['anchor', 'meal', 'discovery'],
+    durationType: 'full',
+    preference: 'anything',
+    stopRoles: ['anchor', 'meal', 'discovery'],
   },
   {
     id: 'full_food_4',
-    duration: 'full',
-    targetPreference: 'food',
-    slots: ['meal', 'anchor', 'discovery', 'stay-extender'],
+    durationType: 'full',
+    preference: 'food',
+    stopRoles: ['meal', 'anchor', 'discovery', 'stay-extender'],
   },
   {
     id: 'full_food_3',
-    duration: 'full',
-    targetPreference: 'food',
-    slots: ['meal', 'anchor', 'discovery'],
+    durationType: 'full',
+    preference: 'food',
+    stopRoles: ['meal', 'anchor', 'discovery'],
   },
   {
     id: 'full_walk_4',
-    duration: 'full',
-    targetPreference: 'walk',
-    slots: ['anchor', 'discovery', 'meal', 'stay-extender'],
+    durationType: 'full',
+    preference: 'walk',
+    stopRoles: ['anchor', 'discovery', 'meal', 'stay-extender'],
   },
   {
     id: 'full_walk_3',
-    duration: 'full',
-    targetPreference: 'walk',
-    slots: ['anchor', 'discovery', 'meal'],
+    durationType: 'full',
+    preference: 'walk',
+    stopRoles: ['anchor', 'discovery', 'meal'],
   },
   {
     id: 'full_photo_4',
-    duration: 'full',
-    targetPreference: 'photo',
-    slots: ['anchor', 'discovery', 'meal', 'stay-extender'],
+    durationType: 'full',
+    preference: 'photo',
+    stopRoles: ['anchor', 'discovery', 'meal', 'stay-extender'],
   },
   {
     id: 'full_photo_3',
-    duration: 'full',
-    targetPreference: 'photo',
-    slots: ['anchor', 'discovery', 'meal'],
+    durationType: 'full',
+    preference: 'photo',
+    stopRoles: ['anchor', 'discovery', 'meal'],
   },
 ];
 
 export interface SelectTemplateOptions {
-  duration: DurationType;
+  durationType: DurationType;
   preference: PreferenceType;
   availableCandidateCount: number;
   hasStayExtender?: boolean;
@@ -120,7 +124,7 @@ export interface SelectTemplateOptions {
  * and respecting stay-extender candidate availability.
  */
 export function selectRouteTemplate({
-  duration,
+  durationType,
   preference,
   availableCandidateCount,
   hasStayExtender = true,
@@ -129,13 +133,13 @@ export function selectRouteTemplate({
 }: SelectTemplateOptions): RouteTemplate | null {
   // 1. Filter templates by requested duration, candidate count feasibility, and stay-extender availability
   const durationMatching = templates.filter((t) => {
-    if (t.duration !== duration) {
+    if (t.durationType !== durationType) {
       return false;
     }
-    if (t.slots.length > availableCandidateCount) {
+    if (t.stopRoles.length > availableCandidateCount) {
       return false;
     }
-    if (!hasStayExtender && t.slots.includes('stay-extender')) {
+    if (!hasStayExtender && t.stopRoles.includes('stay-extender')) {
       return false;
     }
     return true;
@@ -148,12 +152,12 @@ export function selectRouteTemplate({
   // 2. If preference is specified (not 'anything'), prioritize preference-targeted templates
   if (preference !== 'anything') {
     const preferenceMatching = durationMatching.filter(
-      (t) => t.targetPreference === preference
+      (t) => t.preference === preference
     );
     if (preferenceMatching.length > 0) {
       if (hasStayExtender && availableCandidateCount >= 4) {
         const fourStop = preferenceMatching.filter((t) =>
-          t.slots.includes('stay-extender')
+          t.stopRoles.includes('stay-extender')
         );
         if (fourStop.length > 0) {
           const idx = Math.min(
@@ -172,11 +176,13 @@ export function selectRouteTemplate({
   }
 
   // 3. Fallback to general or all feasible templates matching duration
-  const generalTemplates = durationMatching.filter((t) => !t.targetPreference);
+  const generalTemplates = durationMatching.filter(
+    (t) => !t.preference || t.preference === 'anything'
+  );
   const pool = generalTemplates.length > 0 ? generalTemplates : durationMatching;
 
   if (hasStayExtender && availableCandidateCount >= 4) {
-    const fourStop = pool.filter((t) => t.slots.includes('stay-extender'));
+    const fourStop = pool.filter((t) => t.stopRoles.includes('stay-extender'));
     if (fourStop.length > 0) {
       const idx = Math.min(
         fourStop.length - 1,

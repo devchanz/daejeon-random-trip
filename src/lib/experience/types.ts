@@ -1,5 +1,7 @@
 import type { DurationType, PreferenceType } from '../../config/product';
-import type { RouteResult } from '../random/types';
+import type { RouteResult, RerollRewardState, RerollSessionState } from '../random/types';
+
+export type { RerollRewardState, RerollSessionState };
 
 /**
  * Supported experience phases in the setup and recommendation flow.
