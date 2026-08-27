@@ -4,6 +4,7 @@ import { Footer } from '../components/layout/Footer';
 import { LeftSidebar } from '../components/sidebar/LeftSidebar';
 import { RightSidebar } from '../components/sidebar/RightSidebar';
 import { MainExperience } from '../components/experience';
+import { ZONES, PLACE_CANDIDATES } from '../data';
 
 export default function Home() {
   return (
@@ -21,7 +22,7 @@ export default function Home() {
 
           {/* Center Column: Hero Main Experience (Setup -> Slot -> Result) */}
           <main className="order-1 flex w-full flex-col items-center lg:order-2 lg:col-span-6">
-            <MainExperience />
+            <MainExperience zones={[...ZONES]} candidates={[...PLACE_CANDIDATES]} />
           </main>
 
           {/* Right Sidebar: DAEJEON PICK, RANDOM LOG */}
