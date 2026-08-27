@@ -1,4 +1,5 @@
 import type { DurationType, PreferenceType } from '../../config/product';
+import { calculateTotalDurationMinutes } from '../../config/durationBudget';
 import type {
   Zone,
   PlaceCandidate,
@@ -131,7 +132,7 @@ function fillTemplateSlots(
   const usedPlaceIds = new Set<string>();
   const selectedCandidates: PlaceCandidate[] = [];
 
-  for (const role of template.slots) {
+  for (const role of template.stopRoles) {
     const availablePool = zoneCandidates.filter((c) => !usedPlaceIds.has(c.id));
     const chosen = selectCandidateForSlot(availablePool, role, preference, random);
 
@@ -163,7 +164,7 @@ function generateRouteId(random: () => number): string {
  * 2. Select an eligible Zone
  * 3. Select a Route Template matching duration, preference, and stay-extender availability
  * 4. Fill role slots without duplicates; graceful fallback to 3-stop template if stay-extender fails
- * 5. Return validated RouteResult (travelMin omitted as no curated transit data exists)
+ * 5. Return validated RouteResult (travelToNextMin omitted as no curated transit data exists)
  */
 export function generateRoute(options: GenerateRouteOptions): RouteResult {
   const { durationType, preference, zones, candidates, random = Math.random } = options;
@@ -208,7 +209,7 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
 
   // 4. Select a matching route template
   let template = selectRouteTemplate({
-    duration: durationType,
+    durationType,
     preference,
     availableCandidateCount: zoneCandidates.length,
     hasStayExtender,
@@ -226,9 +227,9 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
   let selectedCandidates = fillTemplateSlots(template, zoneCandidates, preference, random);
 
   // If slot filling failed on a stay-extender template, gracefully fall back to 3-stop template
-  if (!selectedCandidates && template.slots.includes('stay-extender')) {
+  if (!selectedCandidates && template.stopRoles.includes('stay-extender')) {
     const fallbackTemplate = selectRouteTemplate({
-      duration: durationType,
+      durationType,
       preference,
       availableCandidateCount: zoneCandidates.length,
       hasStayExtender: false,
@@ -248,23 +249,32 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
     );
   }
 
-  // 6. Map candidates to RouteStop contract (travelMin omitted as real routing data is not present)
+  // 6. Map candidates to RouteStop contract
   const stops: RouteStop[] = selectedCandidates.map((candidate, index) => ({
     order: index + 1,
     placeId: candidate.id,
     name: candidate.name,
     category: candidate.category,
-    durationMin: candidate.durationMin,
+    stayDurationMin: candidate.durationMin,
+    address: candidate.address,
+    mapLinks: candidate.mapLinks,
+    tips: candidate.description,
   }));
 
-  // 7. Construct final RouteResult
+  // 7. Construct final RouteResult with estimated duration calculation
+  const estimatedTotalMinutes = calculateTotalDurationMinutes(stops);
+  const title = `${selectedZone.name} ${durationType === 'half' ? '반일' : '당일'} 코스`;
+
   return {
     id: generateRouteId(random),
     zoneId: selectedZone.id,
+    zoneName: selectedZone.name,
     durationType,
     preference,
+    title,
     stops,
     mission: undefined,
+    estimatedTotalMinutes,
     createdAt: new Date().toISOString(),
   };
 }

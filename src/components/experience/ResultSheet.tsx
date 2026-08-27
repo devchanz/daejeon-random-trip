@@ -84,7 +84,7 @@ export function ResultSheet({ result, className = '' }: ResultSheetProps) {
             const isLast = index === stops.length - 1;
             const stopNumber = stop.order ?? index + 1;
             const hasTravelTime =
-              typeof stop.travelMin === 'number' && stop.travelMin > 0;
+              typeof stop.travelToNextMin === 'number' && stop.travelToNextMin > 0;
 
             return (
               <li
@@ -122,9 +122,9 @@ export function ResultSheet({ result, className = '' }: ResultSheetProps) {
                     {stop.name}
                   </h3>
 
-                  {typeof stop.durationMin === 'number' && stop.durationMin > 0 && (
+                  {typeof stop.stayDurationMin === 'number' && stop.stayDurationMin > 0 && (
                     <p className="mt-1 text-xs font-bold text-[#7d7364]">
-                      체류 예상 약 {stop.durationMin}분
+                      체류 예상 약 {stop.stayDurationMin}분
                     </p>
                   )}
 
@@ -132,7 +132,7 @@ export function ResultSheet({ result, className = '' }: ResultSheetProps) {
                   {!isLast && hasTravelTime && (
                     <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-[#e4dcce] bg-[#faf6ee] px-2.5 py-1 text-xs font-bold text-[#6b6257]">
                       <span aria-hidden="true">&darr;</span>
-                      <span>다음 장소까지 이동 약 {stop.travelMin}분</span>
+                      <span>다음 장소까지 이동 약 {stop.travelToNextMin}분</span>
                     </div>
                   )}
                 </div>

@@ -24,3 +24,10 @@ export const SUPPORTED_PREFERENCES = [
 ] as const;
 
 export type PreferenceType = (typeof SUPPORTED_PREFERENCES)[number];
+
+export {
+  DURATION_BUDGET_POLICIES,
+  calculateTotalDurationMinutes,
+  formatEstimatedDuration,
+  type DurationBudgetPolicy,
+} from './durationBudget';
