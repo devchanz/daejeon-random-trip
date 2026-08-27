@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import type { ExperienceState } from '../../lib/experience';
+import type { ExperienceState, RerollRewardState } from '../../lib/experience';
 import { ResultSheet } from './ResultSheet';
 
 /**
@@ -23,6 +23,9 @@ export const RESULT_OVERLAP_CLASS = '-mt-8 sm:-mt-10';
 
 export interface ResultAreaProps {
   state?: ExperienceState;
+  rerollReward?: RerollRewardState;
+  onOpenGuestbook?: () => void;
+  onExecuteReroll?: () => void;
   className?: string;
   overlapClass?: string;
   ref?: React.Ref<HTMLElement>;
@@ -36,7 +39,14 @@ export interface ResultAreaProps {
  */
 export const ResultArea = React.forwardRef<HTMLElement, ResultAreaProps>(
   function ResultArea(
-    { state, className = '', overlapClass = RESULT_OVERLAP_CLASS },
+    {
+      state,
+      rerollReward = 'locked',
+      onOpenGuestbook,
+      onExecuteReroll,
+      className = '',
+      overlapClass = RESULT_OVERLAP_CLASS,
+    },
     ref
   ) {
     const isResult = state?.phase === 'result' && Boolean(state.result);
@@ -60,7 +70,12 @@ export const ResultArea = React.forwardRef<HTMLElement, ResultAreaProps>(
         data-testid="result-area-boundary"
         className={`relative z-40 w-full scroll-mt-20 sm:scroll-mt-24 ${overlapClass} ${className}`}
       >
-        <ResultSheet result={state.result} />
+        <ResultSheet
+          result={state.result}
+          rerollReward={rerollReward}
+          onOpenGuestbook={onOpenGuestbook}
+          onExecuteReroll={onExecuteReroll}
+        />
       </section>
     );
   }

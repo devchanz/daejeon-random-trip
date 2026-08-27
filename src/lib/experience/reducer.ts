@@ -69,7 +69,7 @@ export function experienceReducer(
     }
 
     case 'START_SPIN': {
-      if (state.phase === 'ready') {
+      if (state.phase === 'ready' || state.phase === 'result') {
         return {
           phase: 'spinning',
           duration: state.duration,
