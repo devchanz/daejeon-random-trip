@@ -170,3 +170,29 @@ export function matchesPreference(
 
   return normalizedTags.some((tag) => keywords.some((kw) => tag.includes(kw)));
 }
+
+/**
+ * Canonical meal candidate check.
+ */
+export function isMealCandidate(candidate: PlaceCandidate): boolean {
+  return candidate.category === '식사' || matchesRole(candidate, 'meal');
+}
+
+/**
+ * Canonical cafe candidate check.
+ * Strictly adheres to PlaceCandidate.category === "카페·디저트".
+ */
+export function isCafeCandidate(candidate: PlaceCandidate): boolean {
+  return candidate.category === '카페·디저트';
+}
+
+/**
+ * Canonical discovery candidate check.
+ */
+export function isDiscoveryCandidate(candidate: PlaceCandidate): boolean {
+  return (
+    candidate.category === '볼거리·문화·체험' ||
+    matchesRole(candidate, 'discovery') ||
+    matchesRole(candidate, 'anchor')
+  );
+}

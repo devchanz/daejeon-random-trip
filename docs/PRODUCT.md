@@ -29,9 +29,9 @@ flowchart LR
 
 - **Zone**: Walkable/travelable neighborhood cluster (initial focus centered around Daejeon Station / old downtown: Eunhaeng-dong & Daeheung-dong).
 - **Engine vs. UI**: The **Recommendation Engine** (`src/lib/random`) handles candidate filtering, random selection, template matching, and route validation. The **Slot Machine** is solely an animated visual interaction layer.
-- **Stop Count Policy**:
-  - **Half-Day (`half`)**: Fixed **3 stops** (2-stop routes are deprecated).
-  - **Full-Day (`full`)**: **3–4 stops** (target/preferred **4 stops** with `stay-extender`; 3-stop template retained as graceful fallback).
+- **Stop Count & Sequence Policy**:
+  - **Half-Day (`half`)**: Fixed **exactly 3 stops** (`Meal → Cafe → Preference`). (2-stop routes are deprecated).
+  - **Full-Day (`full`)**: **3–4 stops** (primary **4 stops**: `Meal → Cafe → Discovery → Preference`; graceful fallback to **3 stops**: `Meal → Cafe → Preference`, omitting Discovery while preserving the user's selected Preference).
 - **Duration Budgeting**: Numeric minute bounds remain unconfigured (TBD) pending transit modeling and verified candidate place data. In provisional MVP data, `estimatedTotalMinutes` represents place stay duration.
 
 

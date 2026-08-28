@@ -57,9 +57,15 @@ export interface RouteResult {
 }
 
 /**
- * Conceptual role assigned to a slot in a route template.
+ * Conceptual role assigned to a place candidate in the recommendation pool.
  */
 export type CandidateRole = 'anchor' | 'meal' | 'discovery' | 'stay-extender';
+
+/**
+ * Ordered route slot type within an itinerary template.
+ * Distinct from candidate-level conceptual roles.
+ */
+export type RouteSlot = 'meal' | 'cafe' | 'discovery' | 'preference';
 
 /**
  * Candidate place definition for the recommendation pool.
@@ -81,16 +87,16 @@ export interface PlaceCandidate {
 }
 
 /**
- * Definition of a structured route template composed of ordered role slots.
+ * Definition of a structured route template composed of ordered slots.
  * Conforms to docs/DATA_MODEL.md section 2.2.
  */
 export interface RouteTemplate {
-  id: string;                    // Template ID (e.g., "half-food-3stop")
+  id: string;                    // Template ID (e.g., "half_ordered_3", "full_ordered_4")
   zoneId?: string;               // Optional zone association (if zone-specific)
   durationType: DurationType;   // 'half' | 'full'
   preference?: PreferenceType;   // Target preference filter ('anything' | 'food' | 'walk' | 'photo')
   targetDurationMin?: { min: number; max: number }; // Configurable duration budget range (TBD)
-  stopRoles: CandidateRole[];    // Role slots sequence (e.g., ['anchor', 'meal', 'discovery'])
+  slots: RouteSlot[];            // Ordered route slot sequence (e.g., ['meal', 'cafe', 'preference'])
 }
 
 /**

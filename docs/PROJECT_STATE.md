@@ -15,10 +15,11 @@
 
 ## Route Recommendation Contract
 - **Engine Logic** (`src/lib/random`): Pure, testable logic decoupled from UI animations.
-- **Half-Day (`half`)**: Fixed **exactly 3 stops** (`half_general_3`, `half_food_3`, `half_walk_3`, `half_photo_3`; 2-stop templates deprecated).
-- **Full-Day (`full`)**: **4 stops preferred** (when `stay-extender` role candidate is present) with graceful fallback to **3 stops**.
-- **Preferences**: `anything` ('아무거나'), `food` ('먹방'), `walk` ('산책'), `photo` ('사진').
-- **Stop Roles**: `anchor`, `meal`, `discovery`, `stay-extender`.
+- **Ordered Route Template**:
+  - **Half-Day (`half`)**: Fixed **exactly 3 stops**: `Meal → Cafe → Preference` (`half_ordered_3`).
+  - **Full-Day (`full`)**: Primary **4 stops**: `Meal → Cafe → Discovery → Preference` (`full_ordered_4`); graceful fallback to **3 stops**: `Meal → Cafe → Preference` (`full_fallback_3`), omitting Discovery while preserving user's chosen Preference.
+- **Preferences**: `anything` ('아무거나', wildcard matching all candidates), `food` ('먹방'), `walk` ('산책'), `photo` ('사진').
+- **Stop Roles vs Route Slots**: Conceptual place taxonomy is `anchor`, `meal`, `discovery`, `stay-extender`. Route slots are `meal`, `cafe`, `discovery`, `preference`. Canonical cafe identification is based on `PlaceCandidate.category === "카페·디저트"`.
 - **Duration Budget Semantics**: In current provisional data, `estimatedTotalMinutes` strictly represents place stay duration ($\sum \text{Place.durationMin}$). Door-to-door transit times are omitted pending transit modeling. Numeric budget bounds (`minMinutes`, `maxMinutes`) remain unconfigured (TBD).
 
 ## Data Status
@@ -41,7 +42,7 @@
 
 ## Completed Milestones
 - [x] Controlled Random recommendation engine with role taxonomy and fallback handling (`src/lib/random`).
-- [x] Enforced 3-stop half-day and 3~4-stop full-day routing contracts.
+- [x] Enforced Ordered Route Templates (Half: Meal -> Cafe -> Preference; Full: Meal -> Cafe -> Discovery -> Preference with 3-stop fallback).
 - [x] Experience state machine & reducer (`src/lib/experience`).
 - [x] Visual v4 layout shell (`Header`, `LeftSidebar`, `RightSidebar`, `Footer`, `MainExperience`).
 - [x] Physical slot machine chassis with sequential reel stops, lever animation, and reduced-motion support.
