@@ -63,13 +63,15 @@ interface Zone {
   active: boolean;
 }
 
+type RouteSlot = 'meal' | 'cafe' | 'discovery' | 'preference';
+
 interface RouteTemplate {
-  id: string;                    // Template ID (e.g., "half-food-3stop")
-  zoneId: string;
+  id: string;                    // Template ID (e.g., "half_ordered_3", "full_ordered_4")
+  zoneId?: string;
   durationType: 'half' | 'full';
-  preference: 'anything' | 'food' | 'walk' | 'photo';
-  targetDurationMin: { min: number; max: number }; // Configurable duration budget range
-  stopRoles: string[];           // Role slots (e.g., ['anchor', 'meal', 'discovery'])
+  preference?: 'anything' | 'food' | 'walk' | 'photo';
+  targetDurationMin?: { min: number; max: number }; // Configurable duration budget range (TBD)
+  slots: RouteSlot[];            // Ordered route slot sequence (e.g., ['meal', 'cafe', 'preference'])
 }
 ```
 

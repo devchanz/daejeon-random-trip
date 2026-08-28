@@ -152,3 +152,15 @@ This document tracks fundamental product, architecture, and growth experience de
   - **Duration Budgets**: Numeric duration bounds (`minMinutes`, `maxMinutes`) remain unconfigured (TBD) in `DURATION_BUDGET_POLICIES`. In provisional MVP data, `estimatedTotalMinutes` strictly represents place stay time ($\sum \text{Place.durationMin}$) without inter-stop transit time.
 - **Why**: 2-stop half-day routes generated insufficiently engaging itineraries with low stay times (min 65m, p10 95m). Fixing half-day to 3 stops naturally lifts the duration floor (min 115m, p10 145m, median 175m) and guarantees 100% route generation success across all 7 active zones without requiring brittle numeric rejection loops on provisional place data.
 - **Revisit when**: Place candidate dataset undergoes full tourism verification and door-to-door transit time modeling is implemented.
+
+---
+
+### ADR-019: Ordered Route Template Sequence & Preference-Preserving Fallback
+- **Status**: **Fixed**
+- **Decision**:
+  - **Half-Day (`half`)**: Fixed sequence of exactly 3 stops: `Meal → Cafe → Preference`.
+  - **Full-Day (`full`)**: Primary sequence of 4 stops: `Meal → Cafe → Discovery → Preference`.
+  - **Full-Day Graceful Fallback**: If a 4-stop itinerary cannot be fulfilled in a zone, gracefully fall back to 3 stops (`Meal → Cafe → Preference`), omitting intermediate `Discovery` while strictly preserving the user's explicit Q2 Preference selection.
+  - **Slot & Role Boundaries**: Canonical cafe identification is based on `PlaceCandidate.category === "카페·디저트"`. The conceptual `CandidateRole` taxonomy (`anchor`, `meal`, `discovery`, `stay-extender`) remains unchanged.
+- **Why**: Pure role-based random ordering produced unnatural sequences (e.g. meal placed at the end of a half-day trip). The Ordered Route structure guarantees coherent, intuitive local itineraries (Meal -> Cafe -> Activity) while keeping randomness and zero database overhead.
+- **Revisit when**: Multi-city extensions or dynamic duration-window constraints are introduced.
