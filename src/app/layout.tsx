@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { getSiteOrigin } from "../lib/share";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(getSiteOrigin()),
   title: "대전 랜덤 여행 | DAEJEON RANDOM TRIP",
   description: "고민 없이 떠나는 대전 당일치기 & 반일 랜덤 여행 코스 추천",
 };

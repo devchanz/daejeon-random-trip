@@ -36,6 +36,52 @@ export function formatShareText(routeTitle: string, stopCount: number): string {
 }
 
 /**
+ * Normalizes and validates a candidate URL string into a clean origin (e.g. "https://example.com").
+ * Returns null if the URL is invalid or uses an unsupported protocol (e.g. ftp:, javascript:).
+ */
+export function normalizeOrigin(raw?: string): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  // Detect explicit URI schemes (e.g. "https://", "ftp://", "javascript:") while ignoring port colons (e.g. "localhost:3000")
+  const hasScheme = /^[a-zA-Z][a-zA-Z0-9+.-]*:(?!\d+($|\/|\?))/.test(trimmed);
+
+  if (hasScheme) {
+    // Only http:// and https:// schemes are permitted
+    if (!/^https?:\/\//i.test(trimmed)) {
+      return null;
+    }
+  }
+
+  // Prepend https:// if no supported scheme was supplied
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+      return parsed.origin;
+    }
+  } catch {
+    // Invalid URL format
+  }
+  return null;
+}
+
+/**
+ * Resolves current site origin from environment cascade with protocol and origin normalization.
+ * Guarantees a valid, normalized http/https origin string without paths or trailing slashes.
+ */
+export function getSiteOrigin(): string {
+  const envCandidate =
+    normalizeOrigin(process.env.NEXT_PUBLIC_SITE_URL) ||
+    normalizeOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL) ||
+    normalizeOrigin(process.env.VERCEL_URL);
+
+  return envCandidate || 'http://localhost:3000';
+}
+
+/**
  * Constructs absolute or relative share URL for a given shareCode.
  */
 export function getShareUrl(shareCode: string): string {
@@ -43,7 +89,7 @@ export function getShareUrl(shareCode: string): string {
   if (typeof window !== 'undefined' && window.location?.origin) {
     return `${window.location.origin}/r/${cleanCode}`;
   }
-  return `/r/${cleanCode}`;
+  return `${getSiteOrigin()}/r/${cleanCode}`;
 }
 
 /**
