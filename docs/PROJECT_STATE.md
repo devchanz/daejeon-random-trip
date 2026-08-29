@@ -1,10 +1,10 @@
 # Daejeon Random Trip — Project State
 
 ## Snapshot
-- **Last Updated**: 2026-08-27
+- **Last Updated**: 2026-08-29
 - **Baseline Main Commit at Handoff Start**: `5060084`
 - **Stack**: Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, ESLint 9, pnpm 11, Supabase (PostgreSQL REST)
-- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, and guestbook rewarded reroll loop are implemented and verified. Referral sharing, in-app route guide, analytics, and asset finalization are pending.
+- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, and referral sharing (`/api/share`, `/r/[shareCode]`, Result share CTA wiring) are implemented and verified. In-app route guide, analytics, and asset finalization are pending.
 
 ## Product Flow
 1. **Q1 (Duration)**: User selects local travel time in Daejeon (`반나절` / `하루`).
@@ -51,10 +51,10 @@
 - [x] Supabase server REST client & `/api/guestbook` route handler.
 - [x] Guestbook composer modal with input sanitization & rewarded reroll lifecycle (`sessionStorage`).
 - [x] Share snapshot persistence foundation (`src/lib/database/share.ts`).
+- [x] Shared Routes / Referral: `/api/share` route handler, dedicated `/r/[shareCode]` friend landing page with dynamic OG metadata, and ResultSheet Web Share / clipboard fallback.
 
 ## Deferred / Known Gaps
 - **Result Visual Contract**: Latest docs (`docs/PRODUCT.md`, `ADR-008`) define a 2-stage reveal with output slit peek cue & centered `ResultModal` overlay; current code uses inline `ResultSheet`.
-- **Shared Routes / Referral End-to-End**: `/api/share` route handler, `/r/[shareCode]` friend landing page, and Result share CTA wiring are not implemented (`src/lib/database/share.ts` is only the database persistence foundation).
 - **In-App Route Guide**: `RouteGuide.tsx` not implemented; `“이 코스로 가보기”` CTA is disabled.
 - **Today's Pick System**: Seed content in `src/data/picks.ts`, `/pick/[slug]` detail page, right sidebar widget, and Q2 vibe seeding not implemented.
 - **Full Guestbook Archive Page & Preview**: `/guestbook` read-only community feed page and right sidebar live feed connection not implemented.
@@ -64,12 +64,11 @@
 - **Dataset Verification**: Final tourism validation for candidate places is pending.
 
 ## Next Recommended Work
-1. **Shared Routes / Referral**: Implement `src/app/api/share/route.ts`, dedicated friend landing page `src/app/r/[shareCode]/page.tsx`, and wire Web Share / clipboard copy on Result Card.
-2. **RouteGuide**: Build `src/components/experience/RouteGuide.tsx` (structured itinerary breakdown, stay times, place guidance, and outbound map links) and wire `“이 코스로 가보기”` CTA.
-3. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
-4. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
-5. **Final Visual Integration**: Align Result presentation with approved centered `ResultModal` overlay and output slit peek cue (ADR-008), integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
-6. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates.
+1. **RouteGuide**: Build `src/components/experience/RouteGuide.tsx` (structured itinerary breakdown, stay times, place guidance, and outbound map links) and wire `“이 코스로 가보기”` CTA.
+2. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
+3. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
+4. **Final Visual Integration**: Align Result presentation with approved centered `ResultModal` overlay and output slit peek cue (ADR-008), integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
+5. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates.
 
 ## Source of Truth
 Authority is distributed across authoritative project documents:

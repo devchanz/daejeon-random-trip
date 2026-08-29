@@ -33,7 +33,10 @@ Before implementing changes, consult the project control-plane documents relevan
 - **Version Control**: Do not commit changes to git unless explicitly requested by the user.
 
 ## 4. Validation Expectations
+- **Whitespace & Formatting Hygiene**:
+  - Before reporting implementation complete, all created or edited files must not contain unintended trailing blank lines at EOF and must pass `git diff --check`.
 - **For Source & Config Changes**:
+  - `git diff --check` (Whitespace and merge conflict marker verification)
   - `pnpm lint` (ESLint 9)
   - `pnpm typecheck` (`tsc --noEmit`)
   - `pnpm build` (Next.js build verification when appropriate)

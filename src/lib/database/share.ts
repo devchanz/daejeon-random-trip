@@ -11,13 +11,38 @@ import { SUPPORTED_DURATIONS, SUPPORTED_PREFERENCES } from '../../config/product
  * Alphanumeric characters used for generating short URL-safe share codes.
  * Omits ambiguous characters (0, O, I, l) for high readability.
  */
-const SHARE_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+export const SHARE_CODE_CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+
+/**
+ * Standard length of public share codes.
+ */
+export const SHARE_CODE_LENGTH = 8;
+
+/**
+ * Validates whether a given string is a well-formed share code.
+ * Ensures the code is exactly SHARE_CODE_LENGTH long and composed strictly of SHARE_CODE_CHARS.
+ */
+export function isValidShareCode(code: unknown): code is string {
+  if (typeof code !== 'string') {
+    return false;
+  }
+  const trimmed = code.trim();
+  if (trimmed.length !== SHARE_CODE_LENGTH) {
+    return false;
+  }
+  for (let i = 0; i < trimmed.length; i++) {
+    if (!SHARE_CODE_CHARS.includes(trimmed[i])) {
+      return false;
+    }
+  }
+  return true;
+}
 
 /**
  * Generates an 8-character URL-safe random share code (e.g., "F7k2Ma9Q")
  * using cryptographically secure random values with rejection sampling to eliminate modulo bias.
  */
-export function generateShareCode(length: number = 8): string {
+export function generateShareCode(length: number = SHARE_CODE_LENGTH): string {
   const charsLength = SHARE_CODE_CHARS.length;
   const maxValidByte = 256 - (256 % charsLength); // 224
   let code = '';
@@ -184,8 +209,16 @@ export function validateSharedRouteInput(
     return { valid: false, error: '루트 제목(title)이 유효하지 않습니다 (1~100자).' };
   }
 
-  if (!Array.isArray(input.stops) || input.stops.length < 1 || input.stops.length > 4) {
-    return { valid: false, error: '경유지(stops)는 1개 이상 4개 이하이어야 합니다.' };
+  if (!Array.isArray(input.stops)) {
+    return { valid: false, error: '경유지(stops) 목록이 올바르지 않습니다.' };
+  }
+
+  if (input.durationType === 'half' && input.stops.length !== 3) {
+    return { valid: false, error: '반나절(half) 여행 코스는 정확히 3개의 경유지(stops)여야 합니다.' };
+  }
+
+  if (input.durationType === 'full' && (input.stops.length < 3 || input.stops.length > 4)) {
+    return { valid: false, error: '하루(full) 여행 코스는 3개 또는 4개의 경유지(stops)여야 합니다.' };
   }
 
   const validatedStops: SharedRouteStopSnapshot[] = [];
@@ -298,7 +331,7 @@ export async function getSharedRouteByCode(
   shareCode: string,
   client: DatabaseClientContract = getDatabaseClient()
 ): Promise<DatabaseResult<SharedRouteRecord | null>> {
-  if (!shareCode || typeof shareCode !== 'string' || shareCode.trim().length === 0) {
+  if (!shareCode || typeof shareCode !== 'string' || !isValidShareCode(shareCode.trim())) {
     return { success: false, error: '유효하지 않은 공유 코드입니다.' };
   }
 

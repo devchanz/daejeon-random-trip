@@ -1,8 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { RouteResult } from '../../lib/random';
 import type { RerollRewardState } from '../../lib/experience';
+import {
+  formatShareTitle,
+  formatShareText,
+  getShareUrl,
+  triggerShare,
+} from '../../lib/share';
 import {
   DURATION_DISPLAY_LABELS,
   PREFERENCE_DISPLAY_LABELS,
@@ -16,11 +22,18 @@ export interface ResultSheetProps {
   className?: string;
 }
 
+interface ShareState {
+  routeId: string;
+  shareCode?: string | null;
+  status: 'idle' | 'loading' | 'copied' | 'error';
+  error?: string | null;
+}
+
 /**
  * Visual V4 ResultSheet component.
  * Renders the variable-length RouteResult as an authentic printed paper travel itinerary sheet / receipt ticket.
  * Features tear-line ticket perforation, stamp badges, route timeline with step nodes,
- * pinned mission card with washi tape, and action CTAs including the Guestbook -> Reroll loop.
+ * pinned mission card with washi tape, and action CTAs including the Referral Share and Guestbook -> Reroll loop.
  */
 export function ResultSheet({
   result,
@@ -29,6 +42,26 @@ export function ResultSheet({
   onExecuteReroll,
   className = '',
 }: ResultSheetProps) {
+  // Client-side share state strictly keyed by routeId
+  const [shareState, setShareState] = useState<ShareState | null>(null);
+
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) {
+        clearTimeout(copiedTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Derived state: automatically resets to idle/null if result.id does not match the cached routeId
+  const isCurrentRoute = shareState?.routeId === result.id;
+  const shareStatus = isCurrentRoute ? (shareState?.status ?? 'idle') : 'idle';
+  const shareError = isCurrentRoute ? (shareState?.error ?? null) : null;
+  const cachedShareCode = isCurrentRoute ? (shareState?.shareCode ?? null) : null;
+
   const durationLabel = result.durationType
     ? DURATION_DISPLAY_LABELS[result.durationType] ?? result.durationType
     : null;
@@ -38,6 +71,168 @@ export function ResultSheet({
     : null;
 
   const stops = result.stops || [];
+
+  const handleShare = async () => {
+    if (shareStatus === 'loading') return;
+
+    setShareState({
+      routeId: result.id,
+      shareCode: cachedShareCode,
+      status: 'loading',
+      error: null,
+    });
+
+    let activeShareCode = cachedShareCode;
+
+    // 1. If shareCode is not yet cached for this routeResult.id, request snapshot creation
+    if (!activeShareCode) {
+      try {
+        const response = await fetch('/api/share', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sourceRouteId: result.id,
+            zoneId: result.zoneId,
+            durationType: result.durationType,
+            preferenceType: result.preference,
+            title: result.title,
+            stops: stops.map((s) => ({
+              order: s.order,
+              placeId: s.placeId,
+              name: s.name,
+              category: s.category,
+              stayDurationMin: s.stayDurationMin,
+              address: s.address,
+              mapLinks: s.mapLinks,
+              tips: s.tips,
+            })),
+            mission: result.mission,
+            estimatedTotalMinutes: result.estimatedTotalMinutes,
+            schemaVersion: 1,
+          }),
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok || !data?.success || !data?.shareCode) {
+          const errText = data?.error || '공유 링크 생성에 실패했습니다.';
+          setShareState({
+            routeId: result.id,
+            shareCode: null,
+            status: 'error',
+            error: errText,
+          });
+          return;
+        }
+
+        activeShareCode = data.shareCode as string;
+      } catch {
+        setShareState({
+          routeId: result.id,
+          shareCode: null,
+          status: 'error',
+          error: '네트워크 오류가 발생했습니다.',
+        });
+        return;
+      }
+    }
+
+    // 2. Invoke Web Share API with clipboard copy fallback
+    const shareTitle = formatShareTitle(result.title);
+    const shareText = formatShareText(result.title, stops.length);
+    const shareUrl = getShareUrl(activeShareCode);
+
+    const shareResult = await triggerShare({
+      title: shareTitle,
+      text: shareText,
+      url: shareUrl,
+    });
+
+    if (shareResult.status === 'copied') {
+      setShareState({
+        routeId: result.id,
+        shareCode: activeShareCode,
+        status: 'copied',
+        error: null,
+      });
+      if (copiedTimerRef.current) {
+        clearTimeout(copiedTimerRef.current);
+      }
+      copiedTimerRef.current = setTimeout(() => {
+        setShareState((prev) =>
+          prev && prev.routeId === result.id ? { ...prev, status: 'idle' } : prev
+        );
+      }, 2000);
+    } else if (shareResult.status === 'error') {
+      setShareState({
+        routeId: result.id,
+        shareCode: activeShareCode,
+        status: 'error',
+        error: shareResult.error,
+      });
+    } else {
+      // 'shared' or 'canceled' -> return to idle
+      setShareState({
+        routeId: result.id,
+        shareCode: activeShareCode,
+        status: 'idle',
+        error: null,
+      });
+    }
+  };
+
+  const renderShareCTA = () => {
+    if (shareStatus === 'loading') {
+      return (
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#7d7364] cursor-wait"
+        >
+          생성 중...
+        </button>
+      );
+    }
+
+    if (shareStatus === 'copied') {
+      return (
+        <button
+          type="button"
+          aria-label="링크 복사 완료"
+          className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#10b981] py-2.5 px-3 text-center text-xs font-black text-white shadow-retro-xs transition-all"
+        >
+          ✨ 링크 복사 완료!
+        </button>
+      );
+    }
+
+    if (shareStatus === 'error') {
+      return (
+        <button
+          type="button"
+          onClick={handleShare}
+          aria-label="공유 다시 시도"
+          className="flex-1 rounded-xl border-2 border-[#ff5555] bg-[#fff5f5] py-2.5 px-3 text-center text-xs font-bold text-[#ff5555] shadow-retro-xs hover:bg-[#ffebeb] cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+        >
+          ⚠️ 다시 시도
+        </button>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={handleShare}
+        aria-label="내 루트 공유하기"
+        className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+      >
+        내 루트 공유하기
+      </button>
+    );
+  };
 
   const renderRerollCTA = () => {
     if (rerollReward === 'available') {
@@ -218,12 +413,23 @@ export function ResultSheet({
           </section>
         )}
 
+        {/* Share Error Alert (if any) */}
+        {shareError && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="rounded-xl border-2 border-[#ff5555] bg-[#fef2f2] p-2.5 text-xs font-black text-[#991b1b]"
+          >
+            ⚠️ {shareError}
+          </div>
+        )}
+
         {/* 4. CTA Action Layout Boundary */}
         <div
           data-testid="result-cta-boundary"
           className="flex flex-col gap-2.5 border-t-2 border-[#2b2520] pt-5"
         >
-          {/* Primary CTA Placeholder */}
+          {/* Primary CTA Placeholder (RouteGuide contract) */}
           <button
             type="button"
             disabled
@@ -233,16 +439,9 @@ export function ResultSheet({
             이 코스로 가보기 (준비 중)
           </button>
 
-          {/* Secondary & Tertiary CTA Placeholders */}
+          {/* Secondary & Tertiary CTA Boundaries */}
           <div className="flex gap-2 w-full">
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              className="flex-1 rounded-xl border-2 border-[#d8d0c2] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#8e8477] cursor-not-allowed transition-none"
-            >
-              내 루트 공유하기 (준비 중)
-            </button>
+            {renderShareCTA()}
             {renderRerollCTA()}
           </div>
         </div>
