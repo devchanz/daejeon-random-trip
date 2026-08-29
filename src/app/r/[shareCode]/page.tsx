@@ -4,6 +4,7 @@ import { Header } from '../../../components/layout/Header';
 import { Footer } from '../../../components/layout/Footer';
 import { SharedRouteView } from '../../../components/share';
 import { getSharedRouteByCode, isValidShareCode } from '../../../lib/database';
+import { getSiteOrigin } from '../../../lib/share';
 
 interface PageProps {
   params: Promise<{
@@ -12,24 +13,9 @@ interface PageProps {
 }
 
 /**
- * Resolves current site origin from environment cascade without inventing domains.
- */
-function getSiteOrigin(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/+$/, '');
-  }
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return 'http://localhost:3000';
-}
-
-/**
  * Dynamic Open Graph and SEO metadata for shared route landing page.
- * Enforces robots: { index: false } (noindex) per ADR-014.
+ * Strictly snapshot-only: resolves all fields deterministically from SharedRouteRecord.
+ * Enforces robots: { index: false, follow: false } (noindex) per ADR-014.
  */
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { shareCode } = await params;
@@ -38,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: '공유 여행 코스 | 대전 랜덤 여행',
       description: '대전 랜덤 여행 추천 코스를 확인해보세요.',
-      robots: { index: false },
+      robots: { index: false, follow: false },
     };
   }
 
@@ -47,26 +33,39 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return {
       title: '여행 코스를 찾을 수 없습니다 | 대전 랜덤 여행',
       description: '존재하지 않거나 만료된 대전 여행 코스입니다.',
-      robots: { index: false },
+      robots: { index: false, follow: false },
     };
   }
 
   const record = result.data;
+  const durationLabel = record.duration_type === 'half' ? '반나절' : '하루';
   const stopSummary = record.stops.map((s) => s.name).join(' → ');
-  const description = `총 ${record.stops.length}곳 (${stopSummary}) 대전 여행 코스가 도착했어요!`;
+  const title = `${record.title} | 대전 랜덤 여행`;
+  const description = `[${durationLabel} 코스 · 총 ${record.stops.length}곳] ${stopSummary}`;
   const shareUrl = `${getSiteOrigin()}/r/${record.share_code}`;
 
   return {
-    title: `${record.title} | 대전 랜덤 여행`,
+    title,
     description,
-    robots: { index: false },
+    alternates: {
+      canonical: shareUrl,
+    },
+    robots: {
+      index: false,
+      follow: false,
+    },
     openGraph: {
-      title: `${record.title} | 대전 랜덤 여행`,
+      title,
       description,
       url: shareUrl,
       siteName: '대전 랜덤 여행',
       type: 'website',
       locale: 'ko_KR',
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
     },
   };
 }
