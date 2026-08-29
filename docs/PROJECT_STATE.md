@@ -4,7 +4,7 @@
 - **Last Updated**: 2026-08-29
 - **Baseline Main Commit at Handoff Start**: `5060084`
 - **Stack**: Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, ESLint 9, pnpm 11, Supabase (PostgreSQL REST)
-- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, and referral sharing (`/api/share`, `/r/[shareCode]`, Result share CTA wiring) are implemented and verified. In-app route guide, analytics, and asset finalization are pending.
+- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`), and in-app Route Guide are implemented and verified. Analytics, Today's Pick, and asset finalization are pending.
 
 ## Product Flow
 1. **Q1 (Duration)**: User selects local travel time in Daejeon (`반나절` / `하루`).
@@ -12,6 +12,7 @@
 3. **READY**: Condition summary displayed; primary CTA activates `“🎰 여행 뽑기!”`.
 4. **SPINNING**: Slot reels spin with neutral arcade symbols; sequential stop (`Reel 1` 1100ms → `Reel 2` 1600ms → `Reel 3` 2100ms → final beat 400ms).
 5. **RESULT**: Spin completes; currently presents an overlapping inline `ResultSheet` ticket (with temporary 1400ms dim/blur backdrop) displaying route stops, stay times, and mission note. *(Note: Transition to centered modal overlay is an approved contract gap deferred to Final Visual Integration).*
+6. **ROUTE_GUIDE**: Clicking `“이 코스로 가보기”` on Result Card or `“이 코스 그대로 가보기”` on `/r/[shareCode]` opens `RouteGuideModal` displaying detailed stop cards, stay durations, curated tips, and external Naver/Kakao map launch buttons.
 
 ## Route Recommendation Contract
 - **Engine Logic** (`src/lib/random`): Pure, testable logic decoupled from UI animations.
@@ -37,7 +38,7 @@
   - Unlocked strictly upon verified server DB insertion from `GuestbookComposer`.
   - Max 1 reward reroll per travel session, backed by browser `sessionStorage`.
   - Consumed only after successful route recommendation generation.
-- **Share Snapshot Foundation**: `src/lib/database/share.ts` implements cryptographic rejection sampling (`generateShareCode`) and snapshot persistence foundation only.
+- **Share Snapshot Foundation**: `src/lib/database/share.ts` implements cryptographic rejection sampling (`generateShareCode`) and snapshot persistence (`createSharedRoute`, `getSharedRouteByCode`, `getSharedRouteBySourceRouteId`).
 - **Asset Placeholders**: `GUESTBOOK_AVATARS` uses 4 development placeholder emojis (⭐, ✨, 🌱, 🎒). Official Kkumdori/Kkumssi assets are pending.
 
 ## Completed Milestones
@@ -50,12 +51,12 @@
 - [x] 163 runtime place candidates across 8 zones (7 active).
 - [x] Supabase server REST client & `/api/guestbook` route handler.
 - [x] Guestbook composer modal with input sanitization & rewarded reroll lifecycle (`sessionStorage`).
-- [x] Share snapshot persistence foundation (`src/lib/database/share.ts`).
+- [x] Share snapshot persistence foundation & DDL migrations (`src/lib/database/share.ts`, `supabase/migrations/`).
 - [x] Shared Routes / Referral: `/api/share` route handler, dedicated `/r/[shareCode]` friend landing page with dynamic OG metadata, and ResultSheet Web Share / clipboard fallback.
+- [x] In-App Route Guide: `RouteGuideModal` & `RouteGuideTimeline` with ordered stop sequence, stay durations, visit tips, external Naver/Kakao map launch buttons, and CTA wiring on `ResultSheet` and `SharedRouteView`.
 
 ## Deferred / Known Gaps
 - **Result Visual Contract**: Latest docs (`docs/PRODUCT.md`, `ADR-008`) define a 2-stage reveal with output slit peek cue & centered `ResultModal` overlay; current code uses inline `ResultSheet`.
-- **In-App Route Guide**: `RouteGuide.tsx` not implemented; `“이 코스로 가보기”` CTA is disabled.
 - **Today's Pick System**: Seed content in `src/data/picks.ts`, `/pick/[slug]` detail page, right sidebar widget, and Q2 vibe seeding not implemented.
 - **Full Guestbook Archive Page & Preview**: `/guestbook` read-only community feed page and right sidebar live feed connection not implemented.
 - **Analytics Telemetry**: `src/lib/analytics/` and GA4 event dispatchers not implemented.
@@ -64,11 +65,10 @@
 - **Dataset Verification**: Final tourism validation for candidate places is pending.
 
 ## Next Recommended Work
-1. **RouteGuide**: Build `src/components/experience/RouteGuide.tsx` (structured itinerary breakdown, stay times, place guidance, and outbound map links) and wire `“이 코스로 가보기”` CTA.
-2. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
-3. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
-4. **Final Visual Integration**: Align Result presentation with approved centered `ResultModal` overlay and output slit peek cue (ADR-008), integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
-5. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates.
+1. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
+2. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
+3. **Final Visual Integration**: Align Result presentation with approved centered `ResultModal` overlay and output slit peek cue (ADR-008), integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
+4. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates.
 
 ## Source of Truth
 Authority is distributed across authoritative project documents:
