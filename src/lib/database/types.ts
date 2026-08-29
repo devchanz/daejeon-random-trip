@@ -1,6 +1,8 @@
 import type { DurationType, PreferenceType } from '../../config/product';
 import type { SharedRouteStopSnapshot } from '../random/types';
 
+export type { SharedRouteStopSnapshot };
+
 export type GuestbookModerationStatus = 'visible' | 'hidden';
 
 /**

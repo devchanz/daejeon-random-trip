@@ -26,6 +26,7 @@ export interface ResultAreaProps {
   rerollReward?: RerollRewardState;
   onOpenGuestbook?: () => void;
   onExecuteReroll?: () => void;
+  onOpenRouteGuide?: () => void;
   className?: string;
   overlapClass?: string;
   ref?: React.Ref<HTMLElement>;
@@ -44,6 +45,7 @@ export const ResultArea = React.forwardRef<HTMLElement, ResultAreaProps>(
       rerollReward = 'locked',
       onOpenGuestbook,
       onExecuteReroll,
+      onOpenRouteGuide,
       className = '',
       overlapClass = RESULT_OVERLAP_CLASS,
     },
@@ -75,6 +77,7 @@ export const ResultArea = React.forwardRef<HTMLElement, ResultAreaProps>(
           rerollReward={rerollReward}
           onOpenGuestbook={onOpenGuestbook}
           onExecuteReroll={onExecuteReroll}
+          onOpenRouteGuide={onOpenRouteGuide}
         />
       </section>
     );

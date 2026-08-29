@@ -21,7 +21,9 @@ import {
   type RouteResult,
 } from '../../lib/random';
 import type { GuestbookEntryRecord } from '../../lib/database/types';
+import { normalizeRouteResult } from '../../lib/guide';
 import { GuestbookComposer } from '../guestbook';
+import { RouteGuideModal } from '../guide';
 import { SetupArea } from './SetupArea';
 import { SlotAnchor } from './SlotAnchor';
 import { ResultArea } from './ResultArea';
@@ -73,6 +75,7 @@ export function MainExperience({
   }, []);
 
   const [isGuestbookOpen, setIsGuestbookOpen] = useState<boolean>(false);
+  const [isRouteGuideOpen, setIsRouteGuideOpen] = useState<boolean>(false);
 
   // Presentation-only local state
   const [pendingResult, setPendingResult] = useState<RouteResult | null>(null);
@@ -327,6 +330,7 @@ export function MainExperience({
         rerollReward={rerollState.rerollReward}
         onOpenGuestbook={() => setIsGuestbookOpen(true)}
         onExecuteReroll={handleExecuteReroll}
+        onOpenRouteGuide={() => setIsRouteGuideOpen(true)}
       />
 
       {/* 4. Guestbook Composer Modal (In-flow modal triggered from Result Card) */}
@@ -336,6 +340,15 @@ export function MainExperience({
           isOpen={isGuestbookOpen}
           onClose={() => setIsGuestbookOpen(false)}
           onSuccess={handleGuestbookSuccess}
+        />
+      )}
+
+      {/* 5. Route Guide Modal (In-flow structured itinerary guidance) */}
+      {isRouteGuideOpen && state.phase === 'result' && state.result && (
+        <RouteGuideModal
+          guideData={normalizeRouteResult(state.result)}
+          isOpen={isRouteGuideOpen}
+          onClose={() => setIsRouteGuideOpen(false)}
         />
       )}
     </div>

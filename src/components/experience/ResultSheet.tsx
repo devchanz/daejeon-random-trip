@@ -19,6 +19,7 @@ export interface ResultSheetProps {
   rerollReward?: RerollRewardState;
   onOpenGuestbook?: () => void;
   onExecuteReroll?: () => void;
+  onOpenRouteGuide?: () => void;
   className?: string;
 }
 
@@ -33,13 +34,14 @@ interface ShareState {
  * Visual V4 ResultSheet component.
  * Renders the variable-length RouteResult as an authentic printed paper travel itinerary sheet / receipt ticket.
  * Features tear-line ticket perforation, stamp badges, route timeline with step nodes,
- * pinned mission card with washi tape, and action CTAs including the Referral Share and Guestbook -> Reroll loop.
+ * pinned mission card with washi tape, and action CTAs including the Referral Share, Route Guide, and Guestbook -> Reroll loop.
  */
 export function ResultSheet({
   result,
   rerollReward = 'locked',
   onOpenGuestbook,
   onExecuteReroll,
+  onOpenRouteGuide,
   className = '',
 }: ResultSheetProps) {
   // Client-side share state strictly keyed by routeId
@@ -429,14 +431,14 @@ export function ResultSheet({
           data-testid="result-cta-boundary"
           className="flex flex-col gap-2.5 border-t-2 border-[#2b2520] pt-5"
         >
-          {/* Primary CTA Placeholder (RouteGuide contract) */}
+          {/* Primary CTA: RouteGuide Transition */}
           <button
             type="button"
-            disabled
-            aria-disabled="true"
-            className="w-full rounded-2xl border-2 border-[#d8d0c2] bg-[#f0eae0] py-3.5 px-4 text-center text-sm font-black text-[#8e8477] cursor-not-allowed transition-none"
+            onClick={onOpenRouteGuide}
+            aria-label="이 코스로 가보기 (상세 여행 가이드 열기)"
+            className="w-full rounded-2xl border-2 border-[#2b2520] bg-[#ff5555] hover:bg-[#ff3b3b] py-3.5 px-4 text-center text-sm font-black text-white shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
           >
-            이 코스로 가보기 (준비 중)
+            이 코스로 가보기
           </button>
 
           {/* Secondary & Tertiary CTA Boundaries */}
