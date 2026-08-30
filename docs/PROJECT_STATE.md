@@ -2,10 +2,9 @@
 
 ## Snapshot
 - **Last Updated**: 2026-08-30
-- **Baseline Main Commit at Checkpoint**: `3b7dd8c` (`docs: update project handoff checkpoint`)
-- **Active Visual Integration Checkpoint**: `00a15fe` (`feat: establish responsive visual slot baseline`, approved via Human Browser review, currently under integration testing in `integration/visual-main`)
+- **Baseline Main Commit at Checkpoint**: `f2789ef` (`feat: establish responsive visual slot baseline`)
 - **Stack**: Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, ESLint 9, pnpm 11, Supabase (PostgreSQL REST)
-- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`), in-app Route Guide, shared route OG social preview hardening, and `SlotVisualFrame` responsive visual architecture baseline are integrated in this branch pending final validation. Analytics, Today's Pick, Result/Ticket output visual redesign, and asset finalization are pending.
+- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`), in-app Route Guide, shared route OG social preview hardening, and `SlotVisualFrame` responsive visual architecture baseline are implemented, verified, and merged to `main`. Visual baseline integration is complete and Human Browser validated; the temporary `integration/visual-main` lane is closed. The `plan_mvp_visual_integration@00a15fe` branch remains only as the preserved approved Visual reference checkpoint (all new visual work must branch from latest `main`). GA4 Analytics & Dashboard, Today's Pick, Result/Ticket output visual redesign, and asset finalization are pending.
 
 ---
 
@@ -113,7 +112,7 @@ SlotStage
 - [x] Shared Routes / Referral: `/api/share` route handler, dedicated `/r/[shareCode]` friend landing page, and ResultSheet Web Share / clipboard fallback.
 - [x] In-App Route Guide: `RouteGuideModal` (React Portal to `document.body`) & `RouteGuideTimeline` with ordered stop sequence, stay durations, visit tips, external Naver/Kakao map launch buttons, and CTA wiring on `ResultSheet` and `SharedRouteView`.
 - [x] Shared Route OG / Social Preview Hardening: `generateMetadata` OpenGraph, Twitter summary card, canonical alternates, `robots: { index: false, follow: false }`, `metadataBase` in root layout, and hardened `normalizeOrigin` / `getSiteOrigin` URL origin resolver.
-- [x] `SlotVisualFrame` architecture baseline: physical-footprint frame + absolute `LogicalCanvas` separation, verified production asset bounds (~46.72%), scroll/overflow fix, state-position lock, and desktop Setup/Slot balance (approved via Human Browser review on `plan_mvp_visual_integration`, under active integration).
+- [x] `SlotVisualFrame` architecture baseline: physical-footprint frame + absolute `LogicalCanvas` separation, verified production asset bounds (~46.72%), scroll/overflow fix, state-position lock, and desktop Setup/Slot balance (approved via Human Browser review and merged to `main` in commit `f2789ef`).
 
 ---
 
@@ -121,7 +120,7 @@ SlotStage
 - **Result Visual Redesign & Ticket Output**: Result functionality is operational. Final Ticket/output reveal and Result presentation are deferred until Q1/Q2/READY/SPIN base proportions are approved. When that visual pass begins, follow `docs/PRODUCT.md` + applicable Fixed ADRs in `docs/DECISIONS.md` rather than inferring the final treatment from the current implementation.
 - **Today's Pick System**: Seed content in `src/data/picks.ts`, `/pick/[slug]` detail page, right sidebar widget, and Q2 vibe seeding not implemented.
 - **Full Guestbook Archive Page & Preview**: `/guestbook` read-only community feed page and right sidebar live feed connection not implemented.
-- **Analytics Telemetry**: `src/lib/analytics/` and GA4 event dispatchers not implemented.
+- **Analytics Telemetry & Dashboard**: `src/lib/analytics/`, GA4 event dispatchers, and Campaign & Funnel Analysis Dashboard not implemented.
 - **Transit Modeling**: Inter-stop travel times and transit modes are not modeled.
 - **Production Brand Assets**: Official Kkumdori / Kkumssi Family illustrations, pixel artwork, and audio files are not yet in `public/`.
 - **Dataset Verification**: Final tourism validation for candidate places is pending.
@@ -149,7 +148,7 @@ Intentionally deferred out of the `SlotVisualFrame` baseline pass; not yet sched
    - **DEV ownership first**: functional DOM/state contract for the Result/Ticket lifecycle, route-data binding, `SlotOutputLayer` behavior (mounts as a sibling of `SlotVisualFrame`, per the Visual Baseline above), and CTA functionality.
    - **VISUAL ownership after the contract lands**: ticket appearance, peek/reveal animation, expanded Result sheet, STOP rows, Mission copy, CTA visual hierarchy, typography/spacing/polish.
 2. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
-3. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
+3. **Analytics (GA4 Telemetry & Campaign Dashboard)**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**), and deliver the Campaign & Funnel Analysis Dashboard to easily analyze paid traffic, acquisition UTMs, 4-loop funnel drop-offs, and proxy conversions without inspecting raw GA4 reports.
 4. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates; integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
 
 ---
