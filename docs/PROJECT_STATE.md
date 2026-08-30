@@ -1,10 +1,10 @@
 # Daejeon Random Trip — Project State
 
 ## Snapshot
-- **Last Updated**: 2026-08-29
+- **Last Updated**: 2026-08-30
 - **Baseline Main Commit at Handoff Start**: `5060084`
 - **Stack**: Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, ESLint 9, pnpm 11, Supabase (PostgreSQL REST)
-- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, and referral sharing (`/api/share`, `/r/[shareCode]`, Result share CTA wiring) are implemented and verified. In-app route guide, analytics, and asset finalization are pending.
+- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`, Result share CTA wiring), and the `SlotVisualFrame` visual architecture baseline are implemented and verified. In-app route guide, analytics, asset finalization, and the Result/Ticket output system are pending.
 
 ## Product Flow
 1. **Q1 (Duration)**: User selects local travel time in Daejeon (`반나절` / `하루`).
@@ -12,6 +12,45 @@
 3. **READY**: Condition summary displayed; primary CTA activates `“🎰 여행 뽑기!”`.
 4. **SPINNING**: Slot reels spin with neutral arcade symbols; sequential stop (`Reel 1` 1100ms → `Reel 2` 1600ms → `Reel 3` 2100ms → final beat 400ms).
 5. **RESULT**: Spin completes; currently presents an overlapping inline `ResultSheet` ticket (with temporary 1400ms dim/blur backdrop) displaying route stops, stay times, and mission note. *(Note: Transition to centered modal overlay is an approved contract gap deferred to Final Visual Integration).*
+
+## Visual Baseline: SlotVisualFrame Architecture (Approved 2026-08-30)
+Human Browser review approved the following as the **Visual baseline for main integration**. It supersedes the prior approach where the transparent 600×500 asset canvas itself participated in page layout, compensated with hand-tuned negative margins.
+
+**Structure**:
+```
+SlotStage
+  ├── SlotVisualFrame        (physical visible machine footprint; participates in page layout)
+  │     └── 600×500 LogicalCanvas   (absolute; does NOT determine surrounding layout spacing)
+  │           ├── DOM reels
+  │           ├── production PNG (slot-idle.png / slot-pulled.png)
+  │           └── DOM CTA
+  └── reserved SlotOutputLayer   (sibling of SlotVisualFrame; not yet implemented)
+```
+
+**Verified production union bounds** (measured by direct PNG alpha-channel decoding across `slot-idle.png` / `slot-pulled.png` / `slot-shell.png`, cross-checked against Figma `00_FINAL_REFERENCE / Landing/Desktop`):
+- Logical 600×500 canvas: `x=168, y=149, w≈280.333, h≈204.667`
+- Source 1800×1500 asset (3× scale): `x=504, y=447, w=841, h=614`
+- Corrects a prior incorrect assumption that the machine's physical footprint was ~58% of the logical canvas width — the verified figure is **~46.72%**.
+
+**Scroll / overflow contract**: `SlotVisualFrame` uses `overflow: hidden`. Root cause of a pre-result empty-scroll-tail bug: the oversized absolute `LogicalCanvas` (≈2.14× the frame's width) extended `document.scrollHeight` while the frame used `overflow: visible`, reserving a large blank area below the ground scenery in every pre-result state. Fixing the frame to `overflow: hidden` does **not** block the future Ticket/Result reveal, because `SlotOutputLayer` is architected as a **sibling** of `SlotVisualFrame` (not a descendant of `LogicalCanvas`) and is therefore never subject to this clip. Pre-result states (`Q1`/`Q2`/`READY`/`SPINNING`) must not reserve large blank Result space; Result content should add vertical space only when the `RESULT` state actually renders it.
+
+**State position lock**: `Q1`, `Q2`, `READY`, and `SPINNING` share pixel-identical geometry for Setup, `SlotVisualFrame`, and Helper (verified by direct DOM measurement at 1920 / 1440 / 1200 / 1024 / 400px). State transitions must never move the pre-result Hero.
+
+**Responsive Slot baseline** (Human-approved current values — **not** permanent final design values):
+| Viewport | Physical Slot width |
+|---|---|
+| 400px mobile | ~360px |
+| 1200px desktop | ~518px |
+| 1440px desktop | ~614px |
+| 1920px wide desktop | ~700px |
+
+**Setup baseline**: The desktop Setup card was intentionally given additional vertical breathing room (question area height, option button height, vertical padding) to balance against the enlarged Slot. Mobile Setup dimensions are unchanged.
+
+**Ground Scenery vs. Footer**: The tower/city/foliage artwork anchored beneath the Visual Stage is **Visual Stage Ground Scenery** — decorative, absolutely positioned, and structurally distinct from the semantic `Footer` component. `Footer` is intentionally excluded from the initial landing Hero.
+
+**Mobile Core Hero composition**: `Title → Setup → Slot → Helper`. Supporting modules (My Profile, Today's Pick, Visitor Log, etc.) follow below the core Hero in a secondary scroll section.
+
+**Key files**: `src/components/experience/slotGeometry.ts` (new — geometry constants and formulas), `src/components/experience/SlotAnchor.tsx`, `src/components/experience/SetupArea.tsx`, `src/components/experience/MainExperience.tsx`, `src/app/page.tsx`.
 
 ## Route Recommendation Contract
 - **Engine Logic** (`src/lib/random`): Pure, testable logic decoupled from UI animations.
@@ -52,9 +91,10 @@
 - [x] Guestbook composer modal with input sanitization & rewarded reroll lifecycle (`sessionStorage`).
 - [x] Share snapshot persistence foundation (`src/lib/database/share.ts`).
 - [x] Shared Routes / Referral: `/api/share` route handler, dedicated `/r/[shareCode]` friend landing page with dynamic OG metadata, and ResultSheet Web Share / clipboard fallback.
+- [x] `SlotVisualFrame` architecture baseline: physical-footprint frame + absolute `LogicalCanvas` separation, verified production asset bounds, scroll/overflow fix, state-position lock, and desktop Setup/Slot balance — approved as the Visual baseline for main integration via Human Browser review (2026-08-30). See "Visual Baseline: SlotVisualFrame Architecture" above.
 
 ## Deferred / Known Gaps
-- **Result Visual Contract**: Latest docs (`docs/PRODUCT.md`, `ADR-008`) define a 2-stage reveal with output slit peek cue & centered `ResultModal` overlay; current code uses inline `ResultSheet`.
+- **Result Visual Contract**: Latest docs (`docs/PRODUCT.md`, `ADR-008`) define a 2-stage reveal with output slit peek cue & centered `ResultModal` overlay; current code uses inline `ResultSheet`. Scoped as the next cross-functional feature — see "Next Recommended Work" and "Deferred Visual Polish" below.
 - **In-App Route Guide**: `RouteGuide.tsx` not implemented; `“이 코스로 가보기”` CTA is disabled.
 - **Today's Pick System**: Seed content in `src/data/picks.ts`, `/pick/[slug]` detail page, right sidebar widget, and Q2 vibe seeding not implemented.
 - **Full Guestbook Archive Page & Preview**: `/guestbook` read-only community feed page and right sidebar live feed connection not implemented.
@@ -63,12 +103,28 @@
 - **Production Brand Assets**: Official Kkumdori / Kkumssi Family illustrations, pixel artwork, and audio files are not yet in `public/`.
 - **Dataset Verification**: Final tourism validation for candidate places is pending.
 
+## Deferred Visual Polish (Post-SlotVisualFrame Baseline)
+Intentionally deferred out of the `SlotVisualFrame` baseline pass; not yet scheduled:
+- Final title artwork and Title → Setup spacing polish (current title/spacing is temporary)
+- Final Y2K typography pass
+- Slot palette / skin recolor
+- Today's Pick seated character
+- Additional cloud / sparkle decorative polish
+- Intro / Start CTA
+- SPINNING visual redesign
+- Result redesign
+- Ticket reveal / peek animation
+- Final Result animation
+- CTA hit-area correction (painted button is visually ~37–38% of the machine per both the production PNG and Figma reference; the interactive hitbox is intentionally still ~32% — unchanged in the `SlotVisualFrame` pass to avoid an unrelated interaction regression)
+
 ## Next Recommended Work
-1. **RouteGuide**: Build `src/components/experience/RouteGuide.tsx` (structured itinerary breakdown, stay times, place guidance, and outbound map links) and wire `“이 코스로 가보기”` CTA.
-2. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
-3. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
-4. **Final Visual Integration**: Align Result presentation with approved centered `ResultModal` overlay and output slit peek cue (ADR-008), integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
-5. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates.
+1. **Result / Ticket Output System** *(next cross-functional feature, after integrating this baseline with latest `main`)*:
+   - **DEV ownership first**: functional DOM/state contract for the Result/Ticket lifecycle, route-data binding, `SlotOutputLayer` behavior (mounts as a sibling of `SlotVisualFrame`, per the Visual Baseline above), and CTA functionality.
+   - **VISUAL ownership after the contract lands**: ticket appearance, peek/reveal animation, expanded Result sheet, STOP rows, Mission copy, CTA visual hierarchy, typography/spacing/polish.
+2. **RouteGuide**: Build `src/components/experience/RouteGuide.tsx` (structured itinerary breakdown, stay times, place guidance, and outbound map links) and wire `“이 코스로 가보기”` CTA.
+3. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
+4. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
+5. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates; integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
 
 ## Source of Truth
 Authority is distributed across authoritative project documents:

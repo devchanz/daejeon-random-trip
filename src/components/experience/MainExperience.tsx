@@ -296,7 +296,7 @@ export function MainExperience({
   return (
     <div
       data-testid="main-experience"
-      className={`relative z-30 flex w-full max-w-2xl flex-col items-center gap-6 ${className}`}
+      className={`relative z-30 flex w-full flex-col items-center gap-6 ${className}`}
     >
       {/* Temporary Reveal Emphasis Backdrop (subtle dim + backdrop-blur, pointer-events-none) */}
       {isRevealEmphasis && (
