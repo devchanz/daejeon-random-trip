@@ -238,3 +238,13 @@ sequenceDiagram
 - Telemetry helpers in `src/lib/analytics/` sanitize and enforce safe non-PII parameters.
 - Free-text strings (visitor nicknames, messages) and personal information (email, phone, demographics) are **never** transmitted to GA4.
 - The application database does not collect or store persistent user IP profiles (while allowing transient infrastructure metadata processing for security and rate limiting).
+
+### 11. Slot Visual Frame & Logical Canvas Separation
+- `SlotVisualFrame` (`src/components/experience/SlotAnchor.tsx`) represents the physical visible slot machine footprint and participates in normal page layout flow. The original 600×500 asset coordinate system (`LogicalCanvas`) is absolutely positioned inside the frame and must never determine surrounding layout spacing (no negative-margin compensation).
+- Verified geometry constants and formulas live in `src/components/experience/slotGeometry.ts`, not hardcoded inline in components. See ADR-020.
+
+### 12. Ground Scenery Is Not Semantic Footer
+- Decorative tower/city/foliage artwork anchored beneath the Visual Stage is Ground Scenery — structurally and semantically distinct from the `Footer` component. `Footer` is intentionally excluded from the initial landing Hero. See ADR-021.
+
+### 13. SlotOutputLayer Reserved as a Sibling, Not a Descendant
+- The future Result/Ticket output reveal (ADR-008) mounts inside `SlotStage` as a sibling of `SlotVisualFrame`, never inside `LogicalCanvas` or subject to the frame's `overflow: hidden` clip. See ADR-022.
