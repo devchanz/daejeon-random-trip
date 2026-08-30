@@ -164,3 +164,27 @@ This document tracks fundamental product, architecture, and growth experience de
   - **Slot & Role Boundaries**: Canonical cafe identification is based on `PlaceCandidate.category === "카페·디저트"`. The conceptual `CandidateRole` taxonomy (`anchor`, `meal`, `discovery`, `stay-extender`) remains unchanged.
 - **Why**: Pure role-based random ordering produced unnatural sequences (e.g. meal placed at the end of a half-day trip). The Ordered Route structure guarantees coherent, intuitive local itineraries (Meal -> Cafe -> Activity) while keeping randomness and zero database overhead.
 - **Revisit when**: Multi-city extensions or dynamic duration-window constraints are introduced.
+
+---
+
+### ADR-020: SlotVisualFrame / LogicalCanvas Separation
+- **Status**: **Fixed**
+- **Decision**: The slot machine's physical visible footprint (`SlotVisualFrame`) participates in normal page layout flow, sized to the production assets' measured non-transparent pixel bounds (~46.72% of the 600×500 logical canvas width, not the previously assumed ~58%). The original 600×500 asset coordinate system (`LogicalCanvas`, containing reels/PNG/CTA) is absolutely positioned inside the frame and must never determine surrounding layout spacing.
+- **Why**: Letting the transparent logical canvas itself participate in layout required hand-tuned negative margins to compensate for its padding, which drifted out of sync at every viewport and could never be fixed by re-tuning constants alone. Separating "physical footprint" from "asset coordinate system" removes the compensation entirely.
+- **Revisit when**: The production slot PNG assets (`slot-idle.png` / `slot-pulled.png` / `slot-shell.png`) are re-exported at different bounds — the measured constants in `src/components/experience/slotGeometry.ts` would need re-verification.
+
+---
+
+### ADR-021: Ground Scenery Is Not Semantic Footer
+- **Status**: **Fixed**
+- **Decision**: The tower/city/foliage artwork anchored beneath the Visual Stage is decorative **Ground Scenery** (absolutely positioned, `pointer-events-none`), structurally and semantically distinct from the `Footer` component. `Footer` is intentionally excluded from the initial landing Hero.
+- **Why**: Prevents future confusion or accidental conflation when legal/nav footer content is eventually scoped for the landing page.
+- **Revisit when**: A semantic Footer is scoped for the landing page.
+
+---
+
+### ADR-022: SlotOutputLayer Reserved as a Sibling of SlotVisualFrame
+- **Status**: **Tentative** (reserved, not yet implemented)
+- **Decision**: The future Result/Ticket output reveal (ADR-008's output slit peek cue) will mount inside `SlotStage` as a **sibling** of `SlotVisualFrame` — never as a descendant of `LogicalCanvas` or inside the frame's clipped bounds.
+- **Why**: `SlotVisualFrame` uses `overflow: hidden` (ADR-020) to fix an empty-scroll-tail bug. ADR-008's reveal needs to extend below the physical chassis; nesting it inside the frame would force a permanent clip that contradicts that contract. A sibling mount is unaffected by the frame's overflow.
+- **Revisit when**: The Result/Ticket Output System is implemented (see `docs/PROJECT_STATE.md` → Next Recommended Work).

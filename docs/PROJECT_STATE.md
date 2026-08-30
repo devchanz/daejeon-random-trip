@@ -2,9 +2,10 @@
 
 ## Snapshot
 - **Last Updated**: 2026-08-30
-- **Baseline Main Commit at Checkpoint**: `80b5226` (`feat: harden shared route social previews`)
+- **Baseline Main Commit at Checkpoint**: `3b7dd8c` (`docs: update project handoff checkpoint`)
+- **Active Visual Integration Checkpoint**: `00a15fe` (`feat: establish responsive visual slot baseline`, approved via Human Browser review, currently under integration testing in `integration/visual-main`)
 - **Stack**: Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, ESLint 9, pnpm 11, Supabase (PostgreSQL REST)
-- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`), in-app Route Guide, and shared route OG social preview hardening are implemented, verified, and merged to `main`. Visual tuning continues in a separate visual worktree (`plan_mvp_visual_integration`). Analytics, Today's Pick, Result visual redesign, Ticket output, and asset finalization are pending.
+- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`), in-app Route Guide, shared route OG social preview hardening, and `SlotVisualFrame` responsive visual architecture baseline are integrated in this branch pending final validation. Analytics, Today's Pick, Result/Ticket output visual redesign, and asset finalization are pending.
 
 ---
 
@@ -16,6 +17,47 @@
 5. **RESULT**: Spin completes; currently presents an overlapping inline `ResultSheet` ticket displaying route stops, stay times, mission note, share CTA, and reroll CTA. *(Note: Final Ticket/output reveal and Result presentation are deferred until base proportions are approved).*
 6. **ROUTE_GUIDE**: Clicking `“이 코스로 가보기”` on Result Card or `“이 코스 그대로 가보기”` on `/r/[shareCode]` opens `RouteGuideModal` (rendered via React Portal to `document.body` to avoid containing-block clipping) displaying detailed stop cards, stay durations, curated tips, and external Naver/Kakao map launch buttons.
 7. **REFERRAL SHARE**: Clicking `“내 루트 공유하기”` creates an immutable snapshot via `/api/share` and opens native Web Share (with clipboard fallback); friends landing on `/r/[shareCode]` see the exact shared itinerary with dynamic OpenGraph/Twitter summary previews and can open the Route Guide or spin their own trip.
+
+---
+
+## Visual Baseline: SlotVisualFrame Architecture
+Human Browser review approved the following as the **Visual baseline for main integration**. It supersedes the prior approach where the transparent 600×500 asset canvas itself participated in page layout, compensated with hand-tuned negative margins.
+
+**Structure**:
+```
+SlotStage
+  ├── SlotVisualFrame        (physical visible machine footprint; participates in page layout)
+  │     └── 600×500 LogicalCanvas   (absolute; does NOT determine surrounding layout spacing)
+  │           ├── DOM reels
+  │           ├── production PNG (slot-idle.png / slot-pulled.png)
+  │           └── DOM CTA
+  └── reserved SlotOutputLayer   (sibling of SlotVisualFrame; not yet implemented)
+```
+
+**Verified production union bounds** (measured by direct PNG alpha-channel decoding across `slot-idle.png` / `slot-pulled.png` / `slot-shell.png`, cross-checked against Figma `00_FINAL_REFERENCE / Landing/Desktop`):
+- Logical 600×500 canvas: `x=168, y=149, w≈280.333, h≈204.667`
+- Source 1800×1500 asset (3× scale): `x=504, y=447, w=841, h=614`
+- Corrects a prior incorrect assumption that the machine's physical footprint was ~58% of the logical canvas width — the verified figure is **~46.72%**.
+
+**Scroll / overflow contract**: `SlotVisualFrame` uses `overflow: hidden`. Root cause of a pre-result empty-scroll-tail bug: the oversized absolute `LogicalCanvas` (≈2.14× the frame's width) extended `document.scrollHeight` while the frame used `overflow: visible`, reserving a large blank area below the ground scenery in every pre-result state. Fixing the frame to `overflow: hidden` does **not** block the future Ticket/Result reveal, because `SlotOutputLayer` is architected as a **sibling** of `SlotVisualFrame` (not a descendant of `LogicalCanvas`) and is therefore never subject to this clip. Pre-result states (`Q1`/`Q2`/`READY`/`SPINNING`) must not reserve large blank Result space; Result content should add vertical space only when the `RESULT` state actually renders it.
+
+**State position lock**: `Q1`, `Q2`, `READY`, and `SPINNING` share pixel-identical geometry for Setup, `SlotVisualFrame`, and Helper (verified by direct DOM measurement at 1920 / 1440 / 1200 / 1024 / 400px). State transitions must never move the pre-result Hero.
+
+**Responsive Slot baseline** (Human-approved current values — **not** permanent final design values):
+| Viewport | Physical Slot width |
+|---|---|
+| 400px mobile | ~360px |
+| 1200px desktop | ~518px |
+| 1440px desktop | ~614px |
+| 1920px wide desktop | ~700px |
+
+**Setup baseline**: The desktop Setup card was intentionally given additional vertical breathing room (question area height, option button height, vertical padding) to balance against the enlarged Slot. Mobile Setup dimensions are unchanged.
+
+**Ground Scenery vs. Footer**: The tower/city/foliage artwork anchored beneath the Visual Stage is **Visual Stage Ground Scenery** — decorative, absolutely positioned, and structurally distinct from the semantic `Footer` component. `Footer` is intentionally excluded from the initial landing Hero.
+
+**Mobile Core Hero composition**: `Title → Setup → Slot → Helper`. Supporting modules (My Profile, Today's Pick, Visitor Log, etc.) follow below the core Hero in a secondary scroll section.
+
+**Key files**: `src/components/experience/slotGeometry.ts` (new — geometry constants and formulas), `src/components/experience/SlotAnchor.tsx`, `src/components/experience/SetupArea.tsx`, `src/components/experience/MainExperience.tsx`, `src/app/page.tsx`.
 
 ---
 
@@ -58,50 +100,6 @@
 
 ---
 
-## Current Visual State Checkpoint
-
-### Worktree & Mode
-- Visual proportion tuning runs in a separate isolated worktree/branch: `plan_mvp_visual_integration`.
-- **Figma MCP**: **OFF** for current browser-tuning work (enabled strictly when exact Figma asset/design extraction is required).
-- **Browser Screenshot**: Represents the final visual source of truth.
-
-### Approved Slot Machine Runtime Architecture
-- PNG Assets: `public/assets/slot-idle.png`, `public/assets/slot-pulled.png`, `public/assets/slot-shell.png`.
-- Unified 600×500 coordinate system with DOM reels and DOM CTA.
-- State swap: Idle → Pulled (500ms) → Idle.
-- Lever animation functional; reel/button internal alignment is approved.
-
-### Restored Desktop Baseline (~1440px Viewport)
-A recent global proportion pass caused unintended shrinkages and has been **SELECTIVELY ROLLED BACK**. The current safe restored baseline is:
-- Overall Stage: ~1361px
-- Left Column: 320px | Center Column: 673px | Right Column: 320px
-- Setup Panel: 600px width
-- SlotAnchor Canvas: 540px width
-- Visible Physical Slot Body: ~313px width
-- Visible Slot / Setup Ratio: ~52%
-*(Note: This baseline is a temporary safe restore point, NOT the approved final visual).*
-
-### Current Visual Problems to Solve
-1. **Visible Physical Slot is too small**: ~52% ratio versus Setup panel makes the machine look miniature compared to the approved final reference.
-2. **Setup-to-Slot Vertical Gap is too large**: Measured gap is ~124.8px (caused by ~24px layout gap + ~100.8px transparent top padding inside the 600×500 PNG canvas).
-
-### Next Visual Pass Strategy
-- Do **NOT** shrink the overall layout or page elements.
-- Keep the application physically large, prominent, and readable.
-- Scale the unified Slot composition substantially larger.
-- Absorb transparent top padding into layout positioning so the physical machine sits closer beneath Setup.
-- Preserve reels, PNG artwork, and CTA button as one unified composition.
-- Apply minimal optical horizontal centering only after scale and vertical placement are calibrated.
-
-### Open Visual / Content Items
-- Footer landscape assets currently exhibit opaque/white background rectangle artifacts.
-- Final global font replacement.
-- Top-left landing title/copy replacement.
-- Ticket output animation and presentation.
-- Result visual redesign / final reveal treatment.
-
----
-
 ## Completed Milestones
 - [x] Controlled Random recommendation engine with role taxonomy and fallback handling (`src/lib/random`).
 - [x] Enforced Ordered Route Templates (Half: Meal -> Cafe -> Preference; Full: Meal -> Cafe -> Discovery -> Preference with 3-stop fallback).
@@ -115,6 +113,7 @@ A recent global proportion pass caused unintended shrinkages and has been **SELE
 - [x] Shared Routes / Referral: `/api/share` route handler, dedicated `/r/[shareCode]` friend landing page, and ResultSheet Web Share / clipboard fallback.
 - [x] In-App Route Guide: `RouteGuideModal` (React Portal to `document.body`) & `RouteGuideTimeline` with ordered stop sequence, stay durations, visit tips, external Naver/Kakao map launch buttons, and CTA wiring on `ResultSheet` and `SharedRouteView`.
 - [x] Shared Route OG / Social Preview Hardening: `generateMetadata` OpenGraph, Twitter summary card, canonical alternates, `robots: { index: false, follow: false }`, `metadataBase` in root layout, and hardened `normalizeOrigin` / `getSiteOrigin` URL origin resolver.
+- [x] `SlotVisualFrame` architecture baseline: physical-footprint frame + absolute `LogicalCanvas` separation, verified production asset bounds (~46.72%), scroll/overflow fix, state-position lock, and desktop Setup/Slot balance (approved via Human Browser review on `plan_mvp_visual_integration`, under active integration).
 
 ---
 
@@ -129,12 +128,29 @@ A recent global proportion pass caused unintended shrinkages and has been **SELE
 
 ---
 
+## Deferred Visual Polish (Post-SlotVisualFrame Baseline)
+Intentionally deferred out of the `SlotVisualFrame` baseline pass; not yet scheduled:
+- Final title artwork and Title → Setup spacing polish (current title/spacing is temporary)
+- Final Y2K typography pass
+- Slot palette / skin recolor
+- Today's Pick seated character
+- Additional cloud / sparkle decorative polish
+- Intro / Start CTA
+- SPINNING visual redesign
+- Result redesign
+- Ticket reveal / peek animation
+- Final Result animation
+- CTA hit-area correction (painted button is visually ~37–38% of the machine per both the production PNG and Figma reference; the interactive hitbox is intentionally still ~32% — unchanged in the `SlotVisualFrame` pass to avoid an unrelated interaction regression)
+
+---
+
 ## Next Recommended Development Order
-1. **Continue Visual Scale + Position Pass**: Iterate from the restored baseline in `plan_mvp_visual_integration` to achieve correct slot scale and absorbed vertical gap.
-2. **Visual Lane Integration**: Merge/rebase visual worktree safely with latest `main`.
-3. **GA4 Analytics & Telemetry**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
-4. **Ticket Output & Result Visual Redesign**: Build output slit reveal and final Result presentation once base stage proportions are finalized.
-5. **Content & Data Verification**: Today's Pick system, `/guestbook` feed, and tourism place verification.
+1. **Result / Ticket Output System** *(next cross-functional feature)*:
+   - **DEV ownership first**: functional DOM/state contract for the Result/Ticket lifecycle, route-data binding, `SlotOutputLayer` behavior (mounts as a sibling of `SlotVisualFrame`, per the Visual Baseline above), and CTA functionality.
+   - **VISUAL ownership after the contract lands**: ticket appearance, peek/reveal animation, expanded Result sheet, STOP rows, Mission copy, CTA visual hierarchy, typography/spacing/polish.
+2. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
+3. **Analytics / GA4**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**).
+4. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates; integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
 
 ---
 

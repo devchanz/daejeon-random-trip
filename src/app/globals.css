@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f3ea;
+  --background: #fdfbf7;
   --foreground: #2b2520;
   --paper-cream: #fffef9;
-  --paper-card: #faf6ee;
+  --paper-card: #ffffff;
   --retro-dark: #2b2520;
   --retro-coral: #ff5555;
   --retro-amber: #ffb800;
@@ -27,13 +27,6 @@ body {
   padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* Subtle retro paper background dot grid */
-.bg-retro-dots {
-  background-color: #f7f3ea;
-  background-image: radial-gradient(#ded5c2 1.2px, transparent 1.2px);
-  background-size: 22px 22px;
 }
 
 /* Notebook grid pattern for log & scrapbook */
