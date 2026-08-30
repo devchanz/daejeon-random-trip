@@ -9,6 +9,7 @@ import {
   type RouteResult,
 } from '../../lib/random';
 import { NEUTRAL_ROLLING_SYMBOLS } from './motionConfig';
+import { SlotOutputLayer } from './SlotOutputLayer';
 import {
   LOGICAL_CANVAS_HEIGHT,
   LOGICAL_CANVAS_TRANSLATE_X_PCT,
@@ -29,6 +30,9 @@ export interface SlotAnchorProps {
   stoppedReelCount?: number;
   pendingResult?: RouteResult | null;
   isLeverActive?: boolean;
+  revealStage?: 'hidden' | 'peek' | 'revealed' | 'minimized';
+  onReopenResult?: () => void;
+  reopenButtonRef?: React.Ref<HTMLButtonElement>;
 }
 
 /**
@@ -48,10 +52,9 @@ export interface SlotAnchorProps {
  *             2. State Asset Skin (z-10, slot-idle.png or slot-pulled.png)
  *             3. DOM CTA Button   (z-20, interactive hit area mapped onto red button)
  *
- * SlotStage reserves room, as a sibling of SlotVisualFrame, for the future
- * output-reveal layer (ADR-008 output slit peek cue) — the Figma reference
- * shows that reveal extending below the physical chassis, so it must not be
- * constrained by the frame's bounds. Not implemented yet.
+ * SlotStage hosts SlotOutputLayer (ADR-008 output slit peek cue) as a sibling
+ * of SlotVisualFrame — the Figma reference shows that reveal extending below
+ * the physical chassis, so it must not be constrained by the frame's bounds.
  */
 export function SlotAnchor({
   state,
@@ -61,6 +64,9 @@ export function SlotAnchor({
   stoppedReelCount = 0,
   pendingResult = null,
   isLeverActive = false,
+  revealStage = 'hidden',
+  onReopenResult,
+  reopenButtonRef,
 }: SlotAnchorProps) {
   const isReady = state.phase === 'ready';
   const isSpinning = state.phase === 'spinning';
@@ -81,7 +87,7 @@ export function SlotAnchor({
     if (isResult) {
       return {
         text: '✨ 추천 완료 ✨',
-        hint: '아래에 추천 코스 티켓이 출력되었습니다!',
+        hint: '추천 코스 티켓이 나왔어요!',
       };
     }
     if (isSpinning) {
@@ -285,18 +291,37 @@ export function SlotAnchor({
         </div>
 
         {/*
-         * Reserved: future SlotOutputLayer (Ticket reveal, ADR-008 output slit peek cue) mounts here,
-         * as a sibling of SlotVisualFrame, so it can extend past the chassis bounds without being
-         * constrained by the frame. Not implemented yet.
+         * SlotOutputLayer (Ticket reveal, ADR-008 output slit peek cue), sibling of
+         * SlotVisualFrame so it can extend past the chassis bounds without being constrained
+         * by the frame. Mounted only once revealStage leaves 'hidden' (i.e. never before or
+         * during Q1/Q2/READY/SPINNING), so pre-result states are structurally unaffected —
+         * protects the position-lock and scroll-tail contracts (ADR-020) by construction.
          */}
+        {revealStage !== 'hidden' && <SlotOutputLayer revealStage={revealStage} />}
       </div>
 
       {/*
        * Helper region: fixed height so Q1/Q2/READY/SPINNING/error copy (which vary in length)
        * can never shift SlotStage or anything below it via text wrapping.
+       *
+       * While Result is minimized (결과 접기), this band swaps its advisory hint for the
+       * "내 여행 티켓" reopen control -- directly beneath the output slit the ticket came
+       * from, at zero added layout height, so it stays discoverable without disturbing the
+       * position-lock contract (docs/PROJECT_STATE.md).
        */}
       <div className="relative z-30 mt-1 flex h-11 sm:h-12 w-full items-center justify-center text-center select-none">
-        {errorMessage ? (
+        {revealStage === 'minimized' ? (
+          <button
+            ref={reopenButtonRef}
+            type="button"
+            onClick={onReopenResult}
+            data-testid="reopen-result-affordance"
+            aria-label="내 여행 티켓 다시 보기"
+            className="rounded-full border-2 border-[#2b2520] bg-[#fffef9] px-4 py-1.5 text-sm font-black text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+          >
+            🎫 내 여행 티켓 다시 보기
+          </button>
+        ) : errorMessage ? (
           <span role="alert" className="line-clamp-2 text-sm sm:text-base font-black text-[#e11d48]">
             {errorMessage}
           </span>

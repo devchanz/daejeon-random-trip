@@ -1,10 +1,10 @@
 # Daejeon Random Trip — Project State
 
 ## Snapshot
-- **Last Updated**: 2026-08-30
-- **Baseline Main Commit at Checkpoint**: `f2789ef` (`feat: establish responsive visual slot baseline`)
+- **Last Updated**: 2026-08-31
+- **Baseline Main Commit at Checkpoint**: `f2789ef` (`feat: establish responsive visual slot baseline`) — the Result/Ticket Output System below is implemented and Human Browser validated on branch `feat/result-ticket-output`, not yet merged to `main`.
 - **Stack**: Next.js 16 (App Router), React 19, TypeScript 5, Tailwind CSS 4, ESLint 9, pnpm 11, Supabase (PostgreSQL REST)
-- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`), in-app Route Guide, shared route OG social preview hardening, and `SlotVisualFrame` responsive visual architecture baseline are implemented, verified, and merged to `main`. Visual baseline integration is complete and Human Browser validated; the temporary `integration/visual-main` lane is closed. The `plan_mvp_visual_integration@00a15fe` branch remains only as the preserved approved Visual reference checkpoint (all new visual work must branch from latest `main`). GA4 Analytics & Dashboard, Today's Pick, Result/Ticket output visual redesign, and asset finalization are pending.
+- **Current Status**: Core Controlled Random recommendation engine, provisional place dataset, setup/spin experience, guestbook rewarded reroll loop, referral sharing (`/api/share`, `/r/[shareCode]`), in-app Route Guide, shared route OG social preview hardening, `SlotVisualFrame` responsive visual architecture baseline, and the Result/Ticket Output System DEV contract (centered Result Card overlay, output slit peek-cue architecture, minimize/reopen presentation lifecycle, nested-overlay keyboard ownership) are implemented and Human Browser validated (ADR-008, ADR-022, ADR-023, ADR-024). Visual baseline integration is complete; the temporary `integration/visual-main` lane is closed. The `plan_mvp_visual_integration@00a15fe` branch remains only as the preserved approved Visual reference checkpoint (all new visual work must branch from latest `main`). GA4 Analytics & Dashboard, Today's Pick, the production ticket-peek visual asset, and asset finalization are pending.
 
 ---
 
@@ -13,7 +13,7 @@
 2. **Q2 (Preference)**: User selects travel vibe (`아무거나` / `먹방` / `산책` / `사진`).
 3. **READY**: Condition summary displayed; primary CTA activates `“🎰 여행 뽑기!”`.
 4. **SPINNING**: Slot reels spin with neutral arcade symbols; sequential stop (`Reel 1` 1100ms → `Reel 2` 1600ms → `Reel 3` 2100ms → final beat 400ms).
-5. **RESULT**: Spin completes; currently presents an overlapping inline `ResultSheet` ticket displaying route stops, stay times, mission note, share CTA, and reroll CTA. *(Note: Final Ticket/output reveal and Result presentation are deferred until base proportions are approved).*
+5. **RESULT**: Spin completes; a brief output slit peek cue (`SlotOutputLayer`, mounted as a sibling of `SlotVisualFrame`) is followed 300–500ms later by the front-facing, centered **Result Card** (`ResultArea`, an in-flow `fixed` overlay — not a Portal, to respect `MainExperience`'s dual desktop/mobile mount) displaying route stops, stay times, mission note, and the 3-action CTA hierarchy (Route Guide / Share / Guestbook-Reroll). Background interaction is blocked and body scroll is locked while revealed. **결과 접기** (minimize) hides the card (`display:none`, not unmounted — `ResultSheet`'s local share state survives) and fully restores landing interactivity without discarding `state.result`; a persistent **내 여행 티켓 다시 보기** affordance in `SlotAnchor`'s helper band reopens the same Result. Opening `RouteGuideModal` or `GuestbookComposer` from the Result Card suspends Result's own Escape/Tab keyboard ownership until that nested overlay closes. *(Note: the peek cue's visual is currently disabled — `OUTPUT_PEEK_ENABLED = false` in `SlotOutputLayer.tsx` — pending the dedicated Figma output-slit ticket asset; the mount/timing architecture is implemented and dormant.)*
 6. **ROUTE_GUIDE**: Clicking `“이 코스로 가보기”` on Result Card or `“이 코스 그대로 가보기”` on `/r/[shareCode]` opens `RouteGuideModal` (rendered via React Portal to `document.body` to avoid containing-block clipping) displaying detailed stop cards, stay durations, curated tips, and external Naver/Kakao map launch buttons.
 7. **REFERRAL SHARE**: Clicking `“내 루트 공유하기”` creates an immutable snapshot via `/api/share` and opens native Web Share (with clipboard fallback); friends landing on `/r/[shareCode]` see the exact shared itinerary with dynamic OpenGraph/Twitter summary previews and can open the Route Guide or spin their own trip.
 
@@ -30,7 +30,7 @@ SlotStage
   │           ├── DOM reels
   │           ├── production PNG (slot-idle.png / slot-pulled.png)
   │           └── DOM CTA
-  └── reserved SlotOutputLayer   (sibling of SlotVisualFrame; not yet implemented)
+  └── SlotOutputLayer   (sibling of SlotVisualFrame; implemented — visual cue currently disabled pending the Figma output-slit ticket asset)
 ```
 
 **Verified production union bounds** (measured by direct PNG alpha-channel decoding across `slot-idle.png` / `slot-pulled.png` / `slot-shell.png`, cross-checked against Figma `00_FINAL_REFERENCE / Landing/Desktop`):
@@ -38,9 +38,11 @@ SlotStage
 - Source 1800×1500 asset (3× scale): `x=504, y=447, w=841, h=614`
 - Corrects a prior incorrect assumption that the machine's physical footprint was ~58% of the logical canvas width — the verified figure is **~46.72%**.
 
-**Scroll / overflow contract**: `SlotVisualFrame` uses `overflow: hidden`. Root cause of a pre-result empty-scroll-tail bug: the oversized absolute `LogicalCanvas` (≈2.14× the frame's width) extended `document.scrollHeight` while the frame used `overflow: visible`, reserving a large blank area below the ground scenery in every pre-result state. Fixing the frame to `overflow: hidden` does **not** block the future Ticket/Result reveal, because `SlotOutputLayer` is architected as a **sibling** of `SlotVisualFrame` (not a descendant of `LogicalCanvas`) and is therefore never subject to this clip. Pre-result states (`Q1`/`Q2`/`READY`/`SPINNING`) must not reserve large blank Result space; Result content should add vertical space only when the `RESULT` state actually renders it.
+**Scroll / overflow contract**: `SlotVisualFrame` uses `overflow: hidden`. Root cause of a pre-result empty-scroll-tail bug: the oversized absolute `LogicalCanvas` (≈2.14× the frame's width) extended `document.scrollHeight` while the frame used `overflow: visible`, reserving a large blank area below the ground scenery in every pre-result state. Fixing the frame to `overflow: hidden` does **not** block the Ticket/Result reveal, because `SlotOutputLayer` is implemented as a **sibling** of `SlotVisualFrame` (not a descendant of `LogicalCanvas`) and is therefore never subject to this clip — it also only mounts once `revealStage` leaves `'hidden'`, so pre-result states are structurally unaffected regardless. Pre-result states (`Q1`/`Q2`/`READY`/`SPINNING`) must not reserve large blank Result space; Result content should add vertical space only when the `RESULT` state actually renders it.
 
-**State position lock**: `Q1`, `Q2`, `READY`, and `SPINNING` share pixel-identical geometry for Setup, `SlotVisualFrame`, and Helper (verified by direct DOM measurement at 1920 / 1440 / 1200 / 1024 / 400px). State transitions must never move the pre-result Hero.
+**State position lock**: `Q1`, `Q2`, `READY`, and `SPINNING` share pixel-identical geometry for Setup, `SlotVisualFrame`, and Helper (verified by direct DOM measurement at 1920 / 1440 / 1200 / 1024 / 400px). State transitions must never move the pre-result Hero. The Result Card's minimized reopen affordance (`SlotAnchor`'s helper band) also respects this: it renders inside the band's existing fixed height, adding zero layout height.
+
+**In-flow fixed overlay stacking contract**: `MainExperience`'s desktop/mobile dual-mount (`page.tsx`, gated by `hidden lg:flex` / `lg:hidden`) means overlays inside it (Result Card, Guestbook Composer) must render as in-flow `fixed` elements, never a Portal to `document.body` — a Portal would escape the responsive gate and could render the hidden breakpoint's overlay on top of the visible layout. This requires the three-column Visual Stage layout to keep its column wrappers at `z-auto` (no per-column `z-index`) so those in-flow fixed overlays aren't trapped inside `<main>`'s own stacking context — see ADR-024.
 
 **Responsive Slot baseline** (Human-approved current values — **not** permanent final design values):
 | Viewport | Physical Slot width |
@@ -113,12 +115,13 @@ SlotStage
 - [x] In-App Route Guide: `RouteGuideModal` (React Portal to `document.body`) & `RouteGuideTimeline` with ordered stop sequence, stay durations, visit tips, external Naver/Kakao map launch buttons, and CTA wiring on `ResultSheet` and `SharedRouteView`.
 - [x] Shared Route OG / Social Preview Hardening: `generateMetadata` OpenGraph, Twitter summary card, canonical alternates, `robots: { index: false, follow: false }`, `metadataBase` in root layout, and hardened `normalizeOrigin` / `getSiteOrigin` URL origin resolver.
 - [x] `SlotVisualFrame` architecture baseline: physical-footprint frame + absolute `LogicalCanvas` separation, verified production asset bounds (~46.72%), scroll/overflow fix, state-position lock, and desktop Setup/Slot balance (approved via Human Browser review and merged to `main` in commit `f2789ef`).
+- [x] Result/Ticket Output System DEV contract: centered `ResultArea` Result Card overlay (in-flow `fixed`, not a Portal, respecting `MainExperience`'s dual desktop/mobile mount), `SlotOutputLayer` output-slit peek-cue architecture (sibling of `SlotVisualFrame`, visual cue currently disabled pending the Figma ticket asset), 결과 접기 minimize/reopen presentation lifecycle preserving `state.result` and `ResultSheet`'s local share state, nested-overlay (`RouteGuideModal` / `GuestbookComposer`) keyboard-ownership suspension, and the `page.tsx` column stacking-context fix enabling in-flow fixed overlays to cover the full page (ADR-008, ADR-022, ADR-023, ADR-024). Human Browser validated on branch `feat/result-ticket-output`.
 
 ---
 
 ## Deferred / Known Gaps
-- **Result Visual Redesign & Ticket Output**: Result functionality is operational. Final Ticket/output reveal and Result presentation are deferred until Q1/Q2/READY/SPIN base proportions are approved. When that visual pass begins, follow `docs/PRODUCT.md` + applicable Fixed ADRs in `docs/DECISIONS.md` rather than inferring the final treatment from the current implementation.
-- **Today's Pick System**: Seed content in `src/data/picks.ts`, `/pick/[slug]` detail page, right sidebar widget, and Q2 vibe seeding not implemented.
+- **Result/Ticket Output — VISUAL polish only**: The DEV contract (centered Result Card overlay, output slit peek-cue architecture, minimize/reopen, nested-overlay keyboard ownership) is implemented and Human Browser validated (ADR-008, ADR-022, ADR-023, ADR-024). Deferred: the production Figma output-slit ticket asset (currently disabled via `OUTPUT_PEEK_ENABLED = false` in `SlotOutputLayer.tsx`), its reveal/peek animation, a mini-ticket skin for the reopen affordance, and final Result Card typography/spacing/visual hierarchy. When that VISUAL pass begins, follow `docs/PRODUCT.md` + Fixed ADRs in `docs/DECISIONS.md` rather than inferring the final treatment from the current DEV-only presentation.
+- **Today's Pick System**: Seed content in `src/data/picks.ts` (currently empty) and the right sidebar editorial banner widget are not implemented. Per ADR-015 (revised), scope is a simple Right Rail banner with ~5 rotating pixel-art variants and an optional external hyperlink — no `/pick/[slug]` detail page and no Q2 preference seeding are approved.
 - **Full Guestbook Archive Page & Preview**: `/guestbook` read-only community feed page and right sidebar live feed connection not implemented.
 - **Analytics Telemetry & Dashboard**: `src/lib/analytics/`, GA4 event dispatchers, and Campaign & Funnel Analysis Dashboard not implemented.
 - **Transit Modeling**: Inter-stop travel times and transit modes are not modeled.
@@ -144,10 +147,8 @@ Intentionally deferred out of the `SlotVisualFrame` baseline pass; not yet sched
 ---
 
 ## Next Recommended Development Order
-1. **Result / Ticket Output System** *(next cross-functional feature)*:
-   - **DEV ownership first**: functional DOM/state contract for the Result/Ticket lifecycle, route-data binding, `SlotOutputLayer` behavior (mounts as a sibling of `SlotVisualFrame`, per the Visual Baseline above), and CTA functionality.
-   - **VISUAL ownership after the contract lands**: ticket appearance, peek/reveal animation, expanded Result sheet, STOP rows, Mission copy, CTA visual hierarchy, typography/spacing/polish.
-2. **Today's Pick**: Populate `src/data/picks.ts`, build `/pick/[slug]` detail page, and update sidebar widget with Q2 preference seeding.
+1. **Result/Ticket Output — VISUAL asset pass**: The DEV contract landed (see Completed Milestones). Once the Figma output-slit ticket asset is ready, flip `OUTPUT_PEEK_ENABLED` to `true` in `SlotOutputLayer.tsx` and implement the final peek/reveal animation, a mini-ticket skin for the `SlotAnchor` reopen affordance, and Result Card typography/spacing/visual hierarchy polish, per `docs/PRODUCT.md` + Fixed ADRs in `docs/DECISIONS.md`.
+2. **Today's Pick**: Populate `src/data/picks.ts` with ~5 production pixel-art variants and a simple rotation schedule (e.g. by weekday); wire the right sidebar banner widget to display the active pick with an optional external hyperlink. No `/pick/[slug]` detail page or Q2 preference seeding (ADR-015, revised).
 3. **Analytics (GA4 Telemetry & Campaign Dashboard)**: Implement `src/lib/analytics/` tracking helpers adhering to `docs/ANALYTICS.md` strict privacy guardrails (**zero PII, no visitor nicknames/messages, no user share_code parameters**), and deliver the Campaign & Funnel Analysis Dashboard to easily analyze paid traffic, acquisition UTMs, 4-loop funnel drop-offs, and proxy conversions without inspecting raw GA4 reports.
 4. **Remaining Content / Data Completion**: Implement `/guestbook` read-only archive feed and sidebar live stream; complete tourism verification for place candidates; integrate official Kkumdori / Kkumssi Family assets and pixel art into frames/avatars.
 

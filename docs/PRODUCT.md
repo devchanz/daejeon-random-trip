@@ -37,7 +37,7 @@ flowchart LR
 
 ---
 
-## 3. Four Core Growth Loops
+## 3. Three Core Growth Loops
 
 ```
 1. CORE CONVERSION LOOP
@@ -48,10 +48,9 @@ flowchart LR
 
 3. REFERRAL LOOP
    Result Card ──► Share Route ──► /r/[shareCode] ──► Friend Reads ──► "나도 여행 뽑아보기" ──► New Landing User
-
-4. CONTENT-TO-SPARK LOOP
-   Landing Today's Pick ──► /pick/[slug] ──► "이 분위기로 여행 뽑기" ──► Q2 Preference Pre-seeded ──► Slot Spin
 ```
+
+> **Today's Pick is not a growth loop.** It is a simple Right Rail editorial / visual banner (see §6.4) — it does not feed into or seed the Slot, and has no detail-page or funnel of its own.
 
 ---
 
@@ -70,7 +69,7 @@ flowchart LR
     - `Result Overlay` (Front-facing centered Result Card modal triggered post-spin).
     - `Route Guide` (In-app itinerary breakdown viewed upon clicking `“이 코스로 가보기”`).
   - **RIGHT SIDEBAR (Content Discovery & Social Proof)**:
-    - `TODAY’S PICK`: 7-day rotating curated spot preview with pixel artwork & Kkumssi family frame.
+    - `TODAY’S PICK`: Editorial banner featuring rotating pixel artwork (~5 production variants); no detail page.
     - `VISITOR LOG`: Preview showing the latest ~3 visible Visitor Log entries with a link to `/guestbook`.
 
 ---
@@ -138,16 +137,12 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
   - Referral MVP sequence: 1. DB snapshot save, 2. `/r/[shareCode]`, 3. Web Share + copy fallback, 4. Default OG meta tags.
   - Dynamic OG image generation is a high-priority non-blocking enhancement within MVP scope.
 
-### 6.4 Today's Pick (7-Day Rotating Spotlight)
-- **Schedule**: 7 static curated picks active across the 7-day campaign schedule, evaluated against `Asia/Seoul` calendar date.
-- **Landing Preview Widget**:
-  - Uses Pixel Artwork and rotating Kkumssi Family character frames (combining modifiable daily pixel art with Kkumssi characters; no realistic photos on landing widget).
-  - Pre-campaign shows Pick 1; post-campaign retains Pick 7.
-- **Detail Page (`/pick/[slug]`)**:
-  - Features real photography, curated recommendation reason, stay duration, recommended visiting hours, transit access, and map links.
-  - **Primary CTA**: `“이 분위기로 여행 뽑기”` (Draw a trip with this vibe!).
-  - **Preference Seeding**: Clicking the CTA navigates to Landing with Q2 pre-seeded to the pick's `recommendedPreference` (`food`, `walk`, `photo`, `anything`). (It does **not** guarantee the specific pick place appears in the random route).
-- **Data Management**: 100% static TypeScript data (`src/data/picks.ts`); no Supabase or CMS overhead.
+### 6.4 Today's Pick (Right Rail Editorial Banner) — Revised Scope (ADR-015)
+- **Concept**: A simple Right Rail editorial / visual banner surface. It is **not** a detail-page flow, a discovery funnel, or a Q2-seeding mechanism.
+- **Artwork**: Approximately 5 production pixel-art variants are planned. The displayed artwork may rotate by weekday or another simple schedule (exact mechanism TBD).
+- **Optional External Link**: A banner may optionally hyperlink to an external site related to the featured artwork/place/theme.
+- **Explicit Exclusions**: No dedicated `/pick/[slug]` detail page. No Q2 preference-seeding CTA. No Today's Pick → Slot funnel.
+- **Data Management**: 100% static TypeScript data (`src/data/picks.ts`); no Supabase or CMS overhead. *(Status: planned — `TODAYS_PICKS` is currently an empty array; not yet implemented.)*
 
 ---
 
@@ -162,8 +157,8 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 - Visitor Log (Landing preview + `/guestbook` read-only archive + in-flow composer with Kkumssi family avatars).
 - 1-Time Reroll Reward unlocked via successful server validation and guestbook DB submission.
 - Referral Share with server snapshot storage and dedicated `/r/[shareCode]` page.
-- 7-Day Today's Pick (Landing pixel widget + `/pick/[slug]` detail page + Q2 vibe seeding).
-- GA4 telemetry tracking across all 4 growth loops with strict PII prohibition.
+- Today's Pick Right Rail editorial banner (~5 rotating pixel-art variants; optional external hyperlink; no detail page, no Q2 seeding).
+- GA4 telemetry tracking across all 3 growth loops with strict PII prohibition.
 
 ### Explicitly Out-of-Scope (MVP)
 - Top navigation tabs (`가이드`, `맛집 리스트`, `내 보관함`).
@@ -174,6 +169,9 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 - Itinerary spot swapping or custom route editing (prevents decision fatigue).
 - Kakao SDK, Kakao Login, or Kakao Talk messaging API integration.
 - CMS / Supabase storage for Today's Pick (must remain static TS data).
+- **Today's Pick `/pick/[slug]` detail page** (revised out of scope, ADR-015).
+- **Today's Pick Q2 preference-seeding CTA** (revised out of scope, ADR-015).
+- **Today's Pick → Slot funnel** of any kind (revised out of scope, ADR-015).
 - Full-screen image slicing (all UI panels and Result Card body must remain semantic React/DOM/CSS).
 
 ---
@@ -183,13 +181,13 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 | Item | Status | Details |
 | :--- | :--- | :--- |
 | **Controlled Random Travel** | **Fixed Product Decision** | Structured recommendation flow separated from visual slot animation. |
-| **Four Growth Loops** | **Fixed Growth Decision** | Core Conversion, Participation & Reward, Referral, and Content-to-Spark. |
+| **Three Core Growth Loops** | **Fixed Growth Decision** | Core Conversion, Participation & Reward, and Referral. Today's Pick is a separate Right Rail editorial banner, not a growth loop. |
 | **In-App Route Guide** | **Fixed Product Decision** | Result CTA opens in-app Route Guide before external map redirection. |
 | **1-Time Reroll Reward** | **Fixed Product Decision** | Replaces free reroll; unlocks 1 reroll upon guestbook DB submission. |
 | **Referral Snapshot Model** | **Fixed Architecture Decision** | Immutable snapshots in `shared_routes` accessed via `/r/[shareCode]`. |
-| **Static 7-Day Today's Pick** | **Fixed Content Decision** | Static TS data with `“이 분위기로 여행 뽑기”` Q2 preference seeding. |
+| **Today's Pick Editorial Banner** | **Fixed Content Decision** | Static TS data; ~5 rotating pixel-art variants; optional external hyperlink. No detail page, no Q2 seeding, no Slot funnel (ADR-015, revised). |
 | **Top Nav Elimination** | **Fixed Layout Decision** | Top tabs removed to maximize viewport priority for Setup & Slot Anchor. |
-| **Proxy Conversion Model** | **Fixed Measurement Decision** | Route Guide map clicks (`place_map_click`) serve as primary high-intent proxy metric (`pick_map_click` as secondary intent signal). |
+| **Proxy Conversion Model** | **Fixed Measurement Decision** | Route Guide map clicks (`place_map_click`) serve as the primary high-intent proxy metric. Today's Pick banner-click tracking is TBD/deferred (see `docs/ANALYTICS.md`). |
 | **No Runtime LLM / No PII** | **Fixed Engineering Decision** | Curated static seed templates; zero PII or free-text in GA4. |
 | **Target Demographic (20–30s)** | *Working Hypothesis* | Operational target for marketing copy/ads; not a rigid product limit. |
 | **Initial Zone Coverage** | *Tentative* | Centered on Daejeon Station / old downtown; expandable post-MVP. |
@@ -199,6 +197,6 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 ## 9. Success Behavior & Measurable Signals
 - **Setup Funnel Progression**: User progression through Q1/Q2 to READY produces clear completion and drop-off metrics in GA4.
 - **Recommendation & Spin Experience**: The recommendation engine and slot animation deliver a coherent itinerary with acceptable perceived latency without blocking runtime delays.
-- **Primary Proxy Conversion**: Clicks on outbound map links within the in-app Route Guide (`place_map_click`) serve as the primary proxy conversion indicating high travel intent. Clicks on Today's Pick map links (`pick_map_click`) provide secondary content/travel-intent signals to evaluate performance marketing campaign efficiency.
+- **Primary Proxy Conversion**: Clicks on outbound map links within the in-app Route Guide (`place_map_click`) serve as the primary proxy conversion indicating high travel intent. Today's Pick banner-click tracking is TBD/deferred until the banner's actual implementation is designed.
 - **Participation & Referral Loops**: Visitor log submissions (`guestbook_submit`) and route sharing completions (`route_share_complete`) operate seamlessly with zero PII or free-text leakage into analytics.
 - **Honest Metric Evaluation**: Map clicks represent high-intent interest and are not conflated with guaranteed physical travel attendance.

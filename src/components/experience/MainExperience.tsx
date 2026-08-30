@@ -47,7 +47,8 @@ export interface MainExperienceProps {
  * MainExperience orchestration layer.
  * Coordinates Q1 -> Q2 -> READY -> SPINNING -> RESULT lifecycle.
  * Manages lever visual feedback, sequential reel stops, pending RouteResult,
- * temporary reveal emphasis, and user-triggered viewport choreography without polluting domain state models.
+ * temporary reveal emphasis, and the output slit peek cue -> Result Card reveal
+ * <-> minimize (결과 접기) presentation lifecycle, without polluting domain state models.
  */
 export function MainExperience({
   initialState = INITIAL_EXPERIENCE_STATE,
@@ -82,13 +83,21 @@ export function MainExperience({
   const [spinningStoppedReelCount, setSpinningStoppedReelCount] = useState<number>(0);
   const [isLeverActive, setIsLeverActive] = useState<boolean>(false);
   const [isRevealEmphasis, setIsRevealEmphasis] = useState<boolean>(false);
+  // Result/Ticket output presentation lifecycle:
+  //   hidden -> peek (output slit cue) -> revealed (Result Card) <-> minimized (결과 접기)
+  // 'minimized' is presentation-only, like every other value here: it never touches the
+  // reducer or state.result (see ResultArea.tsx docstring for the full minimize contract).
+  const [revealStage, setRevealStage] = useState<'hidden' | 'peek' | 'revealed' | 'minimized'>(
+    'hidden'
+  );
 
   // User motion preference
   const prefersReducedMotion = usePrefersReducedMotion();
 
-  // Viewport & trigger tracking refs
-  const isUserTriggeredSpinRef = useRef<boolean>(false);
-  const resultAreaRef = useRef<HTMLElement | null>(null);
+  // Focus target for the reopen affordance rendered inside SlotAnchor's helper band.
+  // MainExperience owns revealStage, so it (not ResultArea, not SlotAnchor) is
+  // responsible for moving focus onto this button on minimize.
+  const reopenButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Derived stopped reel count: 3 when in result, spinningStoppedReelCount when spinning, 0 otherwise
   const stoppedReelCount =
@@ -108,12 +117,13 @@ export function MainExperience({
     };
 
     if (prefersReducedMotion) {
-      // Reduced motion: fast sequence
+      // Reduced motion: fast sequence, skip the output slit peek cue and reveal the Result Card directly
       schedule(() => {
         setIsLeverActive(false);
         setSpinningStoppedReelCount(3);
         dispatch(completeSpin(pendingResult));
         onSpinComplete?.(pendingResult);
+        setRevealStage('revealed');
       }, MOTION_TIMINGS.REDUCED_MOTION_TOTAL_MS);
     } else {
       // Standard motion sequence: Lever pull -> Reel 1 stop -> Reel 2 stop -> Reel 3 stop -> Complete
@@ -142,11 +152,12 @@ export function MainExperience({
         setSpinningStoppedReelCount(3);
       }, MOTION_TIMINGS.REEL_3_STOP_MS);
 
-      // 5. Short final beat -> Complete spin & trigger reveal emphasis
+      // 5. Short final beat -> Complete spin, trigger reveal emphasis & output slit peek cue
       schedule(() => {
         dispatch(completeSpin(pendingResult));
         onSpinComplete?.(pendingResult);
         setIsRevealEmphasis(true);
+        setRevealStage('peek');
       }, effectiveSpinDurationMs);
     }
 
@@ -165,30 +176,26 @@ export function MainExperience({
     }
   }, [isRevealEmphasis]);
 
-  // Viewport choreography: Natural auto-scroll only on user-triggered spin transition to RESULT
+  // Result/Ticket output presentation: peek cue -> Result Card reveal.
+  // Deliberately its own effect (not part of the spin effect above), because that effect is
+  // keyed on state.phase and tears down (clearing all pending timers) the instant completeSpin
+  // flips the phase to 'result' -- a timer scheduled there would never fire.
   useEffect(() => {
-    if (state.phase === 'result' && isUserTriggeredSpinRef.current) {
-      isUserTriggeredSpinRef.current = false;
-
+    if (revealStage === 'peek') {
       const timer = setTimeout(() => {
-        if (resultAreaRef.current) {
-          const rect = resultAreaRef.current.getBoundingClientRect();
-          // Avoid jarring jump if Result is already comfortably visible in upper viewport
-          const isAlreadyComfortablyVisible =
-            rect.top >= 60 && rect.top <= window.innerHeight * 0.4;
-
-          if (!isAlreadyComfortablyVisible) {
-            resultAreaRef.current.scrollIntoView({
-              behavior: prefersReducedMotion ? 'auto' : 'smooth',
-              block: 'start',
-            });
-          }
-        }
-      }, 50);
-
+        setRevealStage('revealed');
+      }, MOTION_TIMINGS.OUTPUT_PEEK_TO_CARD_MS);
       return () => clearTimeout(timer);
     }
-  }, [state.phase, prefersReducedMotion]);
+  }, [revealStage]);
+
+  // On minimize (결과 접기), move focus onto the reopen affordance -- ResultArea's card
+  // unmounts its focus target (display:none), so without this, focus would fall to <body>.
+  useEffect(() => {
+    if (revealStage === 'minimized') {
+      reopenButtonRef.current?.focus();
+    }
+  }, [revealStage]);
 
   // Primary Spin action triggered from SlotAnchor
   const handleSpin = () => {
@@ -214,11 +221,11 @@ export function MainExperience({
         random,
       });
 
-      // 2. Prepare pending presentation state and record user-triggered flag
+      // 2. Prepare pending presentation state
       setPendingResult(generated);
-      isUserTriggeredSpinRef.current = true;
       setSpinningStoppedReelCount(0);
       setIsLeverActive(true);
+      setRevealStage('hidden');
 
       // 3. Dispatch START_SPIN to initiate spinning presentation
       dispatch(startSpin());
@@ -272,9 +279,9 @@ export function MainExperience({
       // 5. Update reroll state, pending result, and start spin presentation
       setRerollState(nextReroll);
       setPendingResult(generated);
-      isUserTriggeredSpinRef.current = true;
       setSpinningStoppedReelCount(0);
       setIsLeverActive(true);
+      setRevealStage('hidden');
 
       dispatch(startSpin());
       onSpinStart?.();
@@ -296,6 +303,22 @@ export function MainExperience({
     setRerollState(nextState);
   };
 
+  // 결과 접기 (minimize): Result data, share state, and reward/reroll lifecycle are all
+  // untouched -- only the presentation stage changes. See ResultArea.tsx for the mount/
+  // reveal split this depends on.
+  const handleMinimizeResult = () => {
+    if (revealStage === 'revealed') {
+      setRevealStage('minimized');
+    }
+  };
+
+  // 내 여행 티켓 (reopen): returns to the same revealed Result Card, unchanged.
+  const handleReopenResult = () => {
+    if (revealStage === 'minimized') {
+      setRevealStage('revealed');
+    }
+  };
+
   return (
     <div
       data-testid="main-experience"
@@ -313,7 +336,10 @@ export function MainExperience({
       {/* 1. Setup Area: Q1 -> Q2 -> READY */}
       <SetupArea state={state} dispatch={dispatch} />
 
-      {/* 2. Slot Anchor: Stable visual anchor across READY -> SPINNING -> RESULT */}
+      {/* 2. Slot Anchor: Stable visual anchor across READY -> SPINNING -> RESULT.
+          Also hosts the "내 여행 티켓" reopen affordance in its helper band while
+          Result is minimized -- see SlotAnchor.tsx for why that placement was chosen
+          over a viewport-corner floating button. */}
       <SlotAnchor
         state={state}
         onSpin={handleSpin}
@@ -321,16 +347,23 @@ export function MainExperience({
         stoppedReelCount={stoppedReelCount}
         pendingResult={pendingResult}
         isLeverActive={isLeverActive}
+        revealStage={revealStage}
+        onReopenResult={handleReopenResult}
+        reopenButtonRef={reopenButtonRef}
       />
 
-      {/* 3. Result Area: Inline presentation boundary below slot with responsive scroll anchor */}
+      {/* 3. Result Area: Centered focus overlay (Result Card), revealed after the output slit peek cue.
+          isNestedOverlayOpen suspends Result's own Escape/Tab keyboard ownership while
+          RouteGuideModal or GuestbookComposer is open above it -- see ResultArea.tsx. */}
       <ResultArea
-        ref={resultAreaRef}
         state={state}
+        revealStage={revealStage}
         rerollReward={rerollState.rerollReward}
         onOpenGuestbook={() => setIsGuestbookOpen(true)}
         onExecuteReroll={handleExecuteReroll}
         onOpenRouteGuide={() => setIsRouteGuideOpen(true)}
+        onMinimize={handleMinimizeResult}
+        isNestedOverlayOpen={isGuestbookOpen || isRouteGuideOpen}
       />
 
       {/* 4. Guestbook Composer Modal (In-flow modal triggered from Result Card) */}

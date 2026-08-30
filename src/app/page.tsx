@@ -30,7 +30,7 @@ export default function Home() {
 
           <div className="relative flex flex-row items-start justify-center gap-4 xl:gap-7 2xl:gap-8">
             {/* Left Column: Title Footprint + MY PROFILE + TODAY IS... + BGM PLAYING */}
-            <div className="relative w-[clamp(260px,21vw,360px)] shrink-0 flex flex-col gap-3.5 z-10">
+            <div className="relative w-[clamp(260px,21vw,360px)] shrink-0 flex flex-col gap-3.5">
               {/* Ambient Cloud behind top-left title */}
               <PixelCloud className="absolute -left-6 -top-4 w-32 h-14 opacity-75 z-0" />
 
@@ -49,14 +49,14 @@ export default function Home() {
             </div>
 
             {/* Center Column: Dominant Hero Experience (Setup -> Slot -> Result) */}
-            <main className="flex-1 max-w-[clamp(620px,46vw,840px)] mx-auto flex flex-col items-center gap-2 z-10 min-w-0">
+            <main className="flex-1 max-w-[clamp(620px,46vw,840px)] mx-auto flex flex-col items-center gap-2 min-w-0">
               <div className="w-full">
                 <MainExperience zones={[...ZONES]} candidates={[...PLACE_CANDIDATES]} />
               </div>
             </main>
 
             {/* Right Column: TODAY'S PICK + VISITOR LOG */}
-            <div className="relative w-[clamp(260px,21vw,360px)] shrink-0 flex flex-col gap-3.5 z-10">
+            <div className="relative w-[clamp(260px,21vw,360px)] shrink-0 flex flex-col gap-3.5">
               {/* Ambient Cloud behind top-right sidebar */}
               <PixelCloud className="absolute -right-6 -top-4 w-32 h-14 opacity-75 z-0" />
               <RightSidebar />
@@ -66,7 +66,10 @@ export default function Home() {
 
         {/* 3. Decorative Ground Layer (Visual Stage Grounding)
             Anchored to the Visual Stage container, positioned inward to frame the side modules.
-            z-0 sits behind cards (z-10). pointer-events-none prevents click interception. */}
+            z-0 sits behind the content wrapper (z-10 at the container above); the column
+            elements are deliberately z-auto so they don't form their own stacking contexts,
+            keeping in-flow fixed overlays (e.g. the Result Card) free to cover the whole page.
+            pointer-events-none prevents click interception. */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute bottom-0 left-[clamp(24px,5vw,100px)] z-0"

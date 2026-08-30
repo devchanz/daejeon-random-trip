@@ -26,9 +26,6 @@ src/
 │   ├── r/
 │   │   └── [shareCode]/
 │   │       └── page.tsx          # Dedicated shared route view (noindex)
-│   ├── pick/
-│   │   └── [slug]/
-│   │       └── page.tsx          # Today's Pick detail page
 │   └── api/                      # Route handlers for share snapshot & guestbook API boundaries
 │       ├── guestbook/
 │       │   └── route.ts          # Input validation, sanitization & DB insert
@@ -44,9 +41,8 @@ src/
 │   │   ├── VisitorLogPreview.tsx # Right sidebar 3-item preview
 │   │   ├── GuestbookComposer.tsx # In-flow modal/section with Kkumssi family avatars (Result Card flow)
 │   │   └── GuestbookList.tsx     # /guestbook archive feed presentation
-│   ├── pick/                     # Today's Pick preview and detail views
-│   │   ├── TodaysPickWidget.tsx  # Right sidebar pixel preview with Kkumssi frame
-│   │   └── PickDetail.tsx        # /pick/[slug] photography view & CTA
+│   ├── pick/                     # Today's Pick editorial banner (planned; not yet implemented)
+│   │   └── TodaysPickWidget.tsx  # Right sidebar rotating pixel-art banner, optional external link
 │   └── layout/                   # Global shell, sidebar widgets, retro header
 │       ├── Header.tsx            # Clean brand bar (top tabs eliminated)
 │       ├── SidebarLeft.tsx       # MY PROFILE, TODAY IS…, BGM PLAYING widgets
@@ -70,7 +66,7 @@ The data architecture strictly separates ephemeral session computations from per
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ STATIC DATA TIER (src/data/, src/config/)                                │
-│ - 7-Day Today's Pick (picks.ts) evaluated against Asia/Seoul             │
+│ - Today's Pick editorial banner (picks.ts) — planned, not yet implemented│
 │ - Place Candidates, Zones, and Route Templates                           │
 │ - Product Policies (Duration budgets, reroll limits, weights)            │
 ├──────────────────────────────────────────────────────────────────────────┤
@@ -199,7 +195,7 @@ sequenceDiagram
 - The output slit serves strictly as a physical reveal cue (a brief peek animation).
 
 ### 4. Result Card & Route Guide DOM Architecture
-- All modal dialogs (`Result Card`, `Guestbook Composer`) and views (`Route Guide`, `/guestbook`, `/r/[shareCode]`, `/pick/[slug]`) must be constructed in **semantic React / DOM / CSS**. Monolithic sliced image layouts are strictly prohibited.
+- All modal dialogs (`Result Card`, `Guestbook Composer`) and views (`Route Guide`, `/guestbook`, `/r/[shareCode]`) must be constructed in **semantic React / DOM / CSS**. Monolithic sliced image layouts are strictly prohibited.
 - **Glassmorphism Prohibition**: Modals and cards must retain the approved retro / Korean Y2K / paper / arcade aesthetic (solid borders, tactile shadows, retro paper textures, stamps, washi tape). Modern frosted glassmorphism is prohibited.
 - Backdrop blur is applied subtly and lightly (`backdrop-blur-sm` / slight dim) solely to direct visual focus.
 
@@ -228,11 +224,11 @@ sequenceDiagram
 - UI components must **never** execute direct database writes or issue raw database queries.
 - Reward rerolls are unlocked only after verified server-side validation and database insert success.
 
-### 9. Today's Pick Static Boundary
-- Managed entirely in static data (`src/data/picks.ts`).
-- Evaluated against `Asia/Seoul` calendar date without dynamic server-side CMS dependencies.
-- Date-based Pixel Artwork and Kkumssi Family character combinations are modifiable across campaign days.
-- Primary CTA (`“이 분위기로 여행 뽑기”`) passes `recommendedPreference` to Landing Q2 state without guaranteeing fixed place inclusion.
+### 9. Today's Pick Static Boundary (Revised Scope — ADR-015)
+- A Right Rail editorial / visual banner only — not a detail-page route, not a discovery funnel, not a Q2-seeding mechanism.
+- Managed entirely in static data (`src/data/picks.ts`, currently `TODAYS_PICKS = []` — planned, not yet implemented) without dynamic server-side CMS dependencies.
+- ~5 production pixel-art variants planned; displayed artwork may rotate by weekday or another simple schedule.
+- A banner may optionally hyperlink to an external site related to the featured artwork/place/theme. No internal route or Q2 state is touched.
 
 ### 10. Analytics & Privacy Boundary
 - Telemetry helpers in `src/lib/analytics/` sanitize and enforce safe non-PII parameters.

@@ -30,7 +30,7 @@ This document tracks fundamental product, architecture, and growth experience de
 
 ### ADR-004: Primary Conversion Metric as a High-Intent Proxy
 - **Status**: **Fixed**
-- **Decision**: Track clicks on outbound map links within the in-app Route Guide (`place_map_click`) as the Primary High-Intent Proxy Conversion. Map clicks on Today's Pick detail pages are tracked separately as `pick_map_click` (secondary travel-intent signal).
+- **Decision**: Track clicks on outbound map links within the in-app Route Guide (`place_map_click`) as the Primary High-Intent Proxy Conversion. Today's Pick banner-click tracking is TBD/deferred (ADR-015, revised) — no secondary event is currently defined for it.
 - **Why**: Physical visits to Daejeon cannot be directly tracked or verified by a lightweight web landing page without intrusive native app permissions or physical beacons.
 - **Revisit when**: Offline verification partnerships (e.g., stamp tours, merchant QR codes) become available.
 
@@ -61,12 +61,13 @@ This document tracks fundamental product, architecture, and growth experience de
 ---
 
 ### ADR-008: Centered Result Card Action Hierarchy (Superseding Inline Result Sheet)
-- **Status**: **Fixed (Supersedes legacy inline long receipt)**
-- **Decision**: Result presentation adopts the 2-stage reveal flow (output slit peek cue followed 300–500ms after the peek cue is triggered by a front-facing centered `Result Card` modal overlay). The Result Card features three distinct action pathways:
+- **Status**: **Fixed (Supersedes legacy inline long receipt)** — implemented via `ResultArea.tsx` / `SlotOutputLayer.tsx`, Human Browser validated.
+- **Decision**: Result presentation adopts the 2-stage reveal flow (output slit peek cue followed 300–500ms after the peek cue is triggered by a front-facing centered `Result Card` modal overlay, rendered as an in-flow `fixed` overlay — not a Portal, since `MainExperience` mounts twice for desktop/mobile and a Portal would escape that responsive gate). The Result Card features three distinct action pathways:
   1. **Conversion (Primary)**: `“이 코스로 가보기”` → Transitions to the in-app `Route Guide`.
   2. **Referral (Secondary)**: `“내 루트 공유하기”` → Generates snapshot and short URL `/r/[shareCode]`.
   3. **Participation / Reward (Tertiary)**: `“랜덤 로그 남기고 1회 더 뽑기”` → Opens in-flow Visitor Log composer and unlocks 1 reroll upon server-verified DB save.
   - Result Card body is semantic React / DOM / CSS; glassmorphism is prohibited; slot machine remains stationary.
+  - Result Card keyboard ownership (Escape-to-minimize, Tab focus containment) is active only while Result is the topmost interactive layer; it suspends automatically whenever `RouteGuideModal` or `GuestbookComposer` is open above it, and reactivates — without minimizing Result — once the nested overlay closes.
 - **Why**: Eliminates layout jumping and viewport displacement caused by long paper extrusion while focusing user attention on structured conversion, referral, and community participation.
 - **Revisit when**: Post-launch campaign analytics show significant conversion drop-offs.
 
@@ -120,11 +121,11 @@ This document tracks fundamental product, architecture, and growth experience de
 
 ---
 
-### ADR-015: 7-Day Static Today’s Pick with Preference-Seeding CTA
+### ADR-015: Today's Pick as a Right Rail Editorial Banner (Revises Prior Detail-Page / Q2-Seeding Scope)
 - **Status**: **Fixed**
-- **Decision**: Maintain 7 curated spotlight spots as static TypeScript data (`src/data/picks.ts`) mapped to the 7-day campaign schedule (Asia/Seoul). The Landing preview features pixel artwork and Kkumssi character decoration; clicking opens `/pick/[slug]` with real photography. The primary CTA `“이 분위기로 여행 뽑기”` navigates to Landing with Q2 pre-seeded to the pick's `recommendedPreference`.
-- **Why**: Drives content discovery and sparks spontaneous travel interest without incurring CMS/Supabase overhead or giving users planning decision fatigue.
-- **Revisit when**: Daily dynamic CMS management is required for long-running evergreen campaigns.
+- **Decision**: Today's Pick remains a Right Rail editorial / visual banner surface only. Approximately 5 production pixel-art variants are planned; the displayed artwork may rotate by weekday or another simple schedule. A banner may optionally hyperlink to an external site related to the featured artwork/place/theme. No dedicated `/pick/[slug]` detail page, no Q2 preference-seeding CTA, and no Today's Pick → Slot funnel are approved.
+- **Why**: The previously documented `/pick/[slug]` detail page and Q2 preference-seeding CTA were never implemented (`TODAYS_PICKS` is an empty array; no `/pick` route exists; the sidebar's `자세히 보기` button has no handler) and are no longer approved scope. Today's Pick is confirmed as a simple editorial surface rather than a secondary discovery/seeding funnel, avoiding unapproved complexity and an unreviewed second entry point into the Slot experience.
+- **Revisit when**: Product explicitly approves a detail-page or Q2-seeding flow for Today's Pick as new, reviewed scope.
 
 ---
 
@@ -183,8 +184,24 @@ This document tracks fundamental product, architecture, and growth experience de
 
 ---
 
-### ADR-022: SlotOutputLayer Reserved as a Sibling of SlotVisualFrame
-- **Status**: **Tentative** (reserved, not yet implemented)
-- **Decision**: The future Result/Ticket output reveal (ADR-008's output slit peek cue) will mount inside `SlotStage` as a **sibling** of `SlotVisualFrame` — never as a descendant of `LogicalCanvas` or inside the frame's clipped bounds.
+### ADR-022: SlotOutputLayer as a Sibling of SlotVisualFrame
+- **Status**: **Fixed** — implemented via `SlotOutputLayer.tsx`, mounted from `SlotAnchor.tsx` at the sibling position reserved for it; Human Browser validated.
+- **Decision**: The Result/Ticket output reveal (ADR-008's output slit peek cue) mounts inside `SlotStage` as a **sibling** of `SlotVisualFrame` — never as a descendant of `LogicalCanvas` or inside the frame's clipped bounds. The visual paper/ticket cue itself is currently disabled (`OUTPUT_PEEK_ENABLED = false` in `SlotOutputLayer.tsx`) because the DEV placeholder read as a plain white rectangle against the production slot PNG; the component, its mount point, its props, and this sibling contract all remain live and dormant, so reinstating the cue is a single flag flip once the dedicated Figma output-slit ticket asset lands.
 - **Why**: `SlotVisualFrame` uses `overflow: hidden` (ADR-020) to fix an empty-scroll-tail bug. ADR-008's reveal needs to extend below the physical chassis; nesting it inside the frame would force a permanent clip that contradicts that contract. A sibling mount is unaffected by the frame's overflow.
-- **Revisit when**: The Result/Ticket Output System is implemented (see `docs/PROJECT_STATE.md` → Next Recommended Work).
+- **Revisit when**: The Figma output-slit ticket asset is ready — flip `OUTPUT_PEEK_ENABLED` to `true` and verify the cue against production asset proportions (see `docs/PROJECT_STATE.md` → Next Recommended Development Order).
+
+---
+
+### ADR-023: Result Minimize / Reopen (결과 접기) Resolves the Result Dismissal Path
+- **Status**: **Fixed** — implemented via `revealStage: 'minimized'` in `MainExperience.tsx`, `ResultArea.tsx`, and the reopen affordance in `SlotAnchor.tsx`'s helper band; Human Browser validated.
+- **Decision**: The Result Card is dismissed by **minimizing** (결과 접기), never by closing or discarding. Minimizing sets the presentation-only `revealStage` to `'minimized'`: the overlay hides (`display:none`, not unmounted, so `ResultSheet`'s local share state survives), body scroll and background interaction are fully restored, and `state.result` is never touched — no route regeneration, no reducer dispatch. A persistent reopen affordance (`🎫 내 여행 티켓 다시 보기`) lives in `SlotAnchor`'s helper band, directly beneath the slot's output slit (zero added layout height, preserving the ADR-020 position-lock contract), and returns to the exact same revealed Result Card with every CTA/reward/reroll state intact. Escape, while Result holds keyboard ownership (ADR-008), also minimizes rather than closing or discarding.
+- **Why**: ADR-008 established the centered Result Card modal overlay but left dismissal undefined. A persistent overlay with no exit trapped the user — background scroll-locked and click-blocked with no way out — and was explicitly flagged as an open Product/UX question during implementation. Minimize resolves it while preserving Result data and the ticket metaphor ("결과가 접혀 있다", not "결과가 사라졌다").
+- **Revisit when**: Product wants an actual close/discard action distinct from minimize, or the reopen affordance's placement needs revisiting for discoverability.
+
+---
+
+### ADR-024: Landing Page Columns Stay Out of Their Own Stacking Context
+- **Status**: **Fixed** — implemented via `src/app/page.tsx`; Human Browser validated.
+- **Decision**: The three-column Visual Stage layout (`src/app/page.tsx`) does not assign `z-index` to the Left Sidebar, Center (`<main>`), or Right Sidebar column wrappers. Only the shared content wrapper they sit inside keeps `z-10`, which is enough to stay above the decorative Ground Scenery (`z-0`).
+- **Why**: `z-index` on a flex item creates a stacking context even without an explicit `position`. All three columns previously carried `z-10`, so every in-flow `fixed` overlay inside `MainExperience` (Result Card, Guestbook Composer, the reveal-emphasis backdrop) resolved its own `z-index` inside `<main>`'s local stacking context instead of the page's — DOM order then decided paint order between columns, so the Right Sidebar (rendered after `<main>`) visually painted over these overlays while the Left Sidebar (rendered before) did not. Removing the redundant column-level `z-index` lets in-flow fixed overlays cover the whole page as intended, without a Portal — which would reintroduce the dual-mount hazard of `MainExperience` rendering twice for desktop/mobile (see ADR-008).
+- **Revisit when**: A future column needs its own `z-index` for an unrelated reason — re-verify against this contract before adding one.

@@ -8,7 +8,7 @@ The data architecture separates data into three distinct lifecycle tiers to mini
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 1. Static Configuration & Seed Tier (src/data, src/config)             │
 │    - Place Candidates, Route Templates, Zones                          │
-│    - 7-Day Today's Pick Content (TS/JSON)                              │
+│    - Today's Pick editorial banner content (TS/JSON) — planned          │
 │    - Product Policies (Duration budgets, reroll limits, weights)       │
 ├────────────────────────────────────────────────────────────────────────┤
 │ 2. Client / Anonymous Session Tier (sessionStorage / Browser Session)  │
@@ -195,34 +195,21 @@ Stores immutable snapshots of itineraries when users click `“내 루트 공유
 
 ---
 
-## 4. Today's Pick Static Data Model
+## 4. Today's Pick Static Data Model (Planned — Not Yet Implemented, ADR-015 Revised Scope)
 
-Picks are managed entirely via static TypeScript/JSON data (`src/data/picks.ts`) without Supabase or CMS overhead. 7 curated items correspond to the 7-day campaign schedule, supporting modifiable daily combinations of Pixel Artwork and Kkumssi Family characters.
+Today's Pick is a simple Right Rail editorial / visual banner — not a detail page, discovery funnel, or Q2-seeding mechanism. It is managed entirely via static TypeScript data (`src/data/picks.ts`, currently `TODAYS_PICKS = []`) without Supabase or CMS overhead. The shape below describes only the confirmed banner concept:
 
 ```typescript
 interface TodaysPickItem {
-  id: string;                    // Pick identifier (e.g., "pick-01-soje")
-  slug: string;                  // URL slug for /pick/[slug] (e.g., "soje-dong-cafe")
-  campaignDate: string;          // Target active date in YYYY-MM-DD (Asia/Seoul)
-  title: string;                 // Headline (e.g., "소제동 철도관사촌 골목 산책")
-  subtitle: string;              // Short description / vibe hook
-  pixelAsset: string;            // Pixel artwork path for Landing frame
-  characterId: string;           // Kkumssi family character ID / asset key (e.g., "kkumdori")
-  characterAsset?: string;       // Direct character artwork path (if mapped)
-  photos: string[];              // Real photography asset paths for Detail page
-  tags: string[];                // Tag list (e.g., ["#철도관사", "#카페거리", "#포토존"])
-  recommendedPreference: 'food' | 'walk' | 'photo' | 'anything'; // Pre-seeding target for Q2
-  recommendationReason: string;  // Curated one-line recommendation reason
-  stayDuration: string;          // Display stay time (e.g., "약 1시간 30분")
-  recommendedTime: string;       // Recommended visiting time (e.g., "오후 2시 ~ 5시")
-  access: string;                // Transit guide (e.g., "대전역 동광장 도보 5분")
-  caution: string;               // Practical visitor tip/caution
-  mapLinks?: {                   // Outbound external map links (provider-neutral)
-    naver?: string;
-    kakao?: string;
-  };
+  id: string;                    // Pick identifier
+  title: string;                 // Headline / short caption for the banner
+  pixelAsset: string;            // Pixel artwork path (~5 production variants planned)
+  rotationKey?: string;          // Simple rotation key (e.g. weekday) selecting the displayed variant -- exact schedule mechanism TBD
+  externalLink?: string;         // Optional outbound hyperlink to an external site related to the featured artwork/place/theme
 }
 ```
+
+> **Note**: The `TodaysPickItem` type currently declared in `src/lib/random/types.ts` additionally carries `slug`, `campaignDate`, `photos`, `characterId`/`characterAsset`, `tags`, `recommendedPreference`, `recommendationReason`, `stayDuration`, `recommendedTime`, `access`, `caution`, and `mapLinks` fields left over from the previously documented (and unimplemented) detail-page / Q2-seeding concept. These are unreferenced by any route or call site today and should be trimmed to the shape above when the banner is actually implemented — this document describes the confirmed target contract, not the current unused type declaration.
 
 ---
 
