@@ -165,3 +165,37 @@ Before launching any paid performance marketing campaign:
 1. **GA4 Debug Mode Verification**: QA engineer/developer verifies tracking using GA4 DebugView / Google Tag Assistant across all 4 growth loops (setup questions, slot spins, in-app Route Guide map CTAs, referral sharing, and guestbook submissions).
 2. **Payload & Cardinality Inspection**: Verify in DebugView that all event names match this specification exactly and that **zero** free-text strings, high-cardinality `share_code` values, or unexpected PII parameters appear in event payloads.
 3. **UTM Attribution Check**: Validate that landing with query parameters correctly associates sessions with campaign source tags in GA4 reports.
+
+---
+
+## 8. Campaign & Funnel Analysis Dashboard Deliverable
+
+### 8.1 Purpose & Role
+The **Campaign & Funnel Analysis Dashboard** is a **required project deliverable** alongside client telemetry instrumentation. Its purpose is to make paid-traffic acquisition, marketing campaign efficiency, growth-loop funnel drop-offs, and proxy conversions easily analyzable without requiring stakeholders to repeatedly inspect raw GA4 exploration tables.
+
+*(Note: The specific dashboard platform—e.g., Looker Studio report, GA4 Custom Exploration template, or another lightweight analysis layer—remains an upcoming implementation decision; the analytical views below define the required functional contract).*
+
+### 8.2 Required Analysis Areas & Views
+All dashboard views rely **strictly** on the events, dimensions, and parameters already defined in this specification (zero new telemetry or PII):
+
+1. **Acquisition & Campaign Attribution (UTM Performance)**:
+   - Evaluates incoming traffic volume, engagement, and conversion efficiency grouped by `utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, and `utm_term`.
+   - Compares traffic sources and campaign attribution against downstream intent (`place_map_click`, `route_share_complete`).
+
+2. **Core Conversion Funnel & Step Drop-Off**:
+   - Visualizes step-by-step conversion rates and identifies drop-off friction across the core flow:
+     `page_view` → `quick_setup_start` → `setup_complete` → `slot_start` → `route_generated` → `route_view` → `route_guide_open` → `place_map_click` (Primary Proxy Conversion).
+
+3. **Route Guide & Outbound Map Engagement**:
+   - Analyzes high-intent engagement on `place_map_click` and `pick_map_click`.
+   - Breaks down map actions by `map_service` (`naver` vs. `kakao`), `zone_id`, and `stop_index` (1–4).
+
+4. **Guestbook & Rewarded Reroll Participation**:
+   - Monitors the participation loop: `route_view` → `reroll_offer_click` → `guestbook_composer_open` → `guestbook_submit` → `reroll_unlocked` → `route_reroll`.
+   - Tracks avatar selection distribution (`avatar_id`) and reroll conversion lift.
+
+5. **Referral & Virality Performance**:
+   - Measures organic sharing and referral acquisition: `route_share_click` → `route_share_create` → `route_share_complete` (by `share_method`: `web_share` vs. `clipboard`) → `shared_route_view` → `shared_route_guide_open` / `shared_route_slot_click` (new landing user acquisition).
+
+6. **Preference & Duration Segmentation**:
+   - Analyzes traveler intent breakdown across permitted categorical dimensions: `duration_type` (`half` vs. `full`), `preference_type` (`food`, `walk`, `photo`, `anything`), and recommended `zone_id`.
