@@ -26,6 +26,16 @@ export const MOTION_TIMINGS = {
   TOTAL_SPIN_MS: REEL_3_STOP_MS + FINAL_BEAT_MS,
   /** Temporary dim & subtle blur reveal emphasis duration */
   REVEAL_EMPHASIS_MS: 1400,
+  /**
+   * Delay from the output slit peek cue being triggered until the centered
+   * Result Card is revealed.
+   *
+   * The 300-500ms window is a Fixed product contract (docs/PRODUCT.md 5.1 and
+   * docs/ARCHITECTURE.md 5.1: "300-500ms after the peek cue is triggered").
+   * DEV lands inside that range; VISUAL may retune within it, but must not
+   * leave it without a documented product decision.
+   */
+  OUTPUT_PEEK_TO_CARD_MS: 400,
   /** Total spin duration when prefers-reduced-motion is active */
   REDUCED_MOTION_TOTAL_MS: 60,
 } as const;

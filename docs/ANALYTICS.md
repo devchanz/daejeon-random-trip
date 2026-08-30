@@ -1,11 +1,12 @@
 # Analytics Contract & Tracking Specification
 
 ## 1. Overview & Objective
-This specification defines the Google Analytics 4 (GA4) telemetry plan for the Daejeon Random Trip MVP. It measures user progression across the four growth loops:
+This specification defines the Google Analytics 4 (GA4) telemetry plan for the Daejeon Random Trip MVP. It measures user progression across the three growth loops:
 1. **Core Conversion**: Setup → Spin → Result Card → Route Guide → Outbound Map Click.
 2. **Participation & Reward**: Result Card → Visitor Log → Reroll Unlock → Second Spin.
 3. **Referral Loop**: Result Card → Share Snapshot → `/r/[shareCode]` → New User Slot Spin.
-4. **Content-to-Spark**: Today's Pick → Detail Page → Seed Q2 → Slot Spin.
+
+> **Today's Pick is not a growth loop.** It is a simple Right Rail editorial banner (ADR-015, revised) with no detail page, Q2 seeding, or Slot funnel. Banner-click/impression tracking, if desired, is **TBD** and deferred until the banner's actual implementation is designed — no events are currently defined for it (see §3.4).
 
 ---
 
@@ -41,14 +42,6 @@ flowchart TD
         R --> S[shared_route_guide_open]
         R --> T[shared_route_slot_click]
         T --> B
-    end
-
-    subgraph ContentPick [4. Content-to-Spark Loop]
-        A --> U[pick_click]
-        U --> V[pick_view]
-        V --> W[pick_map_click]
-        V --> X[pick_slot_click]
-        X --> B
     end
 ```
 
@@ -90,15 +83,10 @@ flowchart TD
 
 > **Telemetry Rule on Referral Identifiers**: High-cardinality user-specific referral codes (`share_code`) are **never** transmitted to GA4 as event parameters. Aggregate viral performance is tracked via standardized funnel events (`route_share_complete`, `shared_route_view`, `shared_route_slot_click`) and low-cardinality categorical dimensions.
 
-### 3.4 Today's Pick Events
-| Event Name | Trigger Condition | Intended Parameters |
-| :--- | :--- | :--- |
-| `pick_click` | User clicks Today's Pick widget on Landing page | `pick_id`, `pick_slug` |
-| `pick_view` | User views `/pick/[slug]` detail page | `pick_id`, `pick_slug` |
-| `pick_map_click` | User clicks outbound map link on Pick detail page | `pick_id`, `map_service` |
-| `pick_slot_click` | User clicks `“이 분위기로 여행 뽑기”` on Pick detail page | `pick_id`, `seeded_preference` |
+### 3.4 Today's Pick (Deferred — No Events Defined)
+Today's Pick is a simple Right Rail editorial banner (ADR-015, revised): no detail page, no Q2 preference seeding, no Slot funnel. The `pick_click` / `pick_view` / `pick_slot_click` / `pick_map_click` events previously specified here existed solely for that unapproved detail-page/seeding flow and have been removed along with it — they must not be reintroduced without a new product decision.
 
-> **Note on Today's Pick Flow**: Clicking `pick_slot_click` navigates back to Landing with the Q2 preference pre-seeded, transitioning to `quick_setup_start`. When the user selects Q1 Duration, the seeded `preference_type` is captured upon `setup_complete`. No redundant preference selection event is dispatched.
+Banner-click or impression tracking, if desired, is **TBD** and deferred until the banner's actual implementation (rotation mechanism, optional external link) is designed. No replacement event taxonomy is defined at this time.
 
 ---
 
@@ -118,8 +106,6 @@ flowchart TD
 - `reroll_count` (`0` or `1`)
 - `share_method` (`'web_share'` / `'clipboard'`)
 - `avatar_id` (categorical Kkumssi family avatar identifier)
-- `pick_id` / `pick_slug` (curated pick identifier)
-- `seeded_preference` (`'food'` / `'walk'` / `'photo'` / `'anything'`)
 - `map_service` (`'naver'` / `'kakao'` / `'generic'`)
 
 ### ⛔ Strict PII & Free-Text Prohibition
@@ -138,11 +124,9 @@ flowchart TD
 > 
 > Therefore, **`place_map_click`** (clicks on outbound map links within the in-app Route Guide) serves as the **Primary High-Intent Proxy Conversion** for performance-marketing campaign evaluation.
 >
-> Outbound map clicks on Today's Pick detail pages (`pick_map_click`) serve as a secondary content and travel-intent signal.
->
-> These reflect high travel intent, not physical visit completion, and must not be misinterpreted as confirmed offline attendance.
+> This reflects high travel intent, not physical visit completion, and must not be misinterpreted as confirmed offline attendance.
 
-Secondary conversion indicators include `route_share_complete`, `guestbook_submit`, and `pick_map_click`.
+Secondary conversion indicators include `route_share_complete` and `guestbook_submit`.
 
 ---
 
@@ -162,7 +146,7 @@ Standard UTM query parameters are captured on landing by GA4 for campaign attrib
 ## 7. Pre-Launch Quality Assurance (GA4 Debug Mode & Validation)
 
 Before launching any paid performance marketing campaign:
-1. **GA4 Debug Mode Verification**: QA engineer/developer verifies tracking using GA4 DebugView / Google Tag Assistant across all 4 growth loops (setup questions, slot spins, in-app Route Guide map CTAs, referral sharing, and guestbook submissions).
+1. **GA4 Debug Mode Verification**: QA engineer/developer verifies tracking using GA4 DebugView / Google Tag Assistant across all 3 growth loops (setup questions, slot spins, in-app Route Guide map CTAs, referral sharing, and guestbook submissions).
 2. **Payload & Cardinality Inspection**: Verify in DebugView that all event names match this specification exactly and that **zero** free-text strings, high-cardinality `share_code` values, or unexpected PII parameters appear in event payloads.
 3. **UTM Attribution Check**: Validate that landing with query parameters correctly associates sessions with campaign source tags in GA4 reports.
 
@@ -187,7 +171,7 @@ All dashboard views rely **strictly** on the events, dimensions, and parameters 
      `page_view` → `quick_setup_start` → `setup_complete` → `slot_start` → `route_generated` → `route_view` → `route_guide_open` → `place_map_click` (Primary Proxy Conversion).
 
 3. **Route Guide & Outbound Map Engagement**:
-   - Analyzes high-intent engagement on `place_map_click` and `pick_map_click`.
+   - Analyzes high-intent engagement on `place_map_click`.
    - Breaks down map actions by `map_service` (`naver` vs. `kakao`), `zone_id`, and `stop_index` (1–4).
 
 4. **Guestbook & Rewarded Reroll Participation**:
