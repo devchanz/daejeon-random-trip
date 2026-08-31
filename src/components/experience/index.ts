@@ -8,6 +8,8 @@ export { ResultArea, type ResultAreaProps } from './ResultArea';
 export { ResultSheet, type ResultSheetProps } from './ResultSheet';
 export {
   MOTION_TIMINGS,
+  REDUCED_MOTION_TIMINGS,
+  getMotionTimings,
   NEUTRAL_ROLLING_SYMBOLS,
   usePrefersReducedMotion,
 } from './motionConfig';

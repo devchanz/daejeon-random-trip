@@ -85,6 +85,8 @@ flowchart LR
    - **Physical Peek Cue**: Immediately following the final beat after Reel 3 stops, a short ticket/paper peek animation appears at the stationary slot output slit as a physical dispensing affordance.
    - **Centered Focus Overlay**: 300–500ms after the peek cue is triggered, the background landing page is slightly dimmed with a subtle backdrop blur, and the front-facing **Result Card** appears in the center of the viewport.
 
+**Reduced Motion**: When the device signals `prefers-reduced-motion: reduce`, the same Q1 → Q2 → READY → SPINNING → RESULT sequence occurs — the Result Card never appears instantly, and the user still perceives a real SPINNING period with reels visibly rolling and stopping sequentially. Only the *intensity* is reduced: the reel roll runs at a deliberately gentler pace (same direction and metaphor as normal motion, not a different visual), the reel-stop settle uses a simple opacity fade instead of a bounce, and the lever swing, ticket entrance, and dim/blur backdrop transition are suppressed entirely. See ADR-026.
+
 ### 5.2 Result Card Action Hierarchy
 The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 코스!”`), STOP 1~4 details, and optional mission. It offers three distinct action paths:
 
