@@ -201,17 +201,54 @@ body {
   animation: output-peek 0.3s ease-out forwards;
 }
 
+/* Reduced-motion reel settle: opacity only -- no translateY, no scale, no
+   brightness bounce. Softens the roll -> final value transition without
+   reintroducing spatial motion. */
+@keyframes reel-settle-fade {
+  0% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 /* Prefers Reduced Motion overrides */
 @media (prefers-reduced-motion: reduce) {
-  .animate-reel-roll-0,
-  .animate-reel-roll-1,
-  .animate-reel-roll-2,
-  .animate-reel-settle,
+  /* Fully suppressed: lever swing, ticket entrance, backdrop fade, output peek. */
   .animate-lever-pull,
   .animate-ticket-entrance,
   .animate-reveal-fade-in,
   .animate-output-peek {
     animation: none !important;
     transition: none !important;
+  }
+
+  /*
+   * Slot reels: REDUCED, not removed. The vertical roll is the product's core
+   * interaction identity ("여행을 뽑는다", ADR-002) -- removing it left the slot
+   * looking frozen (Human E2E failure). Same DOM, same track, same seamless
+   * -50% loop, same direction; only velocity drops ~2x (0.38/0.44/0.35s ->
+   * 0.75/0.90/0.70s). Roughly 10 symbols pass before reel 1 stops instead of
+   * ~35, so the motion is gentler while staying close to the approved
+   * full-motion interaction, which is the visual source of truth.
+   *
+   * Human E2E tuning values -- adjust here if the browser test says otherwise.
+   */
+  .animate-reel-roll-0 {
+    animation-duration: 0.75s;
+  }
+
+  .animate-reel-roll-1 {
+    animation-duration: 0.9s;
+  }
+
+  .animate-reel-roll-2 {
+    animation-duration: 0.7s;
+  }
+
+  /* Settle: bounce replaced by an opacity-only fade (see keyframe above). */
+  .animate-reel-settle {
+    animation: reel-settle-fade 0.2s ease-out forwards !important;
   }
 }

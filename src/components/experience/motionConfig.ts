@@ -36,9 +36,41 @@ export const MOTION_TIMINGS = {
    * leave it without a documented product decision.
    */
   OUTPUT_PEEK_TO_CARD_MS: 400,
-  /** Total spin duration when prefers-reduced-motion is active */
-  REDUCED_MOTION_TOTAL_MS: 60,
 } as const;
+
+const REDUCED_REEL_1_STOP_MS = 650;
+const REDUCED_REEL_2_STOP_MS = 1100;
+const REDUCED_REEL_3_STOP_MS = 1550;
+const REDUCED_FINAL_BEAT_MS = 250;
+
+/**
+ * Reduced-motion timing table.
+ *
+ * `prefers-reduced-motion: reduce` (see globals.css) suppresses VISUAL motion --
+ * it does not mean the product lifecycle should complete instantly. The user
+ * still gets the full READY -> SPINNING -> RESULT sequence with perceptible
+ * reel-by-reel progression; only the animated travel between states is gone.
+ * Shape mirrors MOTION_TIMINGS exactly so the spin effect stays a single code
+ * path (see MainExperience.tsx).
+ */
+export const REDUCED_MOTION_TIMINGS = {
+  LEVER_PULL_MS: 400,
+  REEL_1_STOP_MS: REDUCED_REEL_1_STOP_MS,
+  REEL_2_STOP_MS: REDUCED_REEL_2_STOP_MS,
+  REEL_3_STOP_MS: REDUCED_REEL_3_STOP_MS,
+  FINAL_BEAT_MS: REDUCED_FINAL_BEAT_MS,
+  TOTAL_SPIN_MS: REDUCED_REEL_3_STOP_MS + REDUCED_FINAL_BEAT_MS,
+  REVEAL_EMPHASIS_MS: MOTION_TIMINGS.REVEAL_EMPHASIS_MS,
+  // Unchanged on purpose: the 300-500ms peek->card window is a Fixed product
+  // contract (docs/PRODUCT.md 5.1, docs/ARCHITECTURE.md 5.1) and is a timing
+  // beat, not a motion effect.
+  OUTPUT_PEEK_TO_CARD_MS: MOTION_TIMINGS.OUTPUT_PEEK_TO_CARD_MS,
+} as const;
+
+/** Selects the active timing table based on the user's motion preference. */
+export function getMotionTimings(prefersReducedMotion: boolean) {
+  return prefersReducedMotion ? REDUCED_MOTION_TIMINGS : MOTION_TIMINGS;
+}
 
 /**
  * Neutral travel and arcade symbols displayed on reels while rolling.

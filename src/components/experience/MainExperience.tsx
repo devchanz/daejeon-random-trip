@@ -29,6 +29,7 @@ import { SlotAnchor } from './SlotAnchor';
 import { ResultArea } from './ResultArea';
 import {
   MOTION_TIMINGS,
+  getMotionTimings,
   usePrefersReducedMotion,
 } from './motionConfig';
 
@@ -36,6 +37,7 @@ export interface MainExperienceProps {
   initialState?: ExperienceState;
   zones?: Zone[];
   candidates?: PlaceCandidate[];
+  /** Full-motion spin duration override (test/injection seam). Ignored when the user prefers reduced motion -- that path uses its own timing table (see motionConfig.ts). */
   spinDurationMs?: number;
   random?: () => number;
   onSpinStart?: () => void;
@@ -124,50 +126,47 @@ export function MainExperience({
       return id;
     };
 
-    if (prefersReducedMotion) {
-      // Reduced motion: fast sequence, skip the output slit peek cue and reveal the Result Card directly
-      schedule(() => {
-        setIsLeverActive(false);
-        setSpinningStoppedReelCount(3);
-        dispatch(completeSpin(pendingResult));
-        onSpinComplete?.(pendingResult);
-        setRevealStage('revealed');
-      }, MOTION_TIMINGS.REDUCED_MOTION_TOTAL_MS);
-    } else {
-      // Standard motion sequence: Lever pull -> Reel 1 stop -> Reel 2 stop -> Reel 3 stop -> Complete
-      // Guard: Spin completion delay must never fire before all reels have stopped plus final beat
-      const minSpinDurationMs =
-        MOTION_TIMINGS.REEL_3_STOP_MS + MOTION_TIMINGS.FINAL_BEAT_MS;
-      const effectiveSpinDurationMs = Math.max(spinDurationMs, minSpinDurationMs);
+    // Single lifecycle path for both motion preferences: motion preference selects
+    // WHICH timing table drives the sequence, never whether the sequence happens.
+    // Visual motion (CSS, suppressed via prefers-reduced-motion in globals.css) is
+    // independent from this product-state clock (plain setTimeout beats -- see
+    // MainExperience docstring). `spinDurationMs` is a test/injection seam whose
+    // default is the full-motion total; honoring it under reduced motion would
+    // re-inflate the sequence back to the full-motion length, so reduced motion
+    // always uses its own table's total instead.
+    const timings = getMotionTimings(prefersReducedMotion);
+    const minSpinDurationMs = timings.REEL_3_STOP_MS + timings.FINAL_BEAT_MS;
+    const effectiveSpinDurationMs = prefersReducedMotion
+      ? minSpinDurationMs
+      : Math.max(spinDurationMs, minSpinDurationMs);
 
-      // 1. Lever returns to rest position
-      schedule(() => {
-        setIsLeverActive(false);
-      }, MOTION_TIMINGS.LEVER_PULL_MS);
+    // 1. Lever returns to rest position
+    schedule(() => {
+      setIsLeverActive(false);
+    }, timings.LEVER_PULL_MS);
 
-      // 2. Reel 1 stops
-      schedule(() => {
-        setSpinningStoppedReelCount(1);
-      }, MOTION_TIMINGS.REEL_1_STOP_MS);
+    // 2. Reel 1 stops
+    schedule(() => {
+      setSpinningStoppedReelCount(1);
+    }, timings.REEL_1_STOP_MS);
 
-      // 3. Reel 2 stops
-      schedule(() => {
-        setSpinningStoppedReelCount(2);
-      }, MOTION_TIMINGS.REEL_2_STOP_MS);
+    // 3. Reel 2 stops
+    schedule(() => {
+      setSpinningStoppedReelCount(2);
+    }, timings.REEL_2_STOP_MS);
 
-      // 4. Reel 3 stops
-      schedule(() => {
-        setSpinningStoppedReelCount(3);
-      }, MOTION_TIMINGS.REEL_3_STOP_MS);
+    // 4. Reel 3 stops
+    schedule(() => {
+      setSpinningStoppedReelCount(3);
+    }, timings.REEL_3_STOP_MS);
 
-      // 5. Short final beat -> Complete spin, trigger reveal emphasis & output slit peek cue
-      schedule(() => {
-        dispatch(completeSpin(pendingResult));
-        onSpinComplete?.(pendingResult);
-        setIsRevealEmphasis(true);
-        setRevealStage('peek');
-      }, effectiveSpinDurationMs);
-    }
+    // 5. Short final beat -> Complete spin, trigger reveal emphasis & output slit peek cue
+    schedule(() => {
+      dispatch(completeSpin(pendingResult));
+      onSpinComplete?.(pendingResult);
+      setIsRevealEmphasis(true);
+      setRevealStage('peek');
+    }, effectiveSpinDurationMs);
 
     return () => {
       timeouts.forEach((id) => clearTimeout(id));
