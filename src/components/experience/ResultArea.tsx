@@ -8,6 +8,7 @@ export interface ResultAreaProps {
   state?: ExperienceState;
   revealStage?: 'hidden' | 'peek' | 'revealed' | 'minimized';
   rerollReward?: RerollRewardState;
+  hasLoggedCurrentResult?: boolean;
   onOpenGuestbook?: () => void;
   onExecuteReroll?: () => void;
   onOpenRouteGuide?: () => void;
@@ -66,6 +67,7 @@ export function ResultArea({
   state,
   revealStage = 'hidden',
   rerollReward = 'locked',
+  hasLoggedCurrentResult = false,
   onOpenGuestbook,
   onExecuteReroll,
   onOpenRouteGuide,
@@ -199,6 +201,7 @@ export function ResultArea({
         <ResultSheet
           result={state.result}
           rerollReward={rerollReward}
+          hasLoggedCurrentResult={hasLoggedCurrentResult}
           onOpenGuestbook={onOpenGuestbook}
           onExecuteReroll={onExecuteReroll}
           onOpenRouteGuide={onOpenRouteGuide}

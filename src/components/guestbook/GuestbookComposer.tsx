@@ -1,17 +1,22 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { RouteResult } from '../../lib/random/types';
 import type { GuestbookEntryRecord } from '../../lib/database/types';
-import {
-  GUESTBOOK_AVATARS,
-  DEFAULT_AVATAR_ID,
-  type GuestbookAvatarOption,
-} from '../../config/product';
+import { GUESTBOOK_AVATARS, DEFAULT_AVATAR_ID } from '../../config/product';
+import { CharacterSelector } from './CharacterSelector';
 
 export interface GuestbookComposerProps {
   routeResult: RouteResult;
   isOpen: boolean;
+  /**
+   * Whether *this specific submission* can still unlock the reroll reward --
+   * derived by the caller from reroll session state (`rerollReward === 'locked'`),
+   * never recomputed here. The composer has no reward-state machine of its own;
+   * it only renders copy that matches what will actually happen on success.
+   */
+  rewardEligible: boolean;
   onClose: () => void;
   onSuccess: (record: GuestbookEntryRecord) => void;
 }
@@ -19,15 +24,26 @@ export interface GuestbookComposerProps {
 export function GuestbookComposer({
   routeResult,
   isOpen,
+  rewardEligible,
   onClose,
   onSuccess,
 }: GuestbookComposerProps) {
+  const router = useRouter();
   const [selectedAvatarId, setSelectedAvatarId] = useState<string>(DEFAULT_AVATAR_ID);
   const [nickname, setNickname] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
+  // Snapshot of whether *this* submission actually granted the reward -- captured
+  // once, at submit time, from the `rewardEligible` prop as it stood *before*
+  // onSuccess() runs. The live `rewardEligible` prop cannot be read directly in
+  // the success view: onSuccess() synchronously calls unlockRerollReward in the
+  // parent, and React batches that state update together with this component's
+  // own setIsSuccess(true), so by the time the success screen renders, the prop
+  // has already flipped to reflect the post-submission (now non-'locked') state.
+  const [rewardGrantedThisSubmission, setRewardGrantedThisSubmission] =
+    useState<boolean>(false);
 
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -120,14 +136,23 @@ export function GuestbookComposer({
       // Successful persistent DB save verified
       const record = data.data as GuestbookEntryRecord;
 
+      // 0. Snapshot the outcome BEFORE onSuccess() can change rewardEligible upstream.
+      const rewardGranted = rewardEligible;
+
       // 1. Immediately notify parent to unlock reroll reward (no delay on reward unlock)
       onSuccess(record);
 
-      // 2. Present success feedback to the user
+      // 2. Refresh Server Component data on the current route (e.g. the Right Rail's
+      //    live Random Log preview) so the new entry appears without a manual reload.
+      //    Preserves unaffected client state (Result/reveal/minimize) and performs no navigation.
+      router.refresh();
+
+      // 3. Present success feedback to the user, using the snapshot above
+      setRewardGrantedThisSubmission(rewardGranted);
       setIsSuccess(true);
       setIsSubmitting(false);
 
-      // 3. Short presentation delay solely for closing the modal
+      // 4. Short presentation delay solely for closing the modal
       closeTimerRef.current = setTimeout(() => {
         onClose();
       }, 1000);
@@ -162,7 +187,7 @@ export function GuestbookComposer({
               id="guestbook-composer-title"
               className="text-lg sm:text-xl font-black text-[#2b2520]"
             >
-              랜덤 로그 남기고 1회 더 뽑기
+              {rewardEligible ? '랜덤 로그 남기고 1회 더 뽑기' : '랜덤 로그 남기기'}
             </h2>
           </div>
           <button
@@ -177,18 +202,34 @@ export function GuestbookComposer({
         </div>
 
         {isSuccess ? (
-          /* Success State Presentation */
-          <div className="flex flex-col items-center justify-center gap-3 py-8 text-center animate-ticket-entrance">
-            <span className="text-4xl" role="img" aria-label="Party Popper">
-              🎉
-            </span>
-            <h3 className="text-lg font-black text-[#10b981]">
-              랜덤 로그가 등록되었습니다!
-            </h3>
-            <p className="text-xs font-bold text-[#6b6257]">
-              🎁 1회 더 뽑기 기회가 잠금 해제되었습니다!
-            </p>
-          </div>
+          rewardGrantedThisSubmission ? (
+            /* CASE A: this submission actually unlocked the reroll reward. */
+            <div className="flex flex-col items-center justify-center gap-3 py-8 text-center animate-ticket-entrance">
+              <span className="text-4xl" role="img" aria-label="Party Popper">
+                🎉
+              </span>
+              <h3 className="text-lg font-black text-[#10b981]">
+                랜덤 로그가 등록되었습니다!
+              </h3>
+              <p className="text-xs font-bold text-[#6b6257]">
+                🎁 1회 더 뽑기 기회가 잠금 해제되었습니다!
+              </p>
+            </div>
+          ) : (
+            /* CASE B: reward already consumed this session -- quiet gratitude,
+               no reroll/reward wording, no confetti-style icon. */
+            <div className="flex flex-col items-center justify-center gap-3 py-8 text-center animate-ticket-entrance">
+              <span className="text-4xl" role="img" aria-label="Check Mark">
+                ✅
+              </span>
+              <h3 className="text-lg font-black text-[#2b2520]">
+                랜덤 로그를 남겨주셔서 고마워요.
+              </h3>
+              <p className="text-xs font-bold text-[#6b6257]">
+                당신의 한 줄이 다음 여행자에게 대전 힌트가 될 거예요.
+              </p>
+            </div>
+          )
         ) : (
           /* Form Content */
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -206,35 +247,11 @@ export function GuestbookComposer({
             </div>
 
             {/* 1. Avatar Selection */}
-            <fieldset className="flex flex-col gap-1.5">
-              <legend className="text-xs font-black text-[#2b2520]">
-                캐릭터 아바타 선택 <span className="text-[#ff5555]">*</span>
-              </legend>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {GUESTBOOK_AVATARS.map((avatar: GuestbookAvatarOption) => {
-                  const isSelected = selectedAvatarId === avatar.id;
-                  return (
-                    <button
-                      key={avatar.id}
-                      type="button"
-                      onClick={() => handleAvatarSelect(avatar.id)}
-                      className={`flex flex-col items-center justify-center gap-1 rounded-xl border-2 p-2.5 text-center transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-[#2b2520] bg-[#ffeaa7] shadow-retro-xs ring-2 ring-[#ffb800]'
-                          : 'border-[#d8d0c2] bg-[#fffef9] hover:bg-[#faf6ee]'
-                      }`}
-                    >
-                      <span className="text-2xl" role="img" aria-label={avatar.name}>
-                        {avatar.badgeEmoji ?? '⭐'}
-                      </span>
-                      <span className="text-xs font-black text-[#2b2520]">
-                        {avatar.name}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
+            <CharacterSelector
+              avatars={GUESTBOOK_AVATARS}
+              selectedId={selectedAvatarId}
+              onSelect={handleAvatarSelect}
+            />
 
             {/* 2. Nickname Input */}
             <div className="flex flex-col gap-1">
@@ -315,7 +332,11 @@ export function GuestbookComposer({
                     : 'bg-[#ff5555] hover:bg-[#ff3b3b] shadow-retro-xs cursor-pointer active:translate-x-[1px] active:translate-y-[1px]'
                 }`}
               >
-                {isSubmitting ? '저장 중...' : '등록하고 1회 더 뽑기 받기'}
+                {isSubmitting
+                  ? '저장 중...'
+                  : rewardEligible
+                    ? '등록하고 1회 더 뽑기 받기'
+                    : '등록하기'}
               </button>
             </div>
           </form>

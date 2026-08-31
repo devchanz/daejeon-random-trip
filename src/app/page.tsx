@@ -6,6 +6,13 @@ import { MainExperience } from '../components/experience';
 import { PixelCloud, PixelSparkle } from '../components/layout/AmbientDecorations';
 import { ZONES, PLACE_CANDIDATES } from '../data';
 
+// RightSidebar now embeds a live Random Log DB read (RandomLogRightRailPreview).
+// Without this, `pnpm build` prerenders "/" as a static route and the preview's
+// data gets baked in at build time instead of refetched per request -- verified
+// empirically: Next 16.3.2 does not infer dynamic rendering from an uncached
+// fetch() alone on a route with no dynamic segment or request-time API access.
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   return (
     <div className="relative flex min-h-screen flex-col bg-[#fdfbf7] text-[#2b2520] overflow-x-clip">

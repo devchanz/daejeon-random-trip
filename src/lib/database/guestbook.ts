@@ -11,6 +11,20 @@ import {
 } from '../../config/product';
 
 /**
+ * UUID (v1-v5) format matcher, used to validate the `id` column value before
+ * it is used as the public route identifier for /random-log/[id].
+ */
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+/**
+ * Validates whether a given string is a well-formed UUID.
+ */
+export function isValidGuestbookEntryId(id: unknown): id is string {
+  return typeof id === 'string' && UUID_PATTERN.test(id.trim());
+}
+
+/**
  * Sanitizes single-line user input by stripping control characters and trimming whitespace.
  */
 function sanitizeText(text: string): string {
@@ -122,19 +136,49 @@ export async function createGuestbookEntry(
 }
 
 /**
- * Retrieves the most recent visible guestbook entries for community social proof.
+ * Retrieves the most recent visible guestbook entries (Random Log) for community
+ * social proof and board browsing. Pass `before` (an entry's ISO created_at) to
+ * page further back in time -- used by the /random-log board's "Load more".
  */
 export async function getRecentGuestbookEntries(
   limit: number = 3,
+  before?: string,
   client: DatabaseClientContract = getDatabaseClient()
 ): Promise<DatabaseResult<GuestbookEntryRecord[]>> {
   try {
     const safeLimit = Math.min(Math.max(1, limit), 100);
-    const records = await client.selectRecentGuestbookEntries(safeLimit);
+    const records = await client.selectRecentGuestbookEntries(safeLimit, before);
     return { success: true, data: records };
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : '방명록 조회 중 오류가 발생했습니다.';
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Retrieves a single visible guestbook entry (Random Log) by its public
+ * identifier for the /random-log/[id] detail page.
+ *
+ * This is the one function the detail page is allowed to call to reach the
+ * row -- it queries the `id` column today, but callers only ever depend on
+ * "the public identifier" resolving to a record or null, so a future switch
+ * to a dedicated public_code column only changes this function's internals.
+ */
+export async function getGuestbookEntryByPublicId(
+  publicId: string,
+  client: DatabaseClientContract = getDatabaseClient()
+): Promise<DatabaseResult<GuestbookEntryRecord | null>> {
+  if (!isValidGuestbookEntryId(publicId)) {
+    return { success: false, error: '유효하지 않은 랜덤 로그 식별자입니다.' };
+  }
+
+  try {
+    const record = await client.selectGuestbookEntryById(publicId.trim());
+    return { success: true, data: record };
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : '랜덤 로그 조회 중 오류가 발생했습니다.';
     return { success: false, error: errorMessage };
   }
 }

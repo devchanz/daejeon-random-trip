@@ -1,9 +1,10 @@
 import React from 'react';
+import { RandomLogRightRailPreview } from '../random-log';
 
 /**
  * Visual V4 Right Sidebar based on Figma 00_FINAL_REFERENCE (Landing/Desktop).
  * 1. TODAY'S PICK: Curated spot preview with character badge, tags, and detail link.
- * 2. VISITOR LOG: Mini-homepage guestbook preview with 3 log entries and pagination.
+ * 2. VISITOR LOG: Live Random Log preview (recent 3 entries) linking to /random-log.
  */
 export function RightSidebar({ className = '' }: { className?: string }) {
   return (
@@ -74,12 +75,12 @@ export function RightSidebar({ className = '' }: { className?: string }) {
         </div>
       </section>
 
-      {/* 2. VISITOR LOG (Community Guestbook Preview) */}
+      {/* 2. VISITOR LOG (Live Random Log Preview) */}
       <section
         aria-label="VISITOR LOG"
         className="relative overflow-hidden rounded-2xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-5 shadow-retro"
       >
-        {/* Header with Clover Icon and Write Button */}
+        {/* Header with Clover Icon */}
         <div className="flex items-center justify-between border-b-2 border-[#2b2520] pb-2.5 mb-3">
           <div className="flex items-center gap-1.5">
             <span className="text-sm text-[#10b981]">🍀</span>
@@ -87,68 +88,9 @@ export function RightSidebar({ className = '' }: { className?: string }) {
               VISITOR LOG
             </h2>
           </div>
-          <span className="rounded-lg border border-[#2b2520] bg-[#e0f2fe] px-2.5 py-1 text-xs font-black text-[#0369a1] shadow-2xs cursor-pointer hover:bg-[#bae6fd]">
-            방명록 쓰기 &gt;
-          </span>
         </div>
 
-        {/* 3 Preview Log Rows */}
-        <div className="flex flex-col divide-y divide-[#eee7d8]">
-          {/* Row 1 */}
-          <div className="flex items-start gap-2.5 py-2.5 text-xs sm:text-sm">
-            <span className="text-lg select-none" role="img" aria-label="꿈돌이">
-              ⭐
-            </span>
-            <div className="flex flex-1 flex-col">
-              <div className="flex items-center justify-between">
-                <span className="font-black text-[#2b2520]">꿈돌이 💕</span>
-                <span className="font-mono text-[10px] text-[#8c8273]">05.20 14:30</span>
-              </div>
-              <p className="text-xs sm:text-sm text-[#5c5244] leading-tight mt-0.5">
-                대전 너무 좋아요~ 또 올게요!
-              </p>
-            </div>
-          </div>
-
-          {/* Row 2 */}
-          <div className="flex items-start gap-2.5 py-2.5 text-xs sm:text-sm">
-            <span className="text-lg select-none" role="img" aria-label="여행자B">
-              🌱
-            </span>
-            <div className="flex flex-1 flex-col">
-              <div className="flex items-center justify-between">
-                <span className="font-black text-[#2b2520]">여행자B</span>
-                <span className="font-mono text-[10px] text-[#8c8273]">05.20 13:10</span>
-              </div>
-              <p className="text-xs sm:text-sm text-[#5c5244] leading-tight mt-0.5">
-                추천 코스 덕분에 알찬 여행했어요!
-              </p>
-            </div>
-          </div>
-
-          {/* Row 3 */}
-          <div className="flex items-start gap-2.5 py-2.5 text-xs sm:text-sm">
-            <span className="text-lg select-none" role="img" aria-label="대전러버">
-              🥐
-            </span>
-            <div className="flex flex-1 flex-col">
-              <div className="flex items-center justify-between">
-                <span className="font-black text-[#2b2520]">대전러버</span>
-                <span className="font-mono text-[10px] text-[#8c8273]">05.20 12:25</span>
-              </div>
-              <p className="text-xs sm:text-sm text-[#5c5244] leading-tight mt-0.5">
-                성심당 빵지순례 성공! 행복해요 🥐
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Pagination Bar */}
-        <div className="flex items-center justify-between border-t border-[#eee7d8] pt-2.5 mt-1 text-xs font-mono font-bold text-[#6b6257]">
-          <span className="hover:text-[#2b2520] cursor-pointer">&larr; 이전</span>
-          <span>1 / 20</span>
-          <span className="hover:text-[#2b2520] cursor-pointer">다음 &rarr;</span>
-        </div>
+        <RandomLogRightRailPreview />
       </section>
     </aside>
   );

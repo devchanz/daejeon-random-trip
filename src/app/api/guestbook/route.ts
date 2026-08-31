@@ -88,9 +88,11 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/guestbook?limit=3
+ * GET /api/guestbook?limit=3&before=<ISO created_at>
  *
- * Retrieves recent visible visitor logs for community social proof.
+ * Retrieves recent visible visitor logs (Random Log) for community social proof
+ * and board browsing. `before` pages further back in time for "Load more" on
+ * the /random-log board.
  */
 export async function GET(request: Request) {
   try {
@@ -98,8 +100,9 @@ export async function GET(request: Request) {
     const rawLimit = searchParams.get('limit');
     const limit = rawLimit ? parseInt(rawLimit, 10) : 3;
     const safeLimit = Number.isNaN(limit) ? 3 : Math.min(Math.max(1, limit), 100);
+    const before = searchParams.get('before') ?? undefined;
 
-    const result = await getRecentGuestbookEntries(safeLimit);
+    const result = await getRecentGuestbookEntries(safeLimit, before);
 
     if (!result.success) {
       return NextResponse.json(

@@ -155,25 +155,27 @@ interface SharedRouteStopSnapshot {
 ## 3. Persistent Database Models (Supabase)
 
 ### 3.1 `guestbook_entries` Table
-Stores visitor log entries submitted exclusively from the Result Card composer flow (`“랜덤 로그 남기고 1회 더 뽑기”`). Powers the community social proof stream on `/guestbook` (read-only archive) and unlocks the 1-time Reroll Reward.
+Stores Random Log entries submitted exclusively from the Result Card composer flow (writing requires an active generated Result; there is no landing-page write entry point). Powers three public, ungated read surfaces — the Right Rail preview, the `/random-log` board, and the `/random-log/[id]` detail route — and unlocks the 1-time Reroll Reward on a user's first eligible submission (ADR-011, ADR-025).
 
 | Column | Type | Nullable | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | `UUID` | No | Primary Key |
-| `avatar_id` | `VARCHAR(32)` | No | Selected Kkumssi Family avatar asset identifier |
+| `id` | `UUID` | No | Primary Key, and reused directly as the public identifier for `/random-log/[id]` (see below) |
+| `avatar_id` | `VARCHAR(32)` | No | Selected Kkumssi Family character identifier — a stable slug (e.g. `kkumdori`), independent of any Figma layer path, filename, or asset URL |
 | `nickname` | `VARCHAR(12)` | No | User nickname (2–12 characters, sanitized) |
 | `message` | `VARCHAR(50)` | No | One-liner message (max 50 characters, sanitized) |
-| `route_id` | `VARCHAR(64)` | No | Source route ID associated with this log |
+| `route_id` | `VARCHAR(64)` | No | Source `RouteResult.id` this log was submitted against — see §5.1 for how this backs the once-per-Result write guardrail |
 | `zone_id` | `VARCHAR(32)` | No | Recommended zone ID |
 | `duration_type` | `VARCHAR(16)` | No | `'half'` or `'full'` |
 | `preference_type` | `VARCHAR(16)` | No | `'anything'`, `'food'`, `'walk'`, or `'photo'` |
 | `status` | `VARCHAR(16)` | No | Moderation status: `'visible'` (default) or `'hidden'` |
-| `created_at` | `TIMESTAMPTZ` | No | Submission timestamp (default `now()`) |
+| `created_at` | `TIMESTAMPTZ` | No | Submission timestamp (default `now()`); also the cursor column for `/random-log` board pagination |
 
 > **Privacy Guardrails**:
 > - No phone numbers, email addresses, or demographic identifiers are ever collected or stored in `guestbook_entries`.
 > - The application database does not store persistent user IP address profiles (while allowing transient infrastructure metadata processing for security and rate limiting).
 > - Nicknames and message strings are never forwarded to GA4 telemetry.
+
+> **Public Identifier (ADR-025)**: `/random-log/[id]` reuses the existing `id` UUID directly — no new `public_code`-style column, no migration. This is safe because `guestbook_entries` has no anon/authenticated RLS policy (only `service_role` can read it), so the table is never reachable except through server code that already enforces `status = 'visible'`, and a UUIDv4 is not sequential/enumerable. Unlike `shared_routes.share_code` (§3.2), a dedicated short code wasn't judged worth the migration here: Random Log links are clicked from the rail/board, not hand-typed/shared. The detail page reaches this column through exactly one function, `getGuestbookEntryByPublicId` (`src/lib/database/guestbook.ts`) — never an inline query — so a future move to a `shared_routes`-style short code would only change that function's internals, not the UI or route shape.
 
 ### 3.2 `shared_routes` Table
 Stores immutable snapshots of itineraries when users click `“내 루트 공유하기”`. Enables short referral URLs (`/r/[shareCode]`) that remain permanent and resilient to subsequent candidate data updates.
@@ -231,7 +233,22 @@ interface RerollSessionState {
 
 ### State Progression Guardrails
 1. **Initial Spin**: Produces 1st `RouteResult`. `rerollReward` is `locked`.
-2. **Participation Trigger**: User clicks `“랜덤 로그 남기고 1회 더 뽑기”` on the Result Card and submits a visitor log entry.
+2. **Participation Trigger**: User clicks `“랜덤 로그 남기고 1회 더 뽑기”` on the Result Card and submits a Random Log entry.
 3. **Unlock Condition**: Server API validates payload and DB `INSERT` into `guestbook_entries` succeeds → State transitions to `available`.
 4. **Second Spin**: User executes reroll spin → State transitions to `consumed`.
-5. **Session Cap & Persistence**: Maximum 1 reward reroll per travel session. The state is maintained across same-tab page refreshes via `sessionStorage` during the active travel session, but is not an account-based permanent reward. Additional guestbook submissions never grant additional rerolls.
+5. **Session Cap & Persistence**: Maximum 1 reward reroll per browser-tab session. The state is maintained across same-tab page refreshes via `sessionStorage` during the active session, but is not an account-based permanent reward. Additional Random Log submissions never grant additional rerolls (§5.1).
+
+## 5.1 Random Log Write Eligibility (ADR-025) — Deliberately Separate from Reroll State
+
+Writing eligibility ("has *this* Result already been logged") and reroll reward eligibility ("has this *session* claimed its one reroll") are two independent questions, tracked in two independent places:
+
+```typescript
+// MainExperience.tsx — plain component state, NOT part of RerollSessionState
+// and NOT backed by sessionStorage:
+const [loggedRouteIds, setLoggedRouteIds] = useState<Set<string>>(() => new Set());
+```
+
+- **Not persisted anywhere** — not `sessionStorage`, not a DB column, not a uniqueness constraint. `state.result` (the active `RouteResult`) is itself never persisted across a reload (the experience reducer always seeds fresh from `INITIAL_EXPERIENCE_STATE`), so there is nothing meaningful to write about after a refresh in the first place.
+- **Keyed on `RouteResult.id`** (written to `guestbook_entries.route_id` on submission), which is guaranteed fresh per `generateRoute()` call — including every reroll — so a reroll always produces a Result that can be logged again.
+- **A client UX guardrail, not a security boundary.** `POST /api/guestbook` remains directly callable with any client-supplied `route_id`; this is unchanged by, and not improved by, the once-per-Result rule. Real abuse prevention (rate limiting, auth, a reward ledger) is explicitly out of scope for this MVP — see ADR-025.
+- Submitting a log always attempts to unlock the reroll via the unchanged `unlockRerollReward` (§5 above), which already refuses to re-unlock once `consumed` — so logging a later Result can never grant a second reward, with no additional guard needed here.
