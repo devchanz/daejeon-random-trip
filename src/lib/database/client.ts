@@ -15,8 +15,13 @@ export interface DatabaseClientContract {
   ): Promise<GuestbookEntryRecord>;
 
   selectRecentGuestbookEntries(
-    limit: number
+    limit: number,
+    before?: string
   ): Promise<GuestbookEntryRecord[]>;
+
+  selectGuestbookEntryById(
+    id: string
+  ): Promise<GuestbookEntryRecord | null>;
 
   insertSharedRoute(
     route: Omit<SharedRouteRecord, 'id' | 'created_at'>
@@ -131,13 +136,17 @@ export class SupabaseRestClient implements DatabaseClientContract {
   }
 
   async selectRecentGuestbookEntries(
-    limit: number
+    limit: number,
+    before?: string
   ): Promise<GuestbookEntryRecord[]> {
     if (!this.isConfigured()) {
       throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
     }
 
-    const endpoint = `${this.url}/rest/v1/guestbook_entries?status=eq.visible&order=created_at.desc&limit=${limit}`;
+    const cursorFilter = before
+      ? `&created_at=lt.${encodeURIComponent(before)}`
+      : '';
+    const endpoint = `${this.url}/rest/v1/guestbook_entries?status=eq.visible${cursorFilter}&order=created_at.desc&limit=${limit}`;
     const response = await fetch(endpoint, {
       method: 'GET',
       headers: this.headers,
@@ -149,6 +158,29 @@ export class SupabaseRestClient implements DatabaseClientContract {
     }
 
     return (await response.json()) as GuestbookEntryRecord[];
+  }
+
+  async selectGuestbookEntryById(
+    id: string
+  ): Promise<GuestbookEntryRecord | null> {
+    if (!this.isConfigured()) {
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
+    }
+
+    const sanitizedId = encodeURIComponent(id);
+    const endpoint = `${this.url}/rest/v1/guestbook_entries?id=eq.${sanitizedId}&status=eq.visible&limit=1`;
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: this.headers,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Database select error (${response.status}): ${errorText}`);
+    }
+
+    const data = (await response.json()) as GuestbookEntryRecord[];
+    return data.length > 0 ? data[0] : null;
   }
 
   async insertSharedRoute(

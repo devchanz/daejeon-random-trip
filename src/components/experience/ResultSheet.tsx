@@ -17,6 +17,7 @@ import {
 export interface ResultSheetProps {
   result: RouteResult;
   rerollReward?: RerollRewardState;
+  hasLoggedCurrentResult?: boolean;
   onOpenGuestbook?: () => void;
   onExecuteReroll?: () => void;
   onOpenRouteGuide?: () => void;
@@ -39,6 +40,7 @@ interface ShareState {
 export function ResultSheet({
   result,
   rerollReward = 'locked',
+  hasLoggedCurrentResult = false,
   onOpenGuestbook,
   onExecuteReroll,
   onOpenRouteGuide,
@@ -192,7 +194,7 @@ export function ResultSheet({
           type="button"
           disabled
           aria-disabled="true"
-          className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#7d7364] cursor-wait"
+          className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#7d7364] cursor-wait"
         >
           생성 중...
         </button>
@@ -204,7 +206,7 @@ export function ResultSheet({
         <button
           type="button"
           aria-label="링크 복사 완료"
-          className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#10b981] py-2.5 px-3 text-center text-xs font-black text-white shadow-retro-xs transition-all"
+          className="w-full rounded-xl border-2 border-[#2b2520] bg-[#10b981] py-2.5 px-3 text-center text-xs font-black text-white shadow-retro-xs transition-all"
         >
           ✨ 링크 복사 완료!
         </button>
@@ -217,7 +219,7 @@ export function ResultSheet({
           type="button"
           onClick={handleShare}
           aria-label="공유 다시 시도"
-          className="flex-1 rounded-xl border-2 border-[#ff5555] bg-[#fff5f5] py-2.5 px-3 text-center text-xs font-bold text-[#ff5555] shadow-retro-xs hover:bg-[#ffebeb] cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+          className="w-full rounded-xl border-2 border-[#ff5555] bg-[#fff5f5] py-2.5 px-3 text-center text-xs font-bold text-[#ff5555] shadow-retro-xs hover:bg-[#ffebeb] cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
         >
           ⚠️ 다시 시도
         </button>
@@ -229,49 +231,75 @@ export function ResultSheet({
         type="button"
         onClick={handleShare}
         aria-label="내 루트 공유하기"
-        className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+        className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
       >
         내 루트 공유하기
       </button>
     );
   };
 
-  const renderRerollCTA = () => {
-    if (rerollReward === 'available') {
-      return (
-        <button
-          type="button"
-          onClick={onExecuteReroll}
-          aria-label="리워드 1회 더 뽑기 실행"
-          className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#ff5555] hover:bg-[#ff3b3b] py-2.5 px-3 text-center text-xs font-black text-white shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] motion-safe:animate-pulse"
-        >
-          🎰 1회 더 뽑기
-        </button>
-      );
-    }
-
-    if (rerollReward === 'consumed') {
+  // Random Log CTA and reroll CTA are independent concerns: Log CTA reflects
+  // whether *this* Result has been logged yet; reroll CTA reflects *session*
+  // reward state alone. Previously these were one switch on rerollReward,
+  // which made the composer unreachable forever once the reward was consumed.
+  const renderRandomLogCTA = () => {
+    if (hasLoggedCurrentResult) {
       return (
         <button
           type="button"
           disabled
           aria-disabled="true"
-          className="flex-1 rounded-xl border-2 border-[#d8d0c2] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#8e8477] cursor-not-allowed transition-none"
+          className="w-full rounded-xl border-2 border-[#d8d0c2] bg-[#faf6ee] py-2.5 px-3 text-center text-xs font-bold text-[#8e8477] cursor-not-allowed transition-none"
         >
-          1회 더 뽑기 완료
+          랜덤 로그 작성 완료
         </button>
       );
     }
 
-    // Default: 'locked' -> opens guestbook composer
+    // Only the first-ever log (reward still 'locked') carries the reroll incentive
+    // copy -- once the reward has been claimed or spent, later Results can still
+    // be logged, just without promising another reroll.
+    if (rerollReward === 'locked') {
+      return (
+        <button
+          type="button"
+          onClick={onOpenGuestbook}
+          aria-label="랜덤 로그 남기고 1회 더 뽑기"
+          className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+        >
+          랜덤 로그 남기고 1회 더 뽑기
+        </button>
+      );
+    }
+
     return (
       <button
         type="button"
         onClick={onOpenGuestbook}
-        aria-label="랜덤 로그 남기고 1회 더 뽑기"
-        className="flex-1 rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+        aria-label="랜덤 로그 남기기"
+        className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
       >
-        랜덤 로그 남기고 1회 더 뽑기
+        랜덤 로그 남기기
+      </button>
+    );
+  };
+
+  // Hidden entirely once 'locked' (no incentive to show yet -- the Log CTA above
+  // carries that copy) or 'consumed' (the reward is gone; a disabled "완료" button
+  // would just be dead UI weight on every later Result for the rest of the session).
+  const renderRerollCTA = () => {
+    if (rerollReward !== 'available') {
+      return null;
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={onExecuteReroll}
+        aria-label="리워드 1회 더 뽑기 실행"
+        className="col-span-2 w-full rounded-xl border-2 border-[#2b2520] bg-[#ff5555] hover:bg-[#ff3b3b] py-2.5 px-3 text-center text-xs font-black text-white shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px] motion-safe:animate-pulse"
+      >
+        🎰 1회 더 뽑기
       </button>
     );
   };
@@ -441,9 +469,13 @@ export function ResultSheet({
             이 코스로 가보기
           </button>
 
-          {/* Secondary & Tertiary CTA Boundaries */}
-          <div className="flex gap-2 w-full">
+          {/* Secondary CTA row: Share + Random Log side by side; the reroll CTA
+              (only present while rerollReward === 'available') spans both
+              columns below them, rather than squeezing three buttons into one
+              row on narrow widths. */}
+          <div className="grid grid-cols-2 gap-2 w-full">
             {renderShareCTA()}
+            {renderRandomLogCTA()}
             {renderRerollCTA()}
           </div>
         </div>

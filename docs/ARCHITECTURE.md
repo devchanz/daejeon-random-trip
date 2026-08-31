@@ -20,33 +20,49 @@
 src/
 ├── app/
 │   ├── layout.tsx                # Global root layout, font tokens, metadata
-│   ├── page.tsx                  # Main Landing (IA: Left, Center Experience, Right)
-│   ├── guestbook/
-│   │   └── page.tsx              # Full Visitor Log community stream (read-only archive)
+│   ├── page.tsx                  # Main Landing (IA: Left, Center Experience, Right); force-dynamic (ADR-025)
+│   ├── random-log/
+│   │   ├── page.tsx              # Public Random Log board (list + cursor "Load more"); force-dynamic (ADR-025)
+│   │   └── [id]/
+│   │       └── page.tsx          # Public Random Log detail (noindex), via getGuestbookEntryByPublicId
 │   ├── r/
 │   │   └── [shareCode]/
 │   │       └── page.tsx          # Dedicated shared route view (noindex)
 │   └── api/                      # Route handlers for share snapshot & guestbook API boundaries
 │       ├── guestbook/
-│       │   └── route.ts          # Input validation, sanitization & DB insert
+│       │   └── route.ts          # Input validation, sanitization, DB insert; GET supports cursor pagination
 │       └── share/
 │           └── route.ts          # Snapshot validation, shareCode generation & DB insert
 ├── components/
-│   ├── experience/               # Core slot machine, setup, result modal, route guide
+│   ├── experience/               # Core slot machine, setup, result overlay
 │   │   ├── SetupArea.tsx         # Q1, Q2, and READY status
 │   │   ├── SlotAnchor.tsx        # Stationary slot chassis & animated reels
-│   │   ├── ResultModal.tsx       # Centered focus Result Card overlay
-│   │   └── RouteGuide.tsx        # In-app structured route breakdown
-│   ├── guestbook/                # Visitor log preview, composer, and full list
-│   │   ├── VisitorLogPreview.tsx # Right sidebar 3-item preview
-│   │   ├── GuestbookComposer.tsx # In-flow modal/section with Kkumssi family avatars (Result Card flow)
-│   │   └── GuestbookList.tsx     # /guestbook archive feed presentation
+│   │   ├── ResultArea.tsx        # Centered focus Result Card overlay
+│   │   └── ResultSheet.tsx       # Result Card body; independent Random Log / reroll CTA renderers (ADR-025)
+│   ├── guide/                    # In-app structured route breakdown
+│   │   ├── RouteGuideModal.tsx   # Portal-mounted modal (opened from the Result Card and /r/[shareCode])
+│   │   └── RouteGuideTimeline.tsx# Ordered stop timeline, stay durations, tips, external map links
+│   ├── share/                    # Referral / shared-route landing presentation
+│   │   └── SharedRouteView.tsx   # /r/[shareCode] snapshot view + not-found state
+│   ├── guestbook/                # Random Log writing form (Result-gated; no landing-page entry point)
+│   │   ├── GuestbookComposer.tsx # In-flow modal opened from the Result Card; reward-eligible copy via a prop, never live reroll state (ADR-025)
+│   │   └── CharacterSelector.tsx # Hero preview + fixed 5x2 picker over the 10 Kkumssi-family identities (ADR-025)
+│   ├── random-log/               # Random Log public read surfaces (ADR-025)
+│   │   ├── RandomLogRightRailPreview.tsx # Right sidebar live preview (top 3), reads the DB layer directly
+│   │   ├── RandomLogList.tsx     # /random-log board: initial entries + client-owned "Load more"
+│   │   ├── RandomLogCard.tsx     # Board card: character, nickname, timestamp, message excerpt, trip tags
+│   │   ├── RandomLogDetail.tsx   # /random-log/[id] detail view + not-found state
+│   │   ├── RandomLogAvatarBadge.tsx # Shared avatar_id -> imageSrc/badgeEmoji renderer
+│   │   └── randomLogLabels.ts    # Zone/duration/preference label + KST-pinned timestamp helpers
 │   ├── pick/                     # Today's Pick editorial banner (planned; not yet implemented)
 │   │   └── TodaysPickWidget.tsx  # Right sidebar rotating pixel-art banner, optional external link
-│   └── layout/                   # Global shell, sidebar widgets, retro header
-│       ├── Header.tsx            # Clean brand bar (top tabs eliminated)
-│       ├── SidebarLeft.tsx       # MY PROFILE, TODAY IS…, BGM PLAYING widgets
-│       └── SidebarRight.tsx      # TODAY’S PICK and VISITOR LOG containers
+│   ├── sidebar/                  # MY PROFILE / TODAY'S PICK / VISITOR LOG (Random Log preview) widgets
+│   │   ├── LeftSidebar.tsx       # MY PROFILE, TODAY IS…, BGM PLAYING widgets
+│   │   └── RightSidebar.tsx      # TODAY'S PICK banner + live Random Log preview (RandomLogRightRailPreview)
+│   └── layout/                   # Global shell: header, footer, decorative layer
+│       ├── Header.tsx            # Retro browser-chrome bar; the address-bar pill doubles as a site-wide Home link
+│       ├── Footer.tsx            # Minimal landing footer
+│       └── AmbientDecorations.tsx# Decorative sparkle/cloud pixel elements
 ├── lib/
 │   ├── random/                   # Controlled Random Travel engine, duration budgeting & template matching
 │   ├── database/                 # Supabase client wrapper & server data access layer
@@ -144,6 +160,10 @@ sequenceDiagram
     Slot->>Session: Mark Reroll Consumed (available -> consumed)
     Slot->>Slot: Execute 2nd Spin (Final route generated)
 ```
+
+> **After the reward is consumed (ADR-025)**: the 2nd (or any later) Result may still be logged — writing is gated on having an active Result, not on `Session`'s reward state. The Composer opens with non-reward copy ("랜덤 로그 남기기"), the write succeeds and appears on the public read surfaces below, and `Session` stays `consumed` — `unlockRerollReward`'s existing guard refuses to re-unlock, so this can never grant a second reward. The reroll CTA itself is hidden (not shown disabled) once `consumed`.
+>
+> **Public read surfaces are passive** and intentionally have no sequence diagram of their own: the Right Rail preview, `/random-log`, and `/random-log/[id]` are plain server-rendered reads of `guestbook_entries`, available before any spin, requiring no client action beyond navigation.
 
 ### 4.3 Referral Share Loop
 ```mermaid
@@ -244,3 +264,11 @@ sequenceDiagram
 
 ### 13. SlotOutputLayer Reserved as a Sibling, Not a Descendant
 - The future Result/Ticket output reveal (ADR-008) mounts inside `SlotStage` as a sibling of `SlotVisualFrame`, never inside `LogicalCanvas` or subject to the frame's `overflow: hidden` clip. See ADR-022.
+
+### 14. Random Log: Public Read / Result-Gated Write / Reward Decoupling Boundary
+- Random Log **reading** (Right Rail preview, `/random-log`, `/random-log/[id]`) is public and ungated — available before any spin, never conditioned on `phase === 'result'` or any session state.
+- Random Log **writing** is gated on having an active generated Result (no landing-page write entry point) and capped at one submission per Result within the current mounted client session — a plain, unpersisted React state guardrail (`loggedRouteIds` in `MainExperience`), not a DB constraint.
+- Writing eligibility and reroll reward eligibility (ADR-011) are **independent state machines** — never re-coupled into one CTA switch. `GuestbookComposer` receives reward context as an explicit prop (`rewardEligible`), and snapshots it at submit time rather than reading it live afterward, so its success copy always reflects what that specific submission actually granted.
+- The `/random-log/[id]` public identifier reuses the existing `guestbook_entries.id` UUID directly (no migration, no new column), reached only through the `getGuestbookEntryByPublicId` data-access boundary — never an inline query — so the identifier scheme can evolve later without touching UI or routes.
+- `export const dynamic = 'force-dynamic'` is required on `/` and `/random-log`: Next.js 16.3.2 does not infer dynamic rendering from an uncached `fetch()` alone on a route with no dynamic segment.
+- See ADR-025 for the full contract and rationale, including the explicit MVP abuse-boundary scope (client UX guardrail, not a security control; no auth, device identity, reward ledger, DB uniqueness, or rate limiting).

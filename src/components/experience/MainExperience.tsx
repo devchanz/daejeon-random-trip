@@ -78,6 +78,14 @@ export function MainExperience({
   const [isGuestbookOpen, setIsGuestbookOpen] = useState<boolean>(false);
   const [isRouteGuideOpen, setIsRouteGuideOpen] = useState<boolean>(false);
 
+  // Random Log writing state -- deliberately separate from the reroll reward state
+  // machine above. Writing eligibility is "does the *current Result* have a log yet",
+  // reward eligibility is "has this *session* claimed its one reroll"; conflating the
+  // two is what previously made the composer unreachable once the reward was consumed.
+  // Not persisted: state.result itself is never persisted (the reducer always seeds
+  // from INITIAL_EXPERIENCE_STATE), so after a reload there is no Result to write about.
+  const [loggedRouteIds, setLoggedRouteIds] = useState<Set<string>>(() => new Set());
+
   // Presentation-only local state
   const [pendingResult, setPendingResult] = useState<RouteResult | null>(null);
   const [spinningStoppedReelCount, setSpinningStoppedReelCount] = useState<number>(0);
@@ -297,11 +305,28 @@ export function MainExperience({
 
   // Callback when guestbook submission successfully writes to persistent DB
   const handleGuestbookSuccess = (entry: GuestbookEntryRecord) => {
+    // 1. Mark this Result as logged -- independent of reward state, and never
+    //    re-unlocks a reroll on a later Result that reuses the same tracking.
+    setLoggedRouteIds((prev) => {
+      const next = new Set(prev);
+      next.add(entry.route_id);
+      return next;
+    });
+
+    // 2. Reward unlock is unchanged: unlockRerollReward already refuses to
+    //    re-unlock once 'consumed' (see rerollSession.ts), so writing a log
+    //    against a later Result can never grant a second reroll.
     const activeSessionId =
       rerollState.routeSessionId || getOrCreateRerollSessionState().routeSessionId;
     const nextState = unlockRerollReward(activeSessionId, entry.route_id);
     setRerollState(nextState);
   };
+
+  // Whether the *currently displayed* Result has already had a Random Log
+  // submitted against it -- independent of session-wide reroll reward state.
+  const hasLoggedCurrentResult = Boolean(
+    state.result && loggedRouteIds.has(state.result.id)
+  );
 
   // 결과 접기 (minimize): Result data, share state, and reward/reroll lifecycle are all
   // untouched -- only the presentation stage changes. See ResultArea.tsx for the mount/
@@ -359,6 +384,7 @@ export function MainExperience({
         state={state}
         revealStage={revealStage}
         rerollReward={rerollState.rerollReward}
+        hasLoggedCurrentResult={hasLoggedCurrentResult}
         onOpenGuestbook={() => setIsGuestbookOpen(true)}
         onExecuteReroll={handleExecuteReroll}
         onOpenRouteGuide={() => setIsRouteGuideOpen(true)}
@@ -371,6 +397,10 @@ export function MainExperience({
         <GuestbookComposer
           routeResult={state.result}
           isOpen={isGuestbookOpen}
+          // 'locked' is the only reward state in which THIS submission can still
+          // unlock the reroll -- mirrors renderRandomLogCTA's own copy branch in
+          // ResultSheet.tsx, derived from the same rerollState, never duplicated.
+          rewardEligible={rerollState.rerollReward === 'locked'}
           onClose={() => setIsGuestbookOpen(false)}
           onSuccess={handleGuestbookSuccess}
         />

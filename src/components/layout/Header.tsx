@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 /**
  * Visual V4 Header component based on Figma 00_FINAL_REFERENCE (Landing/Desktop).
@@ -65,11 +66,15 @@ export function Header() {
           </span>
         </div>
 
-        {/* Center URL Pill */}
-        <div className="flex flex-1 max-w-md items-center justify-center gap-1.5 rounded-full border border-[#2b2520] bg-[#fcf8f0] py-1 px-3 text-[11px] sm:text-xs font-mono font-bold text-[#2b2520] shadow-inner select-none">
+        {/* Center URL Pill -- doubles as the site's Home control (address bar metaphor) */}
+        <Link
+          href="/"
+          aria-label="대전 랜덤 여행 홈으로 이동"
+          className="flex flex-1 max-w-md items-center justify-center gap-1.5 rounded-full border border-[#2b2520] bg-[#fcf8f0] py-1 px-3 text-[11px] sm:text-xs font-mono font-bold text-[#2b2520] shadow-inner transition-colors hover:bg-[#f7f3ea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff5555] focus-visible:outline-offset-1"
+        >
           <span className="text-[#ff5555]">❤️</span>
           <span>letsgo-daejeon.com</span>
-        </div>
+        </Link>
 
         {/* Right menu icon */}
         <div className="flex items-center">
