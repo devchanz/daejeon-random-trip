@@ -37,6 +37,7 @@ src/
 │   ├── experience/               # Core slot machine, setup, result overlay
 │   │   ├── SetupArea.tsx         # Q1, Q2, and READY status
 │   │   ├── SlotAnchor.tsx        # Stationary slot chassis & animated reels
+│   │   ├── reelVisuals.ts        # Settled-reel activity artwork, mapped by route slot (presentation layer)
 │   │   ├── ResultArea.tsx        # Centered focus Result Card overlay
 │   │   └── ResultSheet.tsx       # Result Card body; independent Random Log / reroll CTA renderers (ADR-025)
 │   ├── guide/                    # In-app structured route breakdown
@@ -54,11 +55,11 @@ src/
 │   │   ├── RandomLogDetail.tsx   # /random-log/[id] detail view + not-found state
 │   │   ├── RandomLogAvatarBadge.tsx # Shared avatar_id -> imageSrc/badgeEmoji renderer
 │   │   └── randomLogLabels.ts    # Zone/duration/preference label + KST-pinned timestamp helpers
-│   ├── pick/                     # Today's Pick editorial banner (planned; not yet implemented)
-│   │   └── TodaysPickWidget.tsx  # Right sidebar rotating pixel-art banner, optional external link
-│   ├── sidebar/                  # MY PROFILE / TODAY'S PICK / VISITOR LOG (Random Log preview) widgets
+│   ├── editorial/                # Feature-name-agnostic editorial banner shell (ADR-028)
+│   │   └── EditorialSpotlightCard.tsx # Compact header + banner + optional tags; perched mascot; optional link
+│   ├── sidebar/                  # MY PROFILE / editorial spotlight / VISITOR LOG (Random Log preview) widgets
 │   │   ├── LeftSidebar.tsx       # MY PROFILE, TODAY IS…, BGM PLAYING widgets
-│   │   └── RightSidebar.tsx      # TODAY'S PICK banner + live Random Log preview (RandomLogRightRailPreview)
+│   │   └── RightSidebar.tsx      # EditorialSpotlightCard (heading="TODAY'S PICK") + RandomLogRightRailPreview
 │   └── layout/                   # Global shell: header, footer, decorative layer
 │       ├── Header.tsx            # Retro browser-chrome bar; the address-bar pill doubles as a site-wide Home link
 │       ├── Footer.tsx            # Minimal landing footer
@@ -68,7 +69,9 @@ src/
 │   ├── database/                 # Supabase client wrapper & server data access layer
 │   └── analytics/                # GA4 event tracking helpers and parameter sanitizers
 ├── config/                       # Modifiable policies, avatar definitions, duration budgets
-├── data/                         # Static seed data: picks.ts, places.ts, zones.ts, templates.ts
+│   ├── visualAssets.ts           # Central visual asset registry: 36 stable keys -> public paths (ADR-027)
+│   └── avatars.ts                # 10 frozen Random Log identities joined to character.avatar.* asset keys
+├── data/                         # Static seed data: editorial.ts, picks.ts, places.ts, zones.ts, templates.ts
 └── content/                      # Static copy, descriptions, and user-facing strings
 public/                           # Static assets: pixel art, character illustrations, audio
 ```
@@ -82,7 +85,8 @@ The data architecture strictly separates ephemeral session computations from per
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │ STATIC DATA TIER (src/data/, src/config/)                                │
-│ - Today's Pick editorial banner (picks.ts) — planned, not yet implemented│
+│ - Editorial rail banners (editorial.ts) — validity window + daily rotation│
+│ - Visual asset registry (config/visualAssets.ts) — 36 stable asset keys   │
 │ - Place Candidates, Zones, and Route Templates                           │
 │ - Product Policies (Duration budgets, reroll limits, weights)            │
 ├──────────────────────────────────────────────────────────────────────────┤
@@ -222,7 +226,9 @@ sequenceDiagram
 ### 5. Character Asset Boundary
 - Character illustrations (e.g., Kkumdori / 꿈돌이 and Kkumssi Family) must remain **independent image assets/components**.
 - Do **not** bake character artwork directly into panel, slot chassis, or background wallpaper artwork.
-- The approved character assets in `public/` are the authoritative source of truth.
+- The approved character assets in `public/` are the authoritative source of truth, addressed through `src/config/visualAssets.ts` (see boundary 16).
+- **Asset identity is not application identity.** The 10 Random Log avatar ids (`mongmong`, `kkumdongi`, `nebeu`, `geumdori`, `kkumnuri`, `kkumdori`, `doreu`, `kkumbichi`, `eunsuni`, `kkumsuni`) are persisted as `avatar_id` and are frozen. They are joined to `character.avatar.*` asset keys in `src/config/avatars.ts` and nowhere else, so re-exporting or renaming artwork can never reach the database, and renaming a Figma layer can never orphan a stored entry. `badgeEmoji` is retained as the structural fallback for any future identity whose artwork has not yet been exported.
+- `character.avatar.kkumdori` (selectable guestbook variant) and `character.main.kkumdori` (static brand illustration in `LeftSidebar`) are distinct roles and must never be aliased to one another.
 
 ### 6. Duration Budgeting & Recommendation Engine Guardrails
 - `src/lib/random` enforces duration budgets connected to Q1 choices (`half` vs. `full`).
@@ -244,11 +250,14 @@ sequenceDiagram
 - UI components must **never** execute direct database writes or issue raw database queries.
 - Reward rerolls are unlocked only after verified server-side validation and database insert success.
 
-### 9. Today's Pick Static Boundary (Revised Scope — ADR-015)
+### 9. Editorial Rail Boundary (Revised Scope — ADR-015, superseded by ADR-028)
 - A Right Rail editorial / visual banner only — not a detail-page route, not a discovery funnel, not a Q2-seeding mechanism.
-- Managed entirely in static data (`src/data/picks.ts`, currently `TODAYS_PICKS = []` — planned, not yet implemented) without dynamic server-side CMS dependencies.
-- ~5 production pixel-art variants planned; displayed artwork may rotate by weekday or another simple schedule.
-- A banner may optionally hyperlink to an external site related to the featured artwork/place/theme. No internal route or Q2 state is touched.
+- Managed entirely in static data (`src/data/editorial.ts`) without dynamic server-side CMS dependencies.
+- **Feature-name-agnostic by construction.** The surface is currently labelled "TODAY'S PICK", but that string lives *only* in the `heading` prop passed from `RightSidebar` — never in a type, file path, id, or asset key. Renaming the feature must stay a one-string change.
+- `EditorialItem` carries a required `kind` (`spot | theme | event | experience | campaign`). Different kinds share **one** presentation shell (`EditorialSpotlightCard`); `kind` describes an item and must not fork the layout into per-kind variants or tabs.
+- Selection filters by validity window first (`activeFrom` inclusive, `activeUntil` **exclusive**), then rotates deterministically by Asia/Seoul date. Deterministic-per-date is required: server and client must derive the same item, so no hydration mismatch and no autoplay.
+- A banner may optionally hyperlink (`href`, `external`) to a site related to the featured artwork/place/theme. No internal route or Q2 state is touched. No `href` is seeded in the current pass.
+- `src/data/picks.ts` (`TodaysPickItem`, `TODAYS_PICKS = []`) is retained but referenced by no UI. The editorial rail deliberately does **not** reuse it: that model sits behind the recommendation-engine boundary and is shaped for a `/pick/[slug]` page that does not exist.
 
 ### 10. Analytics & Privacy Boundary
 - Telemetry helpers in `src/lib/analytics/` sanitize and enforce safe non-PII parameters.
@@ -277,3 +286,38 @@ sequenceDiagram
 - The SPINNING → RESULT product lifecycle is driven exclusively by `setTimeout` beats in `MainExperience.tsx`, never by `animationend`/`transitionend` or any other coupling to CSS animation completion. `prefers-reduced-motion` selects **which timing table** drives that single lifecycle (`getMotionTimings()` in `motionConfig.ts`, returning `MOTION_TIMINGS` or `REDUCED_MOTION_TIMINGS`) — it must never select a shortened or skipped lifecycle.
 - Visual motion intensity for `prefers-reduced-motion: reduce` is adjusted **only** in `src/app/globals.css`, inside the existing `@media (prefers-reduced-motion: reduce)` block, as `animation-duration` overrides on the same classes/keyframes normal motion uses. Reduced motion must reuse the existing reel DOM, track, and roll metaphor at lower velocity — introducing a distinct visual metaphor (e.g., a symbol-shuffle/crossfade system) for reduced motion is out of scope; the approved full-motion Slot animation is the single visual source of truth for both motion preferences.
 - See ADR-026.
+
+### 16. Visual Asset Registry Boundary (ADR-027)
+- Every production image path resolves through `src/config/visualAssets.ts` — `VISUAL_ASSETS` (39 entries), `VisualAssetKey`, `visualAsset(key)`, and `VISUAL_ASSET_META`. Components must not hard-code `/assets/...` string literals.
+- Enforces the separation: **Figma semantic frame → exported filename → stable code key → feature/component usage.** Each layer changes without touching the others; renaming a *feature* never requires renaming an asset.
+- Keys are transcribed verbatim from the Figma Production manifest's per-asset `handoff` labels, so the registry mirrors a contract the design side authors rather than a locally invented naming scheme.
+- Registry membership (39), Figma-exported registered asset count (34) and `public/assets/` file count (40) are **three different numbers** and must not be conflated in validation: 34 manifest-exported assets + 5 pre-existing production assets adopted for single-source-of-truth = 39 registered; the 40th file is `slot-shell.png`, present in `public/assets/` but referenced by no component and deliberately unregistered. Note also that an *export* is not necessarily a new *entry*: the closeout pass exported five assets but added only three keys, because `Setup/Preference/Food` and `Editorial/Banner/Tashu` were replacements overwritten in place under their existing keys and filenames.
+- The path type and `VisualAssetKey` catch malformed paths and typo'd keys at compile time but cannot catch a **missing file** — a registry-path existence check (39/39) is therefore a required validation step alongside lint / typecheck / build.
+
+### 17. Settled Slot Reel Content Boundary (Visual Detail Pass)
+- The settled reels present **activity character artwork**, mapped by **route slot**, not by the drawn place: reel 0 = Meal → `character.activity.food`, reel 1 = Cafe → `character.activity.dessert`, reel 2 = Discovery/Preference → `character.activity.tashu` (`src/components/experience/reelVisuals.ts`).
+- This mapping lives in the **presentation layer**. `src/lib/random` stays free of UI and asset concerns, and `ReelDisplayModel` gains no field to support it.
+- Detailed route and place information belongs to the **Result Card**, never the reel window — the window is too small to carry it legibly. The reel region's `aria-label` still announces the stop name, so the information remains available to assistive technology.
+- Rolling symbols (`NEUTRAL_ROLLING_SYMBOLS`) remain emoji and are unchanged; only the *settled* state's content was replaced.
+- Because the artwork mounts only at the instant a reel stops (1100ms normal / 650ms reduced), `SlotAnchor` must preload the three images (`<link rel="preload" as="image">`), or a cold first spin settles into empty windows.
+- Slot geometry, motion timings, the reduced-motion tables, CTA coordinates, and the spin lifecycle are unchanged by this boundary.
+
+### 18. Typography Boundary (DOS Gothic — ADR-030, supersedes the Stardust decision in ADR-029)
+- **DOS Gothic is the selected production Korean/UI typeface.** One local family, registered once in `src/app/layout.tsx` via `next/font/local`. Components must never import or reference a font file directly, and no second `font-family` may be declared for it.
+- The CSS variable is **role-named** (`--font-ui`), not font-named, so `globals.css` need not change if the typeface does. The three-candidate audition switch (`ACTIVE_UI_FONT`) was temporary and is removed — **no A/B font switch may exist in production source**.
+- Registered as a **single 400 entry** so 700/800/900 fall through to browser synthetic bold. A `'400 900'` range would tell the browser the one face covers the whole range, suppressing synthesis and flattening every weight — do not add one.
+- **Category split is deliberate and must be preserved.** `--font-sans` → DOS Gothic (Korean and all user-facing copy, inherited via `body`). `--font-mono` → **Geist Mono, unchanged**, carrying the retro English pixel labels (`MY PROFILE`, `TODAY IS...`, `BGM PLAYING`, `TODAY'S PICK`, `VISITOR LOG`, `TOTAL VISIT`, `STEP n/2`, timestamps, the URL pill). A global font replacement is **not** the intent.
+- **Geist Sans is retained** as the second entry in the `--font-sans` stack, and this is load-bearing: DOS Gothic lacks `·` (SPINNING `하루 · 산책`), `“ ”` (READY quotes), `…` (truncate ellipsis), `▾` (RESULT `결과 접기 ▾`) and `’ – — × −`. Without it those resolve to an unspecified system font.
+- **Known accepted limitations** (not solved on this branch): internally Medium/500, and no real Bold/ExtraBold companion, so heavy weights are a platform-dependent renderer approximation that degrades pixel faces. **Never mix another DOS face (e.g. DOSIyagiBoldface) in as a substitute bold** — those are separate designs, not weight variants of this family.
+- **The cascade reaches source-frozen components.** Any component inheriting `--font-sans` can change its rendered layout with a zero-line diff. "Source frozen" (file not edited) and "render frozen" (output unchanged) are different guarantees; only the first is provable by `git diff`. Result Card, Route Guide, composer, Random Log and shared-route surfaces are source-frozen but must be regression-tested visually.
+- `preload: false` + `display: swap`. At ~8.25 MB this is a large TTF; converting delivery to WOFF2 and revisiting preload is a recorded non-blocking pre-production follow-up.
+- **Licence**: MIT (Damheo Lee). Verbatim upstream notice at `licenses/DOSGothic-LICENSE.txt`; the font binary must not be modified, and no product-UI credit surface is added.
+
+### 19. Opaque-Fit Compensation Boundary (ADR-029)
+- Several Figma exports carry large transparent margins, so CSS box size and visible artwork size diverge (measured: `setup.preference.food` 100% opaque vs `setup.preference.walk` 42.7% — a 2.3× spread from an identical box).
+- **Exported PNGs are never modified.** Compensation is data, declared in `VISUAL_ASSET_OPAQUE_FIT` (`src/config/visualAssets.ts`) alongside `VISUAL_ASSET_META`, and applied in exactly one component, `FittedAsset`.
+- **Feature components must never write their own `scale()` or `translate()`.** A stray transform in a feature component is a boundary violation, not a shortcut.
+- **Contract:** `scale` fits the opaque bounding box's **largest dimension** into the layout box while **preserving the artwork's aspect ratio**. It does *not* make both opaque axes equal the box — the shorter axis stays proportionally smaller, which is correct (a camera reads wider than tall). What is normalized is optical mass along the dominant axis.
+- `transform` does not participate in layout, so compensation can never move surrounding UI; the layout box is exactly the classes the caller passes. `FittedAsset` applies `pointer-events-none` unconditionally because the transparent overflow it creates would otherwise sit above neighbouring controls (the brand logo's overflow reaches into the header's address-bar link).
+- Scope is the 10 confirmed assets: the brand logo, the six Q1/Q2 setup icons, the BGM note, and the two decoration symbols — `decoration.symbol.star` (**1.255**) and `decoration.symbol.clover` (**1.511**), which were added once measurement showed them rendering ~12.4px and ~9.3px inside a 16px box. It is deliberately **not** applied to avatars (~98% opaque), editorial banners, or the settled reel characters.
+- Optional per-asset `{ dx, dy }` centring exists in the same metadata and **ships unset** — measured offsets are within tolerance (worst: −1.7px on a 22px icon). It exists so a Human Browser finding is corrected centrally rather than per component.

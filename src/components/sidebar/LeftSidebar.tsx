@@ -1,4 +1,6 @@
 import React from 'react';
+import { visualAsset } from '../../config/visualAssets';
+import { FittedAsset } from '../common';
 
 /**
  * Visual V4 Left Sidebar based on Figma 00_FINAL_REFERENCE (Landing/Desktop).
@@ -15,30 +17,31 @@ export function LeftSidebar({ className = '' }: { className?: string }) {
       {/* 1. MY PROFILE (Character & Welcome Memo) */}
       <section
         aria-label="MY PROFILE"
-        className="relative overflow-hidden rounded-2xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-5 shadow-retro"
+        className="relative overflow-hidden rounded-2xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-5"
       >
-        {/* Header Bar with Bookmark Ribbon */}
+        {/* Header Bar */}
         <div className="flex items-center justify-between border-b-2 border-[#2b2520] pb-2.5 mb-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-base" role="img" aria-label="Profile">
-              🐱
-            </span>
+            {/* Production Manifest clover replaces the standalone cat glyph. 16px matches the
+                glyph it replaces and the MY PROFILE heading hierarchy -- deliberately NOT the
+                right rail's 20px box, so MY PROFILE (16px) stays distinct from VISITOR LOG (20px).
+                Reuses the existing decoration.symbol.clover opaque-fit entry. The cat's
+                role="img"/aria-label is intentionally dropped: FittedAsset marks it aria-hidden and
+                the adjacent <h2>MY PROFILE</h2> already names the section. */}
+            <FittedAsset assetKey="decoration.symbol.clover" className="h-4 w-4 shrink-0" />
             <h2 className="font-mono text-sm font-black tracking-wider uppercase text-[#2b2520]">
               MY PROFILE
             </h2>
           </div>
-          <span className="text-sm font-bold text-[#ffb800]" aria-hidden="true">
-            🔖
-          </span>
         </div>
 
         {/* Profile Card Body: Avatar + Welcome Text */}
         <div className="flex items-center gap-3.5">
           {/* Standing Kkumdori Illustration */}
-          <div className="relative flex h-20 w-16 sm:h-24 sm:w-20 shrink-0 items-center justify-center rounded-xl border border-[#d8d0c2] bg-[#fffdf0] p-1 shadow-2xs">
+          <div className="relative flex h-20 w-16 sm:h-24 sm:w-20 shrink-0 items-center justify-center rounded-xl border border-[#d8d0c2] bg-[#fffdf0] p-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/assets/kkumdori-main.png"
+              src={visualAsset('character.main.kkumdori')}
               alt="꿈돌이"
               className="h-full w-auto object-contain select-none"
             />
@@ -62,15 +65,12 @@ export function LeftSidebar({ className = '' }: { className?: string }) {
       {/* 2. TODAY IS... (Daily Mood Memo & Visitor Counter) */}
       <section
         aria-label="TODAY IS..."
-        className="relative overflow-hidden rounded-2xl border-2 border-[#2b2520] bg-[#fffdf0] p-4 sm:p-5 shadow-retro"
+        className="relative overflow-hidden rounded-2xl border-2 border-[#2b2520] bg-[#fffdf0] p-4 sm:p-5"
       >
         <div className="flex items-center justify-between border-b-2 border-[#2b2520] pb-2.5 mb-3">
           <h2 className="font-mono text-sm font-black tracking-wider uppercase text-[#2b2520]">
             TODAY IS...
           </h2>
-          <span className="text-sm font-bold text-[#ffb800]" aria-hidden="true">
-            🔖
-          </span>
         </div>
 
         <div className="flex flex-col gap-2.5">
@@ -88,18 +88,20 @@ export function LeftSidebar({ className = '' }: { className?: string }) {
       {/* 3. BGM PLAYING (Retro Web Music Player) */}
       <section
         aria-label="BGM PLAYING"
-        className="relative overflow-hidden rounded-2xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-5 shadow-retro"
+        className="relative overflow-hidden rounded-2xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-5"
       >
         <div className="flex items-center justify-between border-b-2 border-[#2b2520] pb-2.5 mb-3">
           <div className="flex items-center gap-1.5">
-            <span className="text-sm text-[#ff5555]">🎵</span>
+            {/* Production music-note artwork (Figma 06_MEDIA). The asset is only
+                52.7% x 59.1% opaque, so at the previous 16px box it rendered ~10px of
+                actual note; FittedAsset compensates so the 22px box is 22px of artwork.
+                Visual only -- the track metadata, equalizer and transport controls below
+                are untouched, as is playback behavior. */}
+            <FittedAsset assetKey="media.musicNote" className="h-[22px] w-[22px] shrink-0" />
             <h2 className="font-mono text-sm font-black tracking-wider uppercase text-[#2b2520]">
               BGM PLAYING
             </h2>
           </div>
-          <span className="text-sm font-bold text-[#ffb800]" aria-hidden="true">
-            🔖
-          </span>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -122,36 +124,47 @@ export function LeftSidebar({ className = '' }: { className?: string }) {
             </div>
           </div>
 
-          {/* Retro Media Player Controls */}
-          <div className="flex items-center justify-center gap-2.5 rounded-xl bg-[#faf6ee] p-2.5 border border-[#e8dfd0]">
-            <button
-              type="button"
-              aria-label="Previous track"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-[#2b2520] bg-[#fffef9] text-xs font-black text-[#2b2520] shadow-2xs hover:bg-[#fff9e6] cursor-pointer"
-            >
-              &#9198;
-            </button>
-            <button
-              type="button"
-              aria-label="Pause track"
-              className="flex h-8 w-9 items-center justify-center rounded-lg border-2 border-[#2b2520] bg-[#ff5555] text-xs font-black text-white shadow-2xs hover:bg-[#ff3b3b] cursor-pointer"
-            >
-              &#10074;&#10074;
-            </button>
-            <button
-              type="button"
-              aria-label="Next track"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-[#2b2520] bg-[#fffef9] text-xs font-black text-[#2b2520] shadow-2xs hover:bg-[#fff9e6] cursor-pointer"
-            >
-              &#9197;
-            </button>
-            <button
-              type="button"
-              aria-label="Stop track"
-              className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-[#2b2520] bg-[#fffef9] text-xs font-black text-[#2b2520] shadow-2xs hover:bg-[#fff9e6] cursor-pointer"
-            >
-              &#9632;
-            </button>
+          {/*
+            Retro Media Player Controls -- production composite (Figma Media/Playback/Controls).
+
+            The 238x53 export is ONE image containing all four controls together with their
+            own tray background and per-button chrome, so it is never split or cropped, and
+            the previous CSS tray (bg / border / rounded / padding) is gone: keeping it would
+            nest two trays. `max-w-[238px]` means the artwork is never upscaled past native,
+            which keeps this row ~53px tall against the 54px it replaced -- the left column's
+            vertical budget is unaffected.
+
+            The four <button>s below are the SAME contract as before: transparent hit regions
+            over the painted controls, in painted left-to-right order, each individually
+            focusable with its own aria-label, and each still WITHOUT a handler. Their
+            left/width percentages are measured from the export (columns differing from the
+            tray colour), not estimated:
+              previous  x 22..60   -> 9.24% / 16.39%
+              pause     x 74..113  -> 31.09% / 16.81%
+              next      x 125..162 -> 52.52% / 15.97%
+              stop      x 176..213 -> 73.95% / 15.97%
+
+            SCOPE: visual layer only. No <audio>, no playback state, no handlers, and this
+            file stays a Server Component. Functional BGM playback is deferred to a dedicated
+            future feature branch -- it is not implemented, changed or removed here.
+          */}
+          <div className="relative mx-auto w-full max-w-[238px]">
+            <FittedAsset assetKey="media.playbackControls" className="h-auto w-full" />
+
+            {[
+              { label: 'Previous track', left: '9.24%', width: '16.39%' },
+              { label: 'Pause track', left: '31.09%', width: '16.81%' },
+              { label: 'Next track', left: '52.52%', width: '15.97%' },
+              { label: 'Stop track', left: '73.95%', width: '15.97%' },
+            ].map((control) => (
+              <button
+                key={control.label}
+                type="button"
+                aria-label={control.label}
+                style={{ left: control.left, width: control.width }}
+                className="absolute inset-y-0 cursor-pointer rounded-lg bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#ff5555]"
+              />
+            ))}
           </div>
         </div>
       </section>

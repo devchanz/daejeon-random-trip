@@ -1,17 +1,26 @@
+import { visualAsset } from './visualAssets';
+
 /**
  * Guestbook / Random Log character avatar registry.
  *
- * NOTE on production assets: the 10 identities below are real Kkumssi-family
- * characters from the Figma handoff (Character/Avatar/*), but the illustration
- * files themselves are not yet present in this repo. `imageSrc` is left unset
- * for every entry until the production assets are extracted into `public/` —
- * `resolveAvatarAsset` falls back to `badgeEmoji` until then, so no component
- * change is required when the real assets land, only this file.
+ * The 10 identities below are the real Kkumssi-family characters from the Figma
+ * handoff (Character/Avatar/*). Their production artwork is now present, wired through
+ * the central asset registry rather than as literal paths -- see src/config/visualAssets.ts.
+ *
+ * IDENTITY vs ASSET. The `id` values (`mongmong`, `kkumdongi`, ...) are stable
+ * APPLICATION identity: they are persisted as `avatar_id` on guestbook rows and must
+ * never change. The `character.avatar.*` keys are ASSET identity, owned by Figma. The
+ * two are joined here and nowhere else, so re-exporting or renaming artwork can never
+ * reach the database, and renaming a Figma layer can never orphan a stored entry.
+ *
+ * `badgeEmoji` is retained as the structural fallback: `resolveAvatarAsset` consumers
+ * still render it whenever an entry has no `imageSrc`, so a future added-but-not-yet-
+ * exported character degrades gracefully instead of rendering a broken image.
  *
  * `kkumdori` here is the selectable guestbook-Avatar variant of the character
  * (Character/Avatar/Kkumdori). It is a different role from the static brand
  * illustration rendered in LeftSidebar ("Character/Main/Kkumdori",
- * `/assets/kkumdori-main.png`) and must not be aliased to it or share its file.
+ * `character.main.kkumdori`) and must not be aliased to it or share its file.
  */
 
 export interface GuestbookAvatarOption {
@@ -27,18 +36,18 @@ export interface GuestbookAvatarOption {
  * character selector. Ordered to match the Figma handoff listing.
  */
 export const GUESTBOOK_AVATARS: readonly GuestbookAvatarOption[] = [
-  { id: 'mongmong', name: 'Mongmong', badgeEmoji: '⭐' },
-  { id: 'kkumdongi', name: 'Kkumdongi', badgeEmoji: '✨' },
-  { id: 'nebeu', name: 'Nebeu', badgeEmoji: '🌱' },
-  { id: 'geumdori', name: 'Geumdori', badgeEmoji: '🎒' },
-  { id: 'kkumnuri', name: 'Kkumnuri', badgeEmoji: '🍀' },
+  { id: 'mongmong', name: '몽몽', badgeEmoji: '⭐', imageSrc: visualAsset('character.avatar.mongmong') },
+  { id: 'kkumdongi', name: '꿈동이', badgeEmoji: '✨', imageSrc: visualAsset('character.avatar.kkumdongi') },
+  { id: 'nebeu', name: '네브', badgeEmoji: '🌱', imageSrc: visualAsset('character.avatar.nebeu') },
+  { id: 'geumdori', name: '금돌이', badgeEmoji: '🎒', imageSrc: visualAsset('character.avatar.geumdori') },
+  { id: 'kkumnuri', name: '꿈누리', badgeEmoji: '🍀', imageSrc: visualAsset('character.avatar.kkumnuri') },
   // Character/Avatar/Kkumdori -- selectable guestbook variant only, distinct
   // from the static Character/Main/Kkumdori brand illustration in LeftSidebar.
-  { id: 'kkumdori', name: 'Kkumdori', badgeEmoji: '🚀' },
-  { id: 'doreu', name: 'Doreu', badgeEmoji: '🌙' },
-  { id: 'kkumbichi', name: 'Kkumbichi', badgeEmoji: '🍬' },
-  { id: 'eunsuni', name: 'Eunsuni', badgeEmoji: '🎈' },
-  { id: 'kkumsuni', name: 'Kkumsuni', badgeEmoji: '🎨' },
+  { id: 'kkumdori', name: '꿈돌이', badgeEmoji: '🚀', imageSrc: visualAsset('character.avatar.kkumdori') },
+  { id: 'doreu', name: '도르', badgeEmoji: '🌙', imageSrc: visualAsset('character.avatar.doreu') },
+  { id: 'kkumbichi', name: '꿈빛이', badgeEmoji: '🍬', imageSrc: visualAsset('character.avatar.kkumbichi') },
+  { id: 'eunsuni', name: '은순이', badgeEmoji: '🎈', imageSrc: visualAsset('character.avatar.eunsuni') },
+  { id: 'kkumsuni', name: '꿈순이', badgeEmoji: '🎨', imageSrc: visualAsset('character.avatar.kkumsuni') },
 ] as const;
 
 /**
