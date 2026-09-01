@@ -34,7 +34,16 @@ export async function RandomLogRightRailPreview() {
               href={`/random-log/${entry.id}`}
               className="-mx-1 flex items-start gap-2.5 rounded-lg px-1 py-2.5 text-xs transition-colors hover:bg-[#faf6ee] sm:text-sm"
             >
-              <RandomLogAvatarBadge avatarId={entry.avatar_id} className="h-7 w-7 text-lg" />
+              {/* 28px was too small to identify a character: the avatars are landscape
+                  (up to 1.75:1) and object-contain letterboxes them inside the circular
+                  badge, so the widest character was only ~16px tall. 34/36px is still
+                  inside the row's text-driven height (nickname + message ≈ 34-42px), so
+                  no row grows and no other avatar consumer is affected -- the badge
+                  component, composer hero and 5x2 selector are untouched. */}
+              <RandomLogAvatarBadge
+                avatarId={entry.avatar_id}
+                className="h-[34px] w-[34px] lg:h-9 lg:w-9 text-lg"
+              />
               <div className="flex min-w-0 flex-1 flex-col">
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate font-black text-[#2b2520]">{entry.nickname}</span>
@@ -54,7 +63,7 @@ export async function RandomLogRightRailPreview() {
       <div className="mt-1 border-t border-[#eee7d8] pt-2.5">
         <Link
           href="/random-log"
-          className="flex w-full items-center justify-center rounded-lg border border-[#2b2520] bg-[#e0f2fe] px-2.5 py-1.5 text-xs font-black text-[#0369a1] shadow-2xs hover:bg-[#bae6fd]"
+          className="flex w-full items-center justify-center rounded-lg border border-[#2b2520] bg-[#e0f2fe] px-2.5 py-1.5 text-xs font-black text-[#0369a1] hover:bg-[#bae6fd]"
         >
           랜덤 로그 전체보기 &gt;
         </Link>

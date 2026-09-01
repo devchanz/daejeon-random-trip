@@ -69,8 +69,9 @@ flowchart LR
     - `Result Overlay` (Front-facing centered Result Card modal triggered post-spin).
     - `Route Guide` (In-app itinerary breakdown viewed upon clicking `“이 코스로 가보기”`).
   - **RIGHT SIDEBAR (Content Discovery & Social Proof)**:
-    - `TODAY’S PICK`: Editorial banner featuring rotating pixel artwork (~5 production variants); no detail page.
+    - `TODAY’S PICK`: Editorial banner featuring rotating pixel artwork; no detail page. The label is presentation copy only — the underlying surface is deliberately feature-name-agnostic and may be renamed without code changes (ADR-028).
     - `VISITOR LOG`: Preview showing the latest ~3 visible Visitor Log entries with a link to `/guestbook`.
+- **Brand Wordmark**: The landing hero renders the production brand logo artwork, whose wordmark reads **“오늘 대전 갈래!”**. This supersedes the earlier text-rendered “대전 갈래..?” and the wording still shown in the historical Figma landing reference. Site metadata (`대전 랜덤 여행 | DAEJEON RANDOM TRIP`) is unaffected.
 
 ---
 
@@ -80,7 +81,8 @@ flowchart LR
 1. **Q1 (Duration)**: Local Daejeon travel time (`Half Day` / `Full Day` — time spent in Daejeon).
 2. **Q2 (Preference)**: Travel vibe (`Anything` / `Food` / `Walk` / `Photo`).
 3. **READY**: Idle placeholder reels; primary CTA activates `“여행 뽑기!”`.
-4. **SPINNING**: Reels roll concurrently; sequential stop (`Reel 1` → `Reel 2` → `Reel 3` → short final beat).
+4. **SPINNING**: Reels roll concurrently through neutral arcade symbols (no place names are exposed while rolling); sequential stop (`Reel 1` → `Reel 2` → `Reel 3` → short final beat).
+   - **Settled reels show activity characters, not place names.** Each reel settles onto a character illustration fixed by that reel's *route slot* — Reel 1 = Meal, Reel 2 = Cafe, Reel 3 = Discovery/Preference. The reel window is a mood and anticipation device; detailed route and place information belongs to the Result Card, which is where the per-spin variation is read. The stop name remains available to assistive technology via the reel's accessible label.
 5. **PEEK CUE & RESULT REVEAL**:
    - **Physical Peek Cue**: Immediately following the final beat after Reel 3 stops, a short ticket/paper peek animation appears at the stationary slot output slit as a physical dispensing affordance.
    - **Centered Focus Overlay**: 300–500ms after the peek cue is triggered, the background landing page is slightly dimmed with a subtle backdrop blur, and the front-facing **Result Card** appears in the center of the viewport.
@@ -139,12 +141,15 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
   - Referral MVP sequence: 1. DB snapshot save, 2. `/r/[shareCode]`, 3. Web Share + copy fallback, 4. Default OG meta tags.
   - Dynamic OG image generation is a high-priority non-blocking enhancement within MVP scope.
 
-### 6.4 Today's Pick (Right Rail Editorial Banner) — Revised Scope (ADR-015)
+### 6.4 Editorial Rail (Right Rail Banner, labelled "TODAY'S PICK") — Revised Scope (ADR-015, superseded by ADR-028)
 - **Concept**: A simple Right Rail editorial / visual banner surface. It is **not** a detail-page flow, a discovery funnel, or a Q2-seeding mechanism.
-- **Artwork**: Approximately 5 production pixel-art variants are planned. The displayed artwork may rotate by weekday or another simple schedule (exact mechanism TBD).
-- **Optional External Link**: A banner may optionally hyperlink to an external site related to the featured artwork/place/theme.
-- **Explicit Exclusions**: No dedicated `/pick/[slug]` detail page. No Q2 preference-seeding CTA. No Today's Pick → Slot funnel.
-- **Data Management**: 100% static TypeScript data (`src/data/picks.ts`); no Supabase or CMS overhead. *(Status: planned — `TODAYS_PICKS` is currently an empty array; not yet implemented.)*
+- **Naming**: "TODAY'S PICK" is display copy passed in as a prop, nothing more. The component, data model, ids, and asset keys are all feature-name-agnostic, so renaming the surface later is a one-string change.
+- **Artwork**: 6 production banners ship — **5 evergreen**: night view (`spot`), Tashu (`experience`), bread tour (`theme`), Kkumssi family (`campaign`), Expo bridge night (`spot`); and **1 date-bound**: September events (`event`). Each carries its own baked-in title copy, so the card does not duplicate it as a separate visible text row; the title remains the banner's accessible name.
+- **Rotation**: Items are filtered by an optional validity window first (`activeFrom` inclusive, `activeUntil` exclusive), then rotated deterministically by Asia/Seoul calendar date. Date-bound content therefore retires on schedule — the September banner is bounded to 2026-09-01 → 2026-10-01 and cannot surface in October.
+- **Composition**: one featured banner at a time. No tabs, no carousel, no autoplay, and no separate `자세히 보기` button — an item with a destination makes the banner itself the link.
+- **Optional External Link**: A banner may optionally hyperlink to an external site related to the featured artwork/place/theme. No destinations are seeded in the current pass.
+- **Explicit Exclusions**: No dedicated `/pick/[slug]` detail page. No Q2 preference-seeding CTA. No editorial → Slot funnel. No voting / Weekly Pick.
+- **Data Management**: 100% static TypeScript data (`src/data/editorial.ts`); no Supabase or CMS overhead. The legacy `src/data/picks.ts` (`TODAYS_PICKS = []`) is retained but referenced by no UI.
 
 ---
 
@@ -159,7 +164,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 - Visitor Log (Landing preview + `/guestbook` read-only archive + in-flow composer with Kkumssi family avatars).
 - 1-Time Reroll Reward unlocked via successful server validation and guestbook DB submission.
 - Referral Share with server snapshot storage and dedicated `/r/[shareCode]` page.
-- Today's Pick Right Rail editorial banner (~5 rotating pixel-art variants; optional external hyperlink; no detail page, no Q2 seeding).
+- Today's Pick Right Rail editorial banner (6 rotating pixel-art variants — 5 evergreen + 1 date-bound; optional external hyperlink; no detail page, no Q2 seeding).
 - GA4 telemetry tracking across all 3 growth loops with strict PII prohibition.
 
 ### Explicitly Out-of-Scope (MVP)
@@ -187,7 +192,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 | **In-App Route Guide** | **Fixed Product Decision** | Result CTA opens in-app Route Guide before external map redirection. |
 | **1-Time Reroll Reward** | **Fixed Product Decision** | Replaces free reroll; unlocks 1 reroll upon guestbook DB submission. |
 | **Referral Snapshot Model** | **Fixed Architecture Decision** | Immutable snapshots in `shared_routes` accessed via `/r/[shareCode]`. |
-| **Today's Pick Editorial Banner** | **Fixed Content Decision** | Static TS data; ~5 rotating pixel-art variants; optional external hyperlink. No detail page, no Q2 seeding, no Slot funnel (ADR-015, revised). |
+| **Today's Pick Editorial Banner** | **Fixed Content Decision** | Static TS data; 6 rotating pixel-art variants (5 evergreen + 1 date-bound); optional external hyperlink. No detail page, no Q2 seeding, no Slot funnel (ADR-015, revised). |
 | **Top Nav Elimination** | **Fixed Layout Decision** | Top tabs removed to maximize viewport priority for Setup & Slot Anchor. |
 | **Proxy Conversion Model** | **Fixed Measurement Decision** | Route Guide map clicks (`place_map_click`) serve as the primary high-intent proxy metric. Today's Pick banner-click tracking is TBD/deferred (see `docs/ANALYTICS.md`). |
 | **No Runtime LLM / No PII** | **Fixed Engineering Decision** | Curated static seed templates; zero PII or free-text in GA4. |

@@ -14,7 +14,17 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* `--font-ui` is the role-named UI font slot, defined by the selected
+     production Korean/UI typeface (DOS Gothic, registered in src/app/layout.tsx). It is
+     role-named rather than font-named so this file need not change if the typeface does.
+     Geist Sans is retained as the next fallback so any glyph the
+     DOS Gothic lacks degrades to a known typeface rather than to an
+     unspecified system font. `body` already resolves to --font-sans, so this single
+     line is what applies the Korean/UI font across the interface. */
+  --font-sans: var(--font-ui), var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Deliberately unchanged: the 29 `font-mono` sites are the retro English pixel
+     labels (MY PROFILE, VISITOR LOG, STEP 1/2, TOTAL VISIT, timestamps, URL pill)
+     whose identity depends on staying monospaced. */
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 

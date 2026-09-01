@@ -9,6 +9,8 @@ import {
   type RouteResult,
 } from '../../lib/random';
 import { NEUTRAL_ROLLING_SYMBOLS } from './motionConfig';
+import { REEL_ACTIVITY_ASSET_KEYS } from './reelVisuals';
+import { visualAsset } from '../../config/visualAssets';
 import { SlotOutputLayer } from './SlotOutputLayer';
 import {
   LOGICAL_CANVAS_HEIGHT,
@@ -21,6 +23,19 @@ import {
   SLOT_FRAME_ASPECT_RATIO,
   SLOT_FRAME_RESPONSIVE_WIDTH,
 } from './slotGeometry';
+
+/**
+ * Responsive type scale for the primary CTA, shared by all three button states so
+ * only colour/cursor/emphasis vary between them.
+ *
+ * Sized against the FROZEN CTA_BUTTON hitbox (15% x 6% of the 600x500 logical canvas),
+ * which resolves to roughly 108px wide at a 360px viewport and 225px at 1920px. The
+ * label at these sizes fills ~53-67% of that width, leaving headroom for ExtraBold's
+ * wider glyphs and keeping the `truncate` guard dormant. Nothing here touches
+ * slotGeometry.ts, the CTA coordinates, or the hitbox -- font-size only.
+ */
+const CTA_TEXT_SCALE =
+  'text-[14px] sm:text-[15px] lg:text-[17px] xl:text-[21px] 2xl:text-[24px]';
 
 export interface SlotAnchorProps {
   state: ExperienceState;
@@ -82,34 +97,39 @@ export function SlotAnchor({
 
   const preSpinDisplay = getPreSpinReelDisplay();
 
-  // Primary CTA label and hint text
+  // Primary CTA label and hint text.
+  // The decorative emoji were removed from the three CTA labels (not from the helper
+  // hints below): they consumed ~30% of the painted button's usable width, which was
+  // the hard ceiling on how large the Korean could grow inside the frozen CTA_BUTTON
+  // box. These strings are also the button's aria-label, so the accessible name is
+  // cleaner as a side effect.
   const getButtonContent = () => {
     if (isResult) {
       return {
-        text: '✨ 추천 완료 ✨',
+        text: '추천 완료',
         hint: '추천 코스 티켓이 나왔어요!',
       };
     }
     if (isSpinning) {
       return {
-        text: '🎰 뽑는 중...',
+        text: '뽑는 중...',
         hint: '행운의 대전 여행 코스를 조합하고 있어요!',
       };
     }
     if (isReady) {
       return {
-        text: '✨ 여행 뽑기! ✨',
+        text: '여행 뽑기!',
         hint: '두 가지만 고르면 여행을 뽑을 수 있어요!',
       };
     }
     if (state.phase === 'q2') {
       return {
-        text: '✨ 여행 뽑기! ✨',
+        text: '여행 뽑기!',
         hint: 'Q2 여행 스타일을 선택해 주세요',
       };
     }
     return {
-      text: '✨ 여행 뽑기! ✨',
+      text: '여행 뽑기!',
       hint: '체류 시간과 여행 스타일을 선택해 주세요',
     };
   };
@@ -121,6 +141,16 @@ export function SlotAnchor({
       aria-label="슬롯머신 영역 (Slot Anchor)"
       className={`relative z-30 flex w-full flex-col items-center select-none ${className}`}
     >
+      {/*
+       * Preload the settled-reel artwork. Reel 0 stops 1100ms into a spin (650ms under
+       * reduced motion) and these images only mount at that instant, so on a cold page
+       * the first spin would otherwise settle into empty windows. React 19 hoists these
+       * <link> tags into <head>. Purely a fetch hint -- no layout, no geometry impact.
+       */}
+      {REEL_ACTIVITY_ASSET_KEYS.map((assetKey) => (
+        <link key={`preload-${assetKey}`} rel="preload" as="image" href={visualAsset(assetKey)} />
+      ))}
+
       {/*
        * SlotStage: document-flow host for the physical machine + (future) output layer.
        * Its own height is driven entirely by SlotVisualFrame below.
@@ -217,24 +247,31 @@ export function SlotAnchor({
                         </div>
                       </>
                     ) : isReelStopped ? (
-                      // Settled Preview
+                      // Settled Preview. VISUAL pass: the label chip + place-name text were
+                      // replaced by the reel's fixed activity character (see reelVisuals.ts).
+                      // Everything structural around it is deliberately unchanged -- same
+                      // wrapper, same `key` (so animate-reel-settle still retriggers per
+                      // settle), same animation class, same placeholder branch, and the
+                      // reel region's aria-label above still announces targetReel.value, so
+                      // screen readers keep the place name the visual no longer shows.
+                      // `h-full` is the one added class: the image fills the existing reel
+                      // window, whose size still comes entirely from REEL_GROUP geometry.
                       <div
                         key={`stopped-reel-${index}-${targetReel.value}`}
-                        className="relative z-10 flex flex-col items-center justify-center gap-0.5 px-0.5 animate-reel-settle w-full"
+                        className="relative z-10 flex h-full flex-col items-center justify-center gap-0.5 px-0.5 animate-reel-settle w-full"
                       >
                         {targetReel.isPlaceholder ? (
                           <span className="text-lg sm:text-xl lg:text-2xl font-black text-[#a89f91]">
                             -
                           </span>
                         ) : (
-                          <>
-                            <span className="rounded bg-[#ffb800] px-1 py-0.2 text-[6px] sm:text-[7px] lg:text-[9px] font-mono font-bold uppercase text-[#2b2520] leading-none">
-                              {targetReel.label}
-                            </span>
-                            <span className="text-[9px] sm:text-[10px] lg:text-xs font-black text-[#2b2520] line-clamp-2 leading-tight px-0.5">
-                              {targetReel.value}
-                            </span>
-                          </>
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={visualAsset(REEL_ACTIVITY_ASSET_KEYS[index])}
+                            alt=""
+                            aria-hidden="true"
+                            className="h-full w-full object-contain p-[6%] select-none"
+                          />
                         )}
                       </div>
                     ) : (
@@ -268,12 +305,12 @@ export function SlotAnchor({
               onClick={onSpin}
               aria-busy={isSpinning}
               aria-label={buttonContent.text}
-              className={`absolute z-20 flex items-center justify-center pointer-events-auto rounded-[4px] font-black text-white select-none transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#ffb800] ${
+              className={`absolute z-20 flex items-center justify-center pointer-events-auto rounded-[4px] font-black text-white select-none transition-transform outline-none focus-visible:ring-2 focus-visible:ring-[#ffb800] ${CTA_TEXT_SCALE} ${
                 isReady
-                  ? 'cursor-pointer active:scale-95 text-[9px] sm:text-[10px] lg:text-xs tracking-wide text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] motion-safe:animate-pulse'
+                  ? 'cursor-pointer active:scale-95 tracking-wide text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] motion-safe:animate-pulse'
                   : isSpinning
-                  ? 'cursor-wait text-[8px] sm:text-[9px] lg:text-[11px] text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]'
-                  : 'cursor-not-allowed text-[8px] sm:text-[9px] lg:text-[11px] text-white/70 drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]'
+                  ? 'cursor-wait text-white/90 drop-shadow-[0_1px_1px_rgba(0,0,0,0.6)]'
+                  : 'cursor-not-allowed text-white/70 drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]'
               }`}
               style={{
                 top: CTA_BUTTON.top,
