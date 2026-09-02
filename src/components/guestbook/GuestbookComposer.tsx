@@ -6,6 +6,7 @@ import type { RouteResult } from '../../lib/random/types';
 import type { GuestbookEntryRecord } from '../../lib/database/types';
 import { GUESTBOOK_AVATARS, DEFAULT_AVATAR_ID } from '../../config/product';
 import { CharacterSelector } from './CharacterSelector';
+import { OVERLAY_BACKDROP, OVERLAY_DIALOG, OVERLAY_STATIC_ZONE, useScrollLock } from '../common';
 
 export interface GuestbookComposerProps {
   routeResult: RouteResult;
@@ -55,6 +56,13 @@ export function GuestbookComposer({
       }
     };
   }, []);
+
+  // Lock document scroll while the composer is open (shared refcounted lock --
+  // see useScrollLock.ts). Previously this composer had NO scroll lock of its
+  // own at all -- it silently relied on ResultArea's, since it only ever opened
+  // from within a revealed Result Card. Adopting the shared lock directly makes
+  // that an explicit, self-contained contract rather than an implicit one.
+  useScrollLock(isOpen);
 
   if (!isOpen) {
     return null;
@@ -167,17 +175,21 @@ export function GuestbookComposer({
       role="dialog"
       aria-modal="true"
       aria-labelledby="guestbook-composer-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2b2520]/50 backdrop-blur-xs animate-reveal-fade-in"
+      className={`${OVERLAY_BACKDROP} bg-[#2b2520]/50 backdrop-blur-xs animate-reveal-fade-in`}
     >
-      <div className="relative w-full max-w-lg rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] p-5 sm:p-7 text-[#2b2520] shadow-retro-xl animate-ticket-entrance overflow-hidden">
+      <div
+        className={`${OVERLAY_DIALOG} w-full max-w-lg rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] p-5 sm:p-7 text-[#2b2520] shadow-retro-xl animate-ticket-entrance`}
+      >
         {/* Top Perforation Deco */}
         <div
           aria-hidden="true"
           className="absolute top-0 left-0 right-0 h-2 border-b-2 border-dashed border-[#d8d0c2] bg-[#f7f3ea]"
         />
 
-        {/* Header */}
-        <div className="flex items-start justify-between border-b-2 border-[#2b2520] pb-3 mb-4">
+        {/* Header: always reachable and non-scrolling */}
+        <div
+          className={`flex items-start justify-between border-b-2 border-[#2b2520] pb-3 mb-4 ${OVERLAY_STATIC_ZONE}`}
+        >
           <div>
             <span className="font-mono text-[11px] font-black tracking-widest text-[#ff5555] uppercase flex items-center gap-1 mb-0.5">
               <span>📓</span>
@@ -204,7 +216,7 @@ export function GuestbookComposer({
         {isSuccess ? (
           rewardGrantedThisSubmission ? (
             /* CASE A: this submission actually unlocked the reroll reward. */
-            <div className="flex flex-col items-center justify-center gap-3 py-8 text-center animate-ticket-entrance">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto overscroll-none py-8 text-center animate-ticket-entrance">
               <span className="text-4xl" role="img" aria-label="Party Popper">
                 🎉
               </span>
@@ -218,7 +230,7 @@ export function GuestbookComposer({
           ) : (
             /* CASE B: reward already consumed this session -- quiet gratitude,
                no reroll/reward wording, no confetti-style icon. */
-            <div className="flex flex-col items-center justify-center gap-3 py-8 text-center animate-ticket-entrance">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto overscroll-none py-8 text-center animate-ticket-entrance">
               <span className="text-4xl" role="img" aria-label="Check Mark">
                 ✅
               </span>
@@ -231,90 +243,100 @@ export function GuestbookComposer({
             </div>
           )
         ) : (
-          /* Form Content */
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {/* Auto-attached Route Info Tag */}
-            <div className="rounded-xl border border-[#e4dcce] bg-[#faf6ee] p-3 text-xs">
-              <div className="font-mono text-[10px] font-black text-[#8c8273] uppercase mb-1">
-                ATTACHED ROUTE
+          /* Form Content -- three-zone shell (header above is its own shrink-0
+             zone): the <form> itself becomes the flex column, with an inner
+             scroll zone for the fields and the 취소/등록하기 row lifted out as a
+             shrink-0 sibling INSIDE the same <form> (not outside it), so the
+             submit button stays natively associated with this form and every
+             validation/submit code path below is untouched. */
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-none">
+              {/* Auto-attached Route Info Tag */}
+              <div className="rounded-xl border border-[#e4dcce] bg-[#faf6ee] p-3 text-xs">
+                <div className="font-mono text-[10px] font-black text-[#8c8273] uppercase mb-1">
+                  ATTACHED ROUTE
+                </div>
+                <div className="font-bold text-[#2b2520] flex flex-wrap items-center gap-1.5">
+                  <span>{routeResult.title}</span>
+                  <span className="rounded-md border border-[#d8d0c2] bg-white px-1.5 py-0.2 text-[10px] font-bold text-[#7d7364]">
+                    {routeResult.stops?.length ?? 0}곳 코스
+                  </span>
+                </div>
               </div>
-              <div className="font-bold text-[#2b2520] flex flex-wrap items-center gap-1.5">
-                <span>{routeResult.title}</span>
-                <span className="rounded-md border border-[#d8d0c2] bg-white px-1.5 py-0.2 text-[10px] font-bold text-[#7d7364]">
-                  {routeResult.stops?.length ?? 0}곳 코스
-                </span>
-              </div>
-            </div>
 
-            {/* 1. Avatar Selection */}
-            <CharacterSelector
-              avatars={GUESTBOOK_AVATARS}
-              selectedId={selectedAvatarId}
-              onSelect={handleAvatarSelect}
-            />
-
-            {/* 2. Nickname Input */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="guestbook-nickname"
-                  className="text-xs font-black text-[#2b2520]"
-                >
-                  닉네임 (2~12자) <span className="text-[#ff5555]">*</span>
-                </label>
-                <span className="font-mono text-[10px] text-[#8c8273]">
-                  {nickname.length}/12
-                </span>
-              </div>
-              <input
-                id="guestbook-nickname"
-                type="text"
-                maxLength={12}
-                value={nickname}
-                onChange={handleNicknameChange}
-                placeholder="여행자 닉네임을 입력하세요"
-                disabled={isSubmitting}
-                className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
+              {/* 1. Avatar Selection */}
+              <CharacterSelector
+                avatars={GUESTBOOK_AVATARS}
+                selectedId={selectedAvatarId}
+                onSelect={handleAvatarSelect}
               />
-            </div>
 
-            {/* 3. Message Input */}
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="guestbook-message"
-                  className="text-xs font-black text-[#2b2520]"
+              {/* 2. Nickname Input */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="guestbook-nickname"
+                    className="text-xs font-black text-[#2b2520]"
+                  >
+                    닉네임 (2~12자) <span className="text-[#ff5555]">*</span>
+                  </label>
+                  <span className="font-mono text-[10px] text-[#8c8273]">
+                    {nickname.length}/12
+                  </span>
+                </div>
+                <input
+                  id="guestbook-nickname"
+                  type="text"
+                  maxLength={12}
+                  value={nickname}
+                  onChange={handleNicknameChange}
+                  placeholder="여행자 닉네임을 입력하세요"
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
+                />
+              </div>
+
+              {/* 3. Message Input */}
+              <div className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <label
+                    htmlFor="guestbook-message"
+                    className="text-xs font-black text-[#2b2520]"
+                  >
+                    한 줄 로그 메시지 (1~50자) <span className="text-[#ff5555]">*</span>
+                  </label>
+                  <span className="font-mono text-[10px] text-[#8c8273]">
+                    {message.length}/50
+                  </span>
+                </div>
+                <input
+                  id="guestbook-message"
+                  type="text"
+                  maxLength={50}
+                  value={message}
+                  onChange={handleMessageChange}
+                  placeholder="코스 소감이나 기대되는 점을 남겨보세요!"
+                  disabled={isSubmitting}
+                  className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
+                />
+              </div>
+
+              {/* Error Message Alert */}
+              {errorMessage && (
+                <div
+                  role="alert"
+                  className="rounded-xl border-2 border-[#ff5555] bg-[#fef2f2] p-2.5 text-xs font-black text-[#991b1b]"
                 >
-                  한 줄 로그 메시지 (1~50자) <span className="text-[#ff5555]">*</span>
-                </label>
-                <span className="font-mono text-[10px] text-[#8c8273]">
-                  {message.length}/50
-                </span>
-              </div>
-              <input
-                id="guestbook-message"
-                type="text"
-                maxLength={50}
-                value={message}
-                onChange={handleMessageChange}
-                placeholder="코스 소감이나 기대되는 점을 남겨보세요!"
-                disabled={isSubmitting}
-                className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
-              />
+                  ⚠️ {errorMessage}
+                </div>
+              )}
             </div>
 
-            {/* Error Message Alert */}
-            {errorMessage && (
-              <div
-                role="alert"
-                className="rounded-xl border-2 border-[#ff5555] bg-[#fef2f2] p-2.5 text-xs font-black text-[#991b1b]"
-              >
-                ⚠️ {errorMessage}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2 border-t border-[#e4dcce]">
+            {/* Actions: always reachable and non-scrolling, but still inside
+                the <form> so the submit button keeps native form association. */}
+            <div
+              className={`flex gap-2 pt-2 border-t border-[#e4dcce] ${OVERLAY_STATIC_ZONE}`}
+            >
               <button
                 type="button"
                 onClick={handleClose}

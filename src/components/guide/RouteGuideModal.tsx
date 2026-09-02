@@ -4,7 +4,13 @@ import React, { useEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { RouteGuideData } from '../../lib/guide';
 import { RouteGuideTimeline } from './RouteGuideTimeline';
-import { skinBandStyle } from '../common';
+import {
+  OVERLAY_BACKDROP,
+  OVERLAY_DIALOG,
+  OVERLAY_STATIC_ZONE,
+  skinBandStyle,
+  useScrollLock,
+} from '../common';
 import {
   GUIDE_BODY_STRIP,
   GUIDE_FOOTER_BAND,
@@ -67,17 +73,11 @@ export function RouteGuideModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isOpen]);
+  // Lock document scroll when modal is open (shared refcounted lock -- see
+  // useScrollLock.ts). Refcounted so this stacks correctly whether the modal is
+  // opened from the Result Card (which is already holding its own lock) or, on
+  // /r/[shareCode] (SharedRouteView), standalone with no Result overlay present.
+  useScrollLock(isOpen);
 
   if (!isOpen || !guideData || !isMounted) {
     return null;
@@ -94,7 +94,7 @@ export function RouteGuideModal({
   const modalContent = (
     <div
       data-testid="route-guide-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-[#2b2520]/60 backdrop-blur-xs animate-fade-in"
+      className={`${OVERLAY_BACKDROP} bg-[#2b2520]/60 backdrop-blur-xs animate-fade-in`}
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -106,7 +106,7 @@ export function RouteGuideModal({
         aria-modal="true"
         aria-labelledby="guide-modal-title"
         data-testid="route-guide-modal"
-        className={`relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col overflow-hidden animate-modal-entrance my-auto ${className}`}
+        className={`${OVERLAY_DIALOG} w-full max-w-2xl animate-modal-entrance ${className}`}
       >
         {/* The approved skin bands carry the cobalt frame, its outline and the
             rounded corners, so the DOM frame (rounded-3xl border-3 shadow-retro-xl)
@@ -116,7 +116,7 @@ export function RouteGuideModal({
         {/* Modal Header: Always reachable and non-scrolling */}
         <header
           style={skinBandStyle(GUIDE_HEADER_BAND.mobile, GUIDE_HEADER_BAND.desktop)}
-          className="skin-band flex flex-col gap-2 px-[6%] pt-[5%] pb-4 sm:px-[4%] shrink-0"
+          className={`skin-band flex flex-col gap-2 px-[6%] pt-[5%] pb-4 sm:px-[4%] ${OVERLAY_STATIC_ZONE}`}
         >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[11px] font-black tracking-widest text-[#ff5555] uppercase flex items-center gap-1">
@@ -180,7 +180,7 @@ export function RouteGuideModal({
           className="skin-strip flex min-h-0 flex-1 px-[5%] sm:px-[3.5%]"
         >
         <div
-          className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain py-4 pr-1.5 sm:gap-5"
+          className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-none py-4 pr-1.5 sm:gap-5"
         >
           {/* Optional Mission Card -- the skin's one fixed interior decorative
               region supplies the amber dashed shell and its sparkles, so no DOM
@@ -213,7 +213,7 @@ export function RouteGuideModal({
         {/* Modal Footer / Close Action: Always reachable and non-scrolling */}
         <footer
           style={skinBandStyle(GUIDE_FOOTER_BAND.mobile, GUIDE_FOOTER_BAND.desktop)}
-          className="skin-band px-[6%] pt-3.5 pb-[5%] sm:px-[4%] flex justify-end shrink-0"
+          className={`skin-band px-[6%] pt-3.5 pb-[5%] sm:px-[4%] flex justify-end ${OVERLAY_STATIC_ZONE}`}
         >
           <button
             type="button"

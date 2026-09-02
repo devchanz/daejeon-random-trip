@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import type { ExperienceState, RerollRewardState } from '../../lib/experience';
 import { ResultQuest } from './result';
+import { OVERLAY_BACKDROP, OVERLAY_DIALOG, OVERLAY_STATIC_ZONE, useScrollLock } from '../common';
 
 export interface ResultAreaProps {
   state?: ExperienceState;
@@ -93,18 +94,11 @@ export function ResultArea({
 
   const dialogRef = useRef<HTMLDivElement | null>(null);
 
-  // Lock body scroll while the Result Card is revealed (RouteGuideModal precedent).
-  // Restored automatically the instant revealStage leaves 'revealed', minimize included.
-  useEffect(() => {
-    if (!isRevealed) return;
-
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
-  }, [isRevealed]);
+  // Lock document scroll while the Result Card is revealed (shared refcounted
+  // lock -- see useScrollLock.ts). Restored automatically the instant
+  // revealStage leaves 'revealed', minimize included. Refcounted so Result
+  // stays locked while a nested RouteGuideModal/GuestbookComposer is also open.
+  useScrollLock(isRevealed);
 
   // Contain focus within the card: move focus onto the dialog container itself (N3 --
   // not the first control) whenever Result (re-)gains keyboard ownership -- first reveal,
@@ -179,7 +173,7 @@ export function ResultArea({
   return (
     <div
       data-testid="result-card-overlay"
-      className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 md:p-6 bg-[#2b2520]/60 backdrop-blur-xs animate-reveal-fade-in ${
+      className={`${OVERLAY_BACKDROP} bg-[#2b2520]/60 backdrop-blur-xs animate-reveal-fade-in ${
         isRevealed ? '' : 'hidden'
       }`}
     >
@@ -190,7 +184,7 @@ export function ResultArea({
         aria-label="추천 결과 (Result Card)"
         tabIndex={-1}
         data-testid="result-card"
-        className={`relative flex w-[min(672px,calc(100vw-32px))] max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex-col overflow-hidden outline-none my-auto ${className}`}
+        className={`${OVERLAY_DIALOG} w-[min(672px,calc(100vw-32px))] outline-none ${className}`}
       >
         {/*
          * 결과 접기 -- ADR-023's visible, non-Escape exit from 'revealed'.
@@ -200,7 +194,7 @@ export function ResultArea({
          * cover artwork. Kept inside this dialog container so the Tab trap and
          * getFocusable() still see it.
          */}
-        <div className="flex shrink-0 justify-end pb-1.5">
+        <div className={`${OVERLAY_STATIC_ZONE} flex justify-end pb-1.5`}>
           <button
             type="button"
             onClick={onMinimize}
