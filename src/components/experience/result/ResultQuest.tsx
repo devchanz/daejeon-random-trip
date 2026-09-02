@@ -60,10 +60,18 @@ export function ResultQuest({
 
           `scrollbar-hidden` removes only the scrollbar's rendering -- `overflow-y-auto`
           is untouched, so wheel, trackpad, touch and keyboard scrolling all still
-          work. The sheet reads as clean paper with no native scrollbar over it. */}
+          work. The sheet reads as clean paper with no native scrollbar over it.
+
+          `overscroll-none` (not `overscroll-contain`): `contain` only stops this
+          scroller's overscroll from CHAINING to the document -- it does not
+          suppress the scroller's OWN rubber-band/stretch, which visibly detached
+          this cream canvas from the fixed header/action rasters above and below
+          it on a touch drag past either end. `none` suppresses that directly; the
+          document-level chaining concern it also used to cover is now handled by
+          the shared `useScrollLock` in ResultArea instead. */}
       <div
         style={{ backgroundColor: RESULT_BODY_PAPER }}
-        className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain"
+        className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none"
       >
         {/* Each child registers against the painted composition by measured
             percentage (skin.regions); inside a region, layout is ordinary
