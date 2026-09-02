@@ -5,10 +5,17 @@ import {
   SLOT_FRAME_ASPECT_RATIO,
   SLOT_FRAME_RESPONSIVE_WIDTH,
   OUTPUT_SLIT,
+  OUTPUT_PEEK_PROGRESS_BY_PHASE,
 } from './slotGeometry';
 
 export interface SlotOutputLayerProps {
   revealStage: 'peek' | 'revealed' | 'minimized';
+  /**
+   * Sub-beat within 'peek' (see MainExperience's `peekPhase` state and
+   * motionConfig's PEEK_EDGE_AT_MS/PEEK_HOLD_AT_MS). Meaningless outside
+   * 'peek' -- once revealStage leaves it, the Result Card owns the reveal.
+   */
+  peekPhase?: 'inside' | 'edge' | 'hold';
 }
 
 /**
@@ -27,6 +34,30 @@ export interface SlotOutputLayerProps {
  * travel distance, and easing are for the VISUAL pass to tune within this
  * structure.
  *
+ * --- Cavity occlusion architecture (Result Quest redesign, dormant) ---
+ * The approved Figma direction has the paper begin deep inside the stainless
+ * output cavity and gradually emerge: hidden -> inside cavity -> edge emerging
+ * -> peek hold -> Result reveal. Two seams establish that, both inert while
+ * OUTPUT_PEEK_ENABLED is false:
+ *  1. Occlusion order -- this layer paints with an explicit z-index (z-[6])
+ *     BELOW SlotVisualFrame's explicit z-10 (see SlotAnchor.tsx), so the
+ *     chassis art itself hides the still-hidden portion of the paper by
+ *     simple paint order, while this layer still mounts as a SlotVisualFrame
+ *     *sibling* (ADR-022) so it is never subject to the frame's own
+ *     overflow-hidden clip once emerged.
+ *  2. RECOMMENDED, not yet added: a cavity clip wrapper (`overflow-hidden`)
+ *     as a second guard for when the chassis art is not fully opaque right at
+ *     the slit. Left undone here deliberately -- its exact clip bounds depend
+ *     on where the final asset's slit actually sits, which cannot be
+ *     verified without that asset; adding a guessed clip now risks silently
+ *     cutting off the very "emerged" position this cue exists to show.
+ * `peekPhase` resolves to a 0-100 progress value (OUTPUT_PEEK_PROGRESS_BY_PHASE
+ * in slotGeometry.ts); the intended mechanism for the VISUAL pass is to drive
+ * paper position from a single `--peek-progress` CSS custom property derived
+ * from it, so retuning the final Figma travel/easing is a keyframe change on
+ * one variable rather than a structural rewrite. No such keyframe exists yet
+ * -- only the geometry and the resolved progress value are wired here.
+ *
  * --- Temporarily suppressed (Product decision, UX follow-up) ---
  * The DEV placeholder cue below reads as a plain white rectangle against the
  * production slot PNG -- wrong proportions for the slit, wrong material
@@ -39,10 +70,16 @@ export interface SlotOutputLayerProps {
  */
 const OUTPUT_PEEK_ENABLED: boolean = false;
 
-export function SlotOutputLayer({ revealStage }: SlotOutputLayerProps) {
+export function SlotOutputLayer({ revealStage, peekPhase = 'inside' }: SlotOutputLayerProps) {
   // Stays mounted (when enabled) through 'peek' / 'revealed' / 'minimized' alike.
-  // Reserved for VISUAL: distinct per-stage treatment, if any.
-  void revealStage;
+  // Resolved progress is consumed by the VISUAL pass's --peek-progress mechanism
+  // (see doc above) -- not wired to a live transform yet since this never renders
+  // while OUTPUT_PEEK_ENABLED is false.
+  const progress =
+    revealStage === 'peek'
+      ? OUTPUT_PEEK_PROGRESS_BY_PHASE[peekPhase]
+      : OUTPUT_PEEK_PROGRESS_BY_PHASE.hold;
+  void progress;
 
   if (!OUTPUT_PEEK_ENABLED) {
     return null;
@@ -51,7 +88,7 @@ export function SlotOutputLayer({ revealStage }: SlotOutputLayerProps) {
   return (
     <div
       aria-hidden="true"
-      className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
+      className="pointer-events-none absolute left-1/2 top-0 z-[6] -translate-x-1/2"
       style={{
         width: SLOT_FRAME_RESPONSIVE_WIDTH,
         aspectRatio: `${SLOT_FRAME_ASPECT_RATIO}`,
@@ -64,7 +101,7 @@ export function SlotOutputLayer({ revealStage }: SlotOutputLayerProps) {
           left: OUTPUT_SLIT.left,
           width: OUTPUT_SLIT.width,
           top: OUTPUT_SLIT.top,
-          height: '8%',
+          height: OUTPUT_SLIT.height,
         }}
       />
     </div>

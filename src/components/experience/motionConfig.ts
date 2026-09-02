@@ -36,6 +36,15 @@ export const MOTION_TIMINGS = {
    * leave it without a documented product decision.
    */
   OUTPUT_PEEK_TO_CARD_MS: 400,
+  /**
+   * Sub-beat offsets within 'peek' (measured from the start of 'peek'), driving
+   * `peekPhase` in MainExperience for the dormant Slot Peek cavity-emergence
+   * architecture (see SlotOutputLayer.tsx). Both stay inside OUTPUT_PEEK_TO_CARD_MS
+   * -- they subdivide the existing Fixed 300-500ms product window, they don't
+   * extend it.
+   */
+  PEEK_EDGE_AT_MS: 150,
+  PEEK_HOLD_AT_MS: 300,
 } as const;
 
 const REDUCED_REEL_1_STOP_MS = 650;
@@ -65,6 +74,9 @@ export const REDUCED_MOTION_TIMINGS = {
   // contract (docs/PRODUCT.md 5.1, docs/ARCHITECTURE.md 5.1) and is a timing
   // beat, not a motion effect.
   OUTPUT_PEEK_TO_CARD_MS: MOTION_TIMINGS.OUTPUT_PEEK_TO_CARD_MS,
+  // Same reasoning: these subdivide the beat above, not a motion effect.
+  PEEK_EDGE_AT_MS: MOTION_TIMINGS.PEEK_EDGE_AT_MS,
+  PEEK_HOLD_AT_MS: MOTION_TIMINGS.PEEK_HOLD_AT_MS,
 } as const;
 
 /** Selects the active timing table based on the user's motion preference. */

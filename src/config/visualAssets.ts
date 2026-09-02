@@ -15,9 +15,12 @@
  *   `character.avatar.*` keys are asset identity only; the stable application ids
  *   (`mongmong`, `kkumdongi`, ...) live in `src/config/avatars.ts` and are frozen.
  *
- * 39 entries = 31 assets exported in the first visual-detail pass
+ * 62 entries = 31 assets exported in the first visual-detail pass
  *            +  3 added in the final closeout (playback controls + 2 editorial banners)
- *            +  5 pre-existing production assets adopted for single-source-of-truth.
+ *            +  5 pre-existing production assets adopted for single-source-of-truth
+ *            +  4 Result StopVisual category defaults (08_RESULT handoff)
+ *            + 12 Result skin bands (08_RESULT: 4 complete states x header/body/actions)
+ *            +  7 Route Guide skin bands + 1 shared mission shell (09_ROUTE_GUIDE).
  * (Two further closeout assets -- Setup/Preference/Food and Editorial/Banner/Tashu --
  * were replacements overwritten in place, so they add no new entry.)
  *
@@ -61,6 +64,68 @@ export const VISUAL_ASSETS = {
   'character.avatar.kkumbichi': '/assets/character-avatar-kkumbichi.png',
   'character.avatar.eunsuni': '/assets/character-avatar-eunsuni.png',
   'character.avatar.kkumsuni': '/assets/character-avatar-kkumsuni.png',
+
+  // --- 08_RESULT / StopVisual ---
+  // The four exportable category defaults published as `Result/StopVisual/{Meal,
+  // Cafe,Walk,Culture}`. Exported at 3x (300x300) from a 100x100 design node --
+  // the artwork is anti-aliased raster styled as pixel art (verified: no integer
+  // pixel grid), so downscaling to the ~64-72px render box is safe and sharp.
+  // All four are FULL-BLEED (measured 100% opaque, edge to edge): each tile
+  // carries its own background fill, so none takes a VISUAL_ASSET_OPAQUE_FIT
+  // entry and none should be rendered inside a decorative frame.
+  'stop.category.meal': '/assets/stop-category-meal.png',
+  'stop.category.cafe': '/assets/stop-category-cafe.png',
+  'stop.category.walk': '/assets/stop-category-walk.png',
+  'stop.category.culture': '/assets/stop-category-culture.png',
+
+  // --- 08_RESULT / Skin bands ---
+  // Deterministic crops of the approved whole-card production blanks
+  // (`Result/Skin/{DesktopBlank-Normal3Action,MobileBlank-Normal3Action,
+  // MobileBlank-RerollConsumed2Action}`), split at measured seams into the three
+  // zones of the Result shell. Crop geometry lives in result/resultSkin.ts.
+  // The header band and body canvas are shared by the normal and consumed states
+  // -- only the action band differs, per the 08_RESULT handoff. Both reward states
+  // now have an approved action raster at both breakpoints, so no state falls back
+  // to a CSS reconstruction any more.
+  'result.skin.desktop.header': '/assets/result-skin-desktop-header.png',
+  'result.skin.desktop.body': '/assets/result-skin-desktop-body.png',
+  'result.skin.desktop.actions3': '/assets/result-skin-desktop-actions-3.png',
+  // Approved desktop CONSUMED band (Result/Skin/DesktopBlank-RerollConsumed2Action,
+  // node 329:2). Its arrival removed the DOM/CSS visual fallback this state used
+  // to need. Exported at the node's own configured scale so the manually cleaned
+  // transparent exterior survives -- overriding the export scale flattens it.
+  'result.skin.desktop.actions2': '/assets/result-skin-desktop-actions-2.png',
+  'result.skin.mobile.header': '/assets/result-skin-mobile-header.png',
+  'result.skin.mobile.body': '/assets/result-skin-mobile-body.png',
+  'result.skin.mobile.actions3': '/assets/result-skin-mobile-actions-3.png',
+  'result.skin.mobile.actions2': '/assets/result-skin-mobile-actions-2.png',
+  // CONSUMED is a complete state: its header/body/actions are all Y-only slices of
+  // ONE master per breakpoint, so no state mixes normal-body with a consumed
+  // footer any more. Verified by an asset-level test -- stacking each state's
+  // three bands reproduces its master pixel-for-pixel (0 byte mismatches).
+  'result.skin.mobile.consumedHeader': '/assets/result-skin-mobile-consumed-header.png',
+  'result.skin.mobile.consumedBody': '/assets/result-skin-mobile-consumed-body.png',
+  'result.skin.desktop.consumedHeader': '/assets/result-skin-desktop-consumed-header.png',
+  'result.skin.desktop.consumedBody': '/assets/result-skin-desktop-consumed-body.png',
+
+  // --- 09_ROUTE_GUIDE / Skin bands ---
+  // Crops of `RouteGuide/Skin/{Desktop,Mobile}`. These skins are intentionally
+  // minimal (cobalt frame + cream paper + one Mission decorative shell), so the
+  // body is a uniform ornament-free strip that tiles on Y while the long content
+  // area stays DOM-driven. The mission shell is cropped separately -- baking it
+  // into the tiling strip would repeat it down the page.
+  'routeGuide.skin.desktop.header': '/assets/route-guide-skin-desktop-header.png',
+  'routeGuide.skin.desktop.body': '/assets/route-guide-skin-desktop-body.png',
+  'routeGuide.skin.desktop.footer': '/assets/route-guide-skin-desktop-footer.png',
+  'routeGuide.skin.mobile.header': '/assets/route-guide-skin-mobile-header.png',
+  'routeGuide.skin.mobile.body': '/assets/route-guide-skin-mobile-body.png',
+  'routeGuide.skin.mobile.footer': '/assets/route-guide-skin-mobile-footer.png',
+  // ONE mission shell for both breakpoints. The desktop RouteGuide skin is
+  // proportioned for a 760x505 landscape modal, so its mission crop is ~15:1 --
+  // at our portrait modal width that would be ~44px tall and could not hold the
+  // label plus two lines without vertically stretching the dashed border, which
+  // is forbidden. The mobile crop's 5.1:1 shell serves both widths undistorted.
+  'routeGuide.missionShell': '/assets/route-guide-mission-shell.png',
 
   // --- 05_EDITORIAL ---
   'editorial.mascotPerched': '/assets/editorial-mascot-perched.png',
@@ -112,6 +177,12 @@ export function visualAsset(key: VisualAssetKey): string {
  */
 export const VISUAL_ASSET_META: Partial<Record<VisualAssetKey, { w: number; h: number }>> = {
   'brand.logo.primary': { w: 680, h: 408 },
+  // Square StopVisual tiles -- reserve the 1:1 box so the StopCard cell cannot
+  // reflow while the artwork loads (cell height must stay deterministic).
+  'stop.category.meal': { w: 300, h: 300 },
+  'stop.category.cafe': { w: 300, h: 300 },
+  'stop.category.walk': { w: 300, h: 300 },
+  'stop.category.culture': { w: 300, h: 300 },
   'chrome.navigationControls': { w: 579, h: 193 },
   'chrome.windowControls': { w: 501, h: 167 },
   'editorial.mascotPerched': { w: 137, h: 151 },

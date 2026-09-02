@@ -20,7 +20,7 @@ interface SetupAreaProps {
 
 export const DURATION_DISPLAY_LABELS: Record<DurationType, string> = {
   half: '반나절',
-  full: '하루',
+  full: '하루종일',
 };
 
 /** Emoji fallbacks, retained behind the production artwork below. */
@@ -32,7 +32,7 @@ export const DURATION_ICONS: Record<DurationType, string> = {
 /**
  * Q1 production icon artwork (Figma 03_SETUP).
  * Canonical mapping -- must never be cross-wired:
- *   half (반나절) = SUN, full (하루) = MOON.
+ *   half (반나절) = SUN, full (하루종일) = MOON.
  */
 export const DURATION_ICON_ASSETS: Record<DurationType, VisualAssetKey> = {
   half: 'setup.duration.halfDay',

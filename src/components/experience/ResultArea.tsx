@@ -2,17 +2,25 @@
 
 import React, { useEffect, useRef } from 'react';
 import type { ExperienceState, RerollRewardState } from '../../lib/experience';
-import { ResultSheet } from './ResultSheet';
+import { ResultQuest } from './result';
 
 export interface ResultAreaProps {
   state?: ExperienceState;
   revealStage?: 'hidden' | 'peek' | 'revealed' | 'minimized';
   rerollReward?: RerollRewardState;
+  /**
+   * Still part of the public API and still supplied by MainExperience (ADR-025
+   * per-Result tracking is unchanged), but no longer rendered: the standalone
+   * Random Log row was removed from the Result sheet body. The composer is now
+   * reached through 다시 뽑기 while the reward is 'locked'.
+   */
   hasLoggedCurrentResult?: boolean;
   onOpenGuestbook?: () => void;
   onExecuteReroll?: () => void;
   onOpenRouteGuide?: () => void;
   onMinimize?: () => void;
+  /** Explore-More destination seam -- not decided in this branch; left unwired. */
+  onExploreMore?: () => void;
   isNestedOverlayOpen?: boolean;
   className?: string;
 }
@@ -32,8 +40,8 @@ export interface ResultAreaProps {
  *
  * --- Reveal vs. minimize (결과 접기) ---
  * 'revealed': centered overlay, background interaction blocked, body scroll locked.
- * 'minimized': the overlay is hidden (`display:none`, not unmounted) so ResultSheet's
- * local share state survives; background interaction and body scroll are fully
+ * 'minimized': the overlay is hidden (`display:none`, not unmounted) so ResultQuest's
+ * (ResultActions') local share state survives; background interaction and body scroll are fully
  * restored. MainExperience renders a persistent "내 여행 티켓" affordance while
  * minimized that calls back in to 'revealed' with `state.result` completely
  * unchanged — no route regeneration, no reducer dispatch. See MainExperience.tsx's
@@ -67,11 +75,11 @@ export function ResultArea({
   state,
   revealStage = 'hidden',
   rerollReward = 'locked',
-  hasLoggedCurrentResult = false,
   onOpenGuestbook,
   onExecuteReroll,
   onOpenRouteGuide,
   onMinimize,
+  onExploreMore,
   isNestedOverlayOpen = false,
   className = '',
 }: ResultAreaProps) {
@@ -182,11 +190,17 @@ export function ResultArea({
         aria-label="추천 결과 (Result Card)"
         tabIndex={-1}
         data-testid="result-card"
-        className={`relative flex w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex-col gap-2 overflow-y-auto overscroll-contain outline-none my-auto ${className}`}
+        className={`relative flex w-[min(672px,calc(100vw-32px))] max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex-col overflow-hidden outline-none my-auto ${className}`}
       >
-        {/* 결과 접기 control -- the only way out of 'revealed' besides Escape. Deliberately
-            outside ResultSheet, which stays untouched. */}
-        <div className="flex justify-end">
+        {/*
+         * 결과 접기 -- ADR-023's visible, non-Escape exit from 'revealed'.
+         * Sits OUTSIDE the ResultQuest raster frame (its pre-skin placement): the
+         * approved 08_RESULT masters paint a dense header band (paperclip, NEW QUEST!
+         * banner, star/heart) with no slot for a control, so overlaying it there would
+         * cover artwork. Kept inside this dialog container so the Tab trap and
+         * getFocusable() still see it.
+         */}
+        <div className="flex shrink-0 justify-end pb-1.5">
           <button
             type="button"
             onClick={onMinimize}
@@ -198,13 +212,29 @@ export function ResultArea({
           </button>
         </div>
 
-        <ResultSheet
+        {/*
+         * Three-zone shell (P0 fix): this dialog is `flex flex-col overflow-hidden`
+         * rather than the scroller itself -- ResultQuest fills it with its own
+         * shrink-0 header / flex-1 min-h-0 scroll body / shrink-0 actions split, so
+         * all Result actions stay structurally reachable regardless of stop count,
+         * font metrics, or copy length.
+         *
+         * Width is `min(672px, calc(100vw - 32px))` -- back to the original max-w-2xl
+         * scale rather than the narrower clamp an earlier pass used, which made the
+         * desktop cells too small. Fluid, with no viewport-specific breakpoints: it
+         * simply tracks the viewport below 704px and pins at 672px above it.
+         *
+         * At 672px the aspect-locked body canvas is ~626px tall, so on shorter
+         * desktop viewports the middle body scrolls -- the Result is never shrunk to
+         * make the height fit.
+         */}
+        <ResultQuest
           result={state.result}
           rerollReward={rerollReward}
-          hasLoggedCurrentResult={hasLoggedCurrentResult}
           onOpenGuestbook={onOpenGuestbook}
           onExecuteReroll={onExecuteReroll}
           onOpenRouteGuide={onOpenRouteGuide}
+          onExploreMore={onExploreMore}
         />
       </div>
     </div>

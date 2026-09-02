@@ -13,7 +13,7 @@ export interface SharedRouteViewProps {
 
 const DURATION_LABELS: Record<string, string> = {
   half: '반나절',
-  full: '하루',
+  full: '하루종일',
 };
 
 const PREFERENCE_LABELS: Record<string, string> = {

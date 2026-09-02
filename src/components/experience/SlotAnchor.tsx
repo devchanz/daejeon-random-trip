@@ -46,6 +46,8 @@ export interface SlotAnchorProps {
   pendingResult?: RouteResult | null;
   isLeverActive?: boolean;
   revealStage?: 'hidden' | 'peek' | 'revealed' | 'minimized';
+  /** Sub-beat within 'peek', forwarded to SlotOutputLayer. See motionConfig.ts. */
+  peekPhase?: 'inside' | 'edge' | 'hold';
   onReopenResult?: () => void;
   reopenButtonRef?: React.Ref<HTMLButtonElement>;
 }
@@ -80,6 +82,7 @@ export function SlotAnchor({
   pendingResult = null,
   isLeverActive = false,
   revealStage = 'hidden',
+  peekPhase = 'inside',
   onReopenResult,
   reopenButtonRef,
 }: SlotAnchorProps) {
@@ -165,10 +168,12 @@ export function SlotAnchor({
          * pixel already lands inside this box) so it can't inflate document
          * scrollHeight. Safe for the future output reveal: SlotOutputLayer mounts
          * as a sibling of this frame (see below), not inside it, so it is never
-         * subject to this clip.
+         * subject to this clip. Explicit z-10 (Result Quest redesign): gives
+         * SlotOutputLayer's still-hidden cavity portion something explicit to
+         * paint below (see SlotOutputLayer.tsx's occlusion architecture doc).
          */}
         <div
-          className="relative shrink-0 select-none pointer-events-none overflow-hidden"
+          className="relative z-10 shrink-0 select-none pointer-events-none overflow-hidden"
           style={{
             width: SLOT_FRAME_RESPONSIVE_WIDTH,
             aspectRatio: `${SLOT_FRAME_ASPECT_RATIO}`,
@@ -334,7 +339,9 @@ export function SlotAnchor({
          * during Q1/Q2/READY/SPINNING), so pre-result states are structurally unaffected —
          * protects the position-lock and scroll-tail contracts (ADR-020) by construction.
          */}
-        {revealStage !== 'hidden' && <SlotOutputLayer revealStage={revealStage} />}
+        {revealStage !== 'hidden' && (
+          <SlotOutputLayer revealStage={revealStage} peekPhase={peekPhase} />
+        )}
       </div>
 
       {/*

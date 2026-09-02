@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const record = result.data;
-  const durationLabel = record.duration_type === 'half' ? '반나절' : '하루';
+  const durationLabel = record.duration_type === 'half' ? '반나절' : '하루종일';
   const stopSummary = record.stops.map((s) => s.name).join(' → ');
   const title = `${record.title} | 대전 랜덤 여행`;
   const description = `[${durationLabel} 코스 · 총 ${record.stops.length}곳] ${stopSummary}`;

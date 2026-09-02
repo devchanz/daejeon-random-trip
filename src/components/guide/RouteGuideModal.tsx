@@ -3,8 +3,16 @@
 import React, { useEffect, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { RouteGuideData } from '../../lib/guide';
-import { formatDurationSummary } from '../../lib/guide';
 import { RouteGuideTimeline } from './RouteGuideTimeline';
+import { skinBandStyle } from '../common';
+import {
+  GUIDE_BODY_STRIP,
+  GUIDE_FOOTER_BAND,
+  GUIDE_HEADER_BAND,
+  GUIDE_MISSION_SHELL_ASPECT,
+  GUIDE_MISSION_SHELL_KEY,
+  GUIDE_PAPER,
+} from './guideSkin';
 
 export interface RouteGuideModalProps {
   guideData: RouteGuideData | null;
@@ -17,7 +25,7 @@ const emptySubscribe = () => () => {};
 
 const DURATION_LABELS: Record<string, string> = {
   half: '반나절',
-  full: '하루',
+  full: '하루종일',
 };
 
 const PREFERENCE_LABELS: Record<string, string> = {
@@ -83,8 +91,6 @@ export function RouteGuideModal({
     ? PREFERENCE_LABELS[guideData.preferenceType] ?? guideData.preferenceType
     : null;
 
-  const durationSummary = formatDurationSummary(guideData.estimatedTotalMinutes);
-
   const modalContent = (
     <div
       data-testid="route-guide-overlay"
@@ -100,16 +106,18 @@ export function RouteGuideModal({
         aria-modal="true"
         aria-labelledby="guide-modal-title"
         data-testid="route-guide-modal"
-        className={`relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] shadow-retro-xl overflow-hidden animate-modal-entrance my-auto ${className}`}
+        className={`relative w-full max-w-2xl max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-2.5rem)] flex flex-col overflow-hidden animate-modal-entrance my-auto ${className}`}
       >
-        {/* Top Ticket Perforation Line */}
-        <div
-          aria-hidden="true"
-          className="h-2 border-b-2 border-dashed border-[#d8d0c2] bg-[#f7f3ea] shrink-0"
-        />
+        {/* The approved skin bands carry the cobalt frame, its outline and the
+            rounded corners, so the DOM frame (rounded-3xl border-3 shadow-retro-xl)
+            and the dashed perforation strip were removed rather than drawn on top
+            of the artwork. */}
 
         {/* Modal Header: Always reachable and non-scrolling */}
-        <header className="flex flex-col gap-2 p-4 sm:p-5 md:p-6 border-b-2 border-[#2b2520] bg-[#faf6ee] shrink-0">
+        <header
+          style={skinBandStyle(GUIDE_HEADER_BAND.mobile, GUIDE_HEADER_BAND.desktop)}
+          className="skin-band flex flex-col gap-2 px-[6%] pt-[5%] pb-4 sm:px-[4%] shrink-0"
+        >
           <div className="flex items-center justify-between">
             <span className="font-mono text-[11px] font-black tracking-widest text-[#ff5555] uppercase flex items-center gap-1">
               <span>🗺️</span>
@@ -143,36 +151,55 @@ export function RouteGuideModal({
                   {preferenceLabel}
                 </span>
               )}
+              {/* Visit order, not a clock schedule: no total or per-stop duration is
+                  rendered here. Duration is intentionally absent per the 09_ROUTE_GUIDE
+                  handoff; estimatedTotalMinutes stays in the data model for the share
+                  snapshot path only. */}
               <span className="rounded-md border-2 border-[#2b2520] bg-white px-2 py-0.5 font-black text-[#2b2520] shadow-retro-xs">
                 총 {guideData.stops.length}곳
               </span>
-              {durationSummary && (
-                <span className="rounded-md border-2 border-[#2b2520] bg-white px-2 py-0.5 font-black text-[#2b2520] shadow-retro-xs">
-                  체류 {durationSummary}
-                </span>
-              )}
             </div>
           </div>
         </header>
 
-        {/* Scrollable Content Body: Strictly scrolls inside the modal */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 md:p-6 flex flex-col gap-4 sm:gap-5 overscroll-contain">
-          {/* Optional Mission Card */}
+        {/* Scrollable Content Body: Strictly scrolls inside the modal. The skin's
+            ornament-free cream+rails strip tiles vertically behind it, so the
+            timeline can be any length without repeating a decorative motif. */}
+        {/*
+         * Two nested boxes on purpose. The OUTER one carries the tiling cream+rails
+         * strip and the horizontal inset that clears the painted cobalt rails; the
+         * INNER one is the actual scroller. That way the thin scrollbar renders in
+         * the cream gutter instead of painting over the cobalt frame, which is what
+         * made the default OS scrollbar look intrusive here.
+         */}
+        <div
+          style={{
+            ...skinBandStyle(GUIDE_BODY_STRIP.mobile, GUIDE_BODY_STRIP.desktop),
+            backgroundColor: GUIDE_PAPER,
+          }}
+          className="skin-strip flex min-h-0 flex-1 px-[5%] sm:px-[3.5%]"
+        >
+        <div
+          className="scrollbar-subtle flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-contain py-4 pr-1.5 sm:gap-5"
+        >
+          {/* Optional Mission Card -- the skin's one fixed interior decorative
+              region supplies the amber dashed shell and its sparkles, so no DOM
+              border/background is drawn here.
+              ASPECT-LOCKED and `.skin-canvas` (100% auto, no-repeat): the dashed
+              border must never be vertically stretched, so the shell keeps its
+              designed 834x163 ratio and the text is clamped to 2 lines with
+              responsive type to fit inside it. */}
           {guideData.mission && guideData.mission.trim().length > 0 && (
             <section
               aria-label="오늘의 여행 미션"
               data-testid="guide-mission-card"
-              className="rounded-2xl border-2 border-dashed border-[#ffb800] bg-[#fffdf0] p-3.5 sm:p-4 shadow-retro-sm"
+              style={skinBandStyle(GUIDE_MISSION_SHELL_KEY, GUIDE_MISSION_SHELL_KEY)}
+              className={`skin-canvas ${GUIDE_MISSION_SHELL_ASPECT} flex w-full shrink-0 flex-col justify-center gap-0.5 px-[6%] py-[2%]`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                <span className="rounded-md border border-[#2b2520] bg-[#ffb800] px-2 py-0.5 text-[10px] font-black uppercase text-[#2b2520]">
-                  MISSION
-                </span>
-                <h3 className="text-xs font-black text-[#92400e]">
-                  오늘의 여행 미션
-                </h3>
-              </div>
-              <p className="text-xs sm:text-sm font-bold text-[#4a4237] leading-relaxed break-words">
+              <h3 className="shrink-0 text-[10px] font-black uppercase leading-none tracking-wide text-[#92400e] sm:text-xs">
+                오늘의 여행 미션
+              </h3>
+              <p className="line-clamp-2 break-words text-[11px] font-bold leading-snug text-[#4a4237] sm:text-sm">
                 {guideData.mission.trim()}
               </p>
             </section>
@@ -181,9 +208,13 @@ export function RouteGuideModal({
           {/* Ordered Stop Timeline */}
           <RouteGuideTimeline stops={guideData.stops} />
         </div>
+        </div>
 
         {/* Modal Footer / Close Action: Always reachable and non-scrolling */}
-        <footer className="p-3.5 sm:p-4 md:p-5 border-t-2 border-[#2b2520] bg-[#faf6ee] flex justify-end shrink-0">
+        <footer
+          style={skinBandStyle(GUIDE_FOOTER_BAND.mobile, GUIDE_FOOTER_BAND.desktop)}
+          className="skin-band px-[6%] pt-3.5 pb-[5%] sm:px-[4%] flex justify-end shrink-0"
+        >
           <button
             type="button"
             onClick={onClose}
