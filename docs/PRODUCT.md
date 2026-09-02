@@ -96,8 +96,11 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
    - Transitions directly to the in-app **Route Guide** for structured itinerary guidance.
 2. **Referral (Secondary)**: `“내 루트 공유하기”`
    - Generates an immutable snapshot in `shared_routes`, generates a short lookup code (`/r/[shareCode]`), and triggers Web Share API (with clipboard copy fallback).
-3. **Participation / Reward (Tertiary)**: `“랜덤 로그 남기고 1회 더 뽑기”`
-   - Opens the Visitor Log composer in-flow. Upon successful server validation and DB save, unlocks 1 reward reroll.
+3. **Participation / Reward (Tertiary)**: `“다시 뽑기”`
+   - One unified CTA driven by the reroll reward state: while `locked`, it opens the Visitor Log composer in-flow (successful server validation and DB save unlocks 1 reward reroll); once `available`, the same CTA executes the reroll directly; once `consumed`, the CTA is not shown (hidden, not disabled).
+   - There is no separate, always-present "leave a Random Log" row in the Result Card body — participation is reached solely through this one action.
+
+**Result Card content composition**: The route stops render in a fixed four-cell grid (2×2 desktop, 1-column ×4 mobile). Half-day routes (3 stops) fill the fourth cell with an "Explore More" banner (`“조금 더 놀다 갈래?”`) rather than leaving it empty or stretching STOP 3 — this banner is presentation-only, is never a domain stop, and carries no place data. Its downstream destination is not yet decided; until it is, the banner renders as a non-interactive prompt. An optional **Bonus Quest** mission line, drawn from a small curated pool of generic playful prompts (not per-place data, not a recommendation axis), may also appear.
 
 ---
 
@@ -113,7 +116,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 
 ### 6.2 Guestbook / Visitor Log & 1-Time Reroll Reward
 - **Visitor Log Role**: Delivers social proof and incentivizes participation.
-- **Composer UX**: Opens exclusively within the Result Card flow (`“랜덤 로그 남기고 1회 더 뽑기”`). `/guestbook` serves as the dedicated social proof archive and full log stream (read-only archive, no standalone composer on `/guestbook`).
+- **Composer UX**: Opens exclusively within the Result Card flow, via the unified `“다시 뽑기”` CTA while the reroll reward is `locked`. `/guestbook` serves as the dedicated social proof archive and full log stream (read-only archive, no standalone composer on `/guestbook`).
 - **Input Fields & Constraints**:
   - **Avatar**: Selectable Kkumssi Family avatar (mandatory; shared asset IDs across preview and `/guestbook`).
   - **Nickname**: 2–12 characters (sanitized).

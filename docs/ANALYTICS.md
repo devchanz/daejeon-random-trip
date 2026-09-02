@@ -183,3 +183,28 @@ All dashboard views rely **strictly** on the events, dimensions, and parameters 
 
 6. **Preference & Duration Segmentation**:
    - Analyzes traveler intent breakdown across permitted categorical dimensions: `duration_type` (`half` vs. `full`), `preference_type` (`food`, `walk`, `photo`, `anything`), and recommended `zone_id`.
+
+---
+
+## 9. Current Implementation State (GA4 Phase 1 — Base Integration)
+
+> Everything above this section is the **measurement contract/spec**. This section is the **current implementation state** against that spec, as of `main` @ `6ae03c4` (`feat: add GA4 base analytics integration`).
+
+- **Status**: GA4 Phase 1 base integration is merged to `main`. No custom event instrumentation exists yet — this phase is tag loading and verification only.
+- **Mechanism**: `@next/third-parties`'s `GoogleAnalytics` component is mounted once in the root layout (`src/app/layout.tsx`), conditionally on `process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID` (renders nothing when unset).
+- **Measurement ID**: sourced from `NEXT_PUBLIC_GA_MEASUREMENT_ID`, configured in Vercel Production environment variables — not committed to the repo.
+- **No GTM**: Google Tag Manager is not installed; GA4 loads directly via the third-parties helper, not a container.
+- **No manual/duplicate tracking**: there is no hand-rolled `gtag()` call and no manual `page_view` dispatch anywhere in the app. `GoogleAnalytics`'s built-in automatic page_view tracking is the only `page_view` source today — a future custom `page_view` implementation must not be added alongside it without first accounting for the automatic one.
+- **Manually verified in Production**:
+  - GA tag loads on the live site.
+  - GA4 Realtime reports active users.
+  - `google-analytics.com/g/collect` fires a `page_view` hit.
+  - UTM landing parameters are captured in the collect payload's `dl` (document location) field, tested with `utm_source=chatgpt_test&utm_medium=test&utm_campaign=ga4_setup&utm_content=link_a`.
+- **Team access**: GA4 property access has been shared with team members.
+- **Outstanding / not yet true**:
+  - The standard GA4 Traffic Acquisition report may still be waiting on processed data (GA4 processing latency, not a bug).
+  - A campaign/UTM naming convention is not finalized.
+  - **None** of the custom events in the §3 Event Catalog are instrumented — all of §3.1–3.3 (`quick_setup_start` through `shared_route_slot_click`) remain spec only, and `src/lib/analytics/` does not exist yet.
+  - The Campaign & Funnel Analysis Dashboard (§8) is not built.
+  - Today's Pick banner tracking remains TBD per §3.4.
+- **Next step**: implement `src/lib/analytics/` event dispatchers against §3's Event Catalog, enforcing §4's parameter whitelist, then re-verify each event in GA4 DebugView per §7 before any paid campaign launch.
