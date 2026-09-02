@@ -87,6 +87,131 @@ body {
   box-shadow: 0 1px 2px rgba(43, 37, 32, 0.1);
 }
 
+/*
+ * Production skin bands (Result / Route Guide).
+ *
+ * Each consumer passes BOTH breakpoint variants in as CSS custom properties,
+ * resolved through `visualAsset()` so the asset registry stays the single source
+ * of truth for paths (ADR-027):
+ *
+ *   style={{ '--skin-m': `url(${visualAsset(mobileKey)})`,
+ *            '--skin-d': `url(${visualAsset(desktopKey)})` }}
+ *
+ * CSS then picks between them, so no JS breakpoint detection is introduced and
+ * only the matching image is fetched. Breakpoint is 640px to match MainQuest's
+ * `sm:grid-cols-2` switch, so the skin and the grid can never disagree.
+ *
+ * `--skin-d` is optional: when a consumer omits it (desktop Result consumed, whose
+ * source asset is missing) the media block resolves to nothing and the band falls
+ * back to its DOM/CSS styling.
+ */
+.skin-band {
+  background-image: var(--skin-m);
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+/*
+ * Non-repeating, NEVER-STRETCHED raster. `100% auto` locks the image to the
+ * element's width and lets the artwork's own aspect set the height, so it is never
+ * distorted in either axis. Always pair it with an aspect-locked container whose
+ * ratio equals the artwork's, which makes the rendered scale exactly 1.0.
+ *
+ * Used by:
+ *  - the Result body canvas (Summary shell / MAIN QUEST ribbon / four cells /
+ *    BONUS QUEST shell), and
+ *  - the Result ACTION bands, which moved here from `.skin-band`: sizing the
+ *    footer from the DOM buttons and stretching the raster to fit measured
+ *    1.43-1.60x on mobile consumed and visibly distorted the painted wells and
+ *    the cobalt bottom frame.
+ * It must never become repeat-y.
+ */
+.skin-canvas {
+  background-image: var(--skin-m);
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  background-position: top center;
+}
+
+/*
+ * Route Guide body ONLY: its approved skin is intentionally minimal (cobalt frame
+ * + cream paper) and its content area is deliberately DOM-driven and long, so a
+ * neutral vertically-tiling paper treatment is correct there.
+ */
+.skin-strip {
+  background-image: var(--skin-m);
+  background-size: 100% auto;
+  background-repeat: repeat-y;
+}
+
+/*
+ * 1024px, NOT 640px: page.tsx dual-mounts MainExperience with `hidden lg:flex` /
+ * `lg:hidden`, so the desktop Result composition only exists from `lg` up. Keying
+ * the skin swap to `sm` meant that between 640px and 1023px the MOBILE mount was
+ * served the desktop bands -- and in the consumed state, where no desktop raster
+ * exists, `var(--skin-d)` resolved to nothing and the painted action band
+ * disappeared behind the DOM fallback. Every `lg:` variant in the Result skin
+ * geometry must stay in step with this query.
+ */
+@media (min-width: 1024px) {
+  .skin-band,
+  .skin-canvas,
+  .skin-strip {
+    background-image: var(--skin-d);
+  }
+}
+
+/*
+ * (An earlier `.result-consumed-fallback` rule lived here, reconstructing the
+ * desktop consumed footer -- cream field, gradient cobalt rails, bottom frame --
+ * in CSS because no approved raster existed for that state. An approved raster now
+ * does (Result/Skin/DesktopBlank-RerollConsumed2Action, node 329:2), so the whole
+ * CSS reconstruction has been deleted rather than kept as a second code path.)
+ */
+
+/*
+ * Result body: hide the native scrollbar so the quest sheet reads as clean paper.
+ * Scrolling itself is untouched -- wheel, trackpad, touch and keyboard all still
+ * work, because this only affects the scrollbar's rendering, never `overflow`.
+ */
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge/IE */
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/*
+ * Route Guide body: a thin, muted scrollbar instead of the thick OS default.
+ * Applied to an INNER scroller that is inset from the skin's cobalt rails, so the
+ * thumb sits in the cream gutter and never paints over the painted frame.
+ */
+.scrollbar-subtle {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(43, 37, 32, 0.28) transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar {
+  width: 5px;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb {
+  background-color: rgba(43, 37, 32, 0.28);
+  border-radius: 999px;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(43, 37, 32, 0.45);
+}
+
 /* Slot Reel Rolling Animation */
 @keyframes reel-roll {
   0% {

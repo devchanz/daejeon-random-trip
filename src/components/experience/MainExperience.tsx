@@ -101,6 +101,11 @@ export function MainExperience({
     'hidden'
   );
 
+  // Sub-beat within 'peek', for the dormant Slot Peek cavity-emergence architecture
+  // (see SlotOutputLayer.tsx). Meaningless outside 'peek'; does not touch the
+  // revealStage state model above. Presentation-only, like everything else here.
+  const [peekPhase, setPeekPhase] = useState<'inside' | 'edge' | 'hold'>('inside');
+
   // User motion preference
   const prefersReducedMotion = usePrefersReducedMotion();
 
@@ -165,6 +170,7 @@ export function MainExperience({
       dispatch(completeSpin(pendingResult));
       onSpinComplete?.(pendingResult);
       setIsRevealEmphasis(true);
+      setPeekPhase('inside');
       setRevealStage('peek');
     }, effectiveSpinDurationMs);
 
@@ -187,14 +193,27 @@ export function MainExperience({
   // Deliberately its own effect (not part of the spin effect above), because that effect is
   // keyed on state.phase and tears down (clearing all pending timers) the instant completeSpin
   // flips the phase to 'result' -- a timer scheduled there would never fire.
+  //
+  // Also schedules the dormant Slot Peek sub-beats (peekPhase: inside -> edge -> hold),
+  // both inside OUTPUT_PEEK_TO_CARD_MS -- see SlotOutputLayer.tsx. They subdivide the
+  // existing Fixed 300-500ms product window and never render visibly today
+  // (OUTPUT_PEEK_ENABLED is false), but honor the same reduced-motion timing-table
+  // selection as the rest of the lifecycle (ADR-026).
   useEffect(() => {
     if (revealStage === 'peek') {
-      const timer = setTimeout(() => {
+      const timings = getMotionTimings(prefersReducedMotion);
+      const edgeTimer = setTimeout(() => setPeekPhase('edge'), timings.PEEK_EDGE_AT_MS);
+      const holdTimer = setTimeout(() => setPeekPhase('hold'), timings.PEEK_HOLD_AT_MS);
+      const revealTimer = setTimeout(() => {
         setRevealStage('revealed');
-      }, MOTION_TIMINGS.OUTPUT_PEEK_TO_CARD_MS);
-      return () => clearTimeout(timer);
+      }, timings.OUTPUT_PEEK_TO_CARD_MS);
+      return () => {
+        clearTimeout(edgeTimer);
+        clearTimeout(holdTimer);
+        clearTimeout(revealTimer);
+      };
     }
-  }, [revealStage]);
+  }, [revealStage, prefersReducedMotion]);
 
   // On minimize (결과 접기), move focus onto the reopen affordance -- ResultArea's card
   // unmounts its focus target (display:none), so without this, focus would fall to <body>.
@@ -247,7 +266,7 @@ export function MainExperience({
     }
   };
 
-  // Rewarded 1-time reroll action triggered from ResultSheet
+  // Rewarded 1-time reroll action triggered from Result (ResultActions)
   const handleExecuteReroll = () => {
     // 1. Verify state.phase === 'result', rerollReward === 'available', and session initialized
     if (
@@ -372,6 +391,7 @@ export function MainExperience({
         pendingResult={pendingResult}
         isLeverActive={isLeverActive}
         revealStage={revealStage}
+        peekPhase={peekPhase}
         onReopenResult={handleReopenResult}
         reopenButtonRef={reopenButtonRef}
       />
@@ -398,7 +418,7 @@ export function MainExperience({
           isOpen={isGuestbookOpen}
           // 'locked' is the only reward state in which THIS submission can still
           // unlock the reroll -- mirrors renderRandomLogCTA's own copy branch in
-          // ResultSheet.tsx, derived from the same rerollState, never duplicated.
+          // ResultActions.tsx (rendered via ResultQuest), derived from the same rerollState, never duplicated.
           rewardEligible={rerollState.rerollReward === 'locked'}
           onClose={() => setIsGuestbookOpen(false)}
           onSuccess={handleGuestbookSuccess}

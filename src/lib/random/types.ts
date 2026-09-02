@@ -35,7 +35,8 @@ export interface RouteStop {
   transitMode?: 'walk' | 'transit' | 'taxi'; // Recommended transit mode
   address?: string;
   mapLinks?: PlaceMapLinks;      // External map links (provider-neutral)
-  tips?: string;                 // Playful tip or caution
+  tips?: string;                 // Playful tip or caution (operational text -- Route Guide only, never Result)
+  hook?: string;                 // Resolved short attraction copy for Result StopCard (candidate.hook, falling back to a genre tag) -- never operational text
 }
 
 /**
@@ -82,7 +83,8 @@ export interface PlaceCandidate {
   mapLinks?: PlaceMapLinks;      // Outbound external map links (provider-neutral)
   mapUrl?: string;               // Optional legacy/generic map URL fallback
   image?: string;                // Optional image asset path
-  description?: string;          // Curated one-line description
+  description?: string;          // Curated one-line description (operational: hours/break/last order/parking/waiting -- Route Guide only, never Result)
+  hook?: string;                 // Optional short attraction "hook" copy for Result StopCard; falls back to a genre tag when absent
   active: boolean;               // Availability flag
 }
 

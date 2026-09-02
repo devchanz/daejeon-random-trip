@@ -1,5 +1,6 @@
-import type { DurationType, PreferenceType } from '../../config/product';
+import { SUPPORTED_PREFERENCES, type DurationType, type PreferenceType } from '../../config/product';
 import { calculateTotalDurationMinutes } from '../../config/durationBudget';
+import { BONUS_QUEST_MISSIONS } from '../../config/missions';
 import type {
   Zone,
   PlaceCandidate,
@@ -69,7 +70,7 @@ export function getEligibleZones(
 /**
  * Helper to pick a random element from an array using the provided random source.
  */
-function pickRandomItem<T>(items: T[], random: () => number): T {
+function pickRandomItem<T>(items: readonly T[], random: () => number): T {
   const idx = Math.min(
     items.length - 1,
     Math.max(0, Math.floor(random() * items.length))
@@ -87,6 +88,25 @@ function shuffleArray<T>(items: T[], random: () => number): T[] {
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
   return arr;
+}
+
+/**
+ * Preference tokens double as PlaceCandidate.tags entries for filter matching, so
+ * they're excluded from the genre-tag fallback below (Result StopCard copy).
+ */
+const PREFERENCE_TAG_TOKENS: ReadonlySet<string> = new Set(SUPPORTED_PREFERENCES);
+
+/**
+ * Resolves the short attraction "hook" copy for a Result StopCard: the candidate's
+ * curated `hook` when present, otherwise the first non-preference genre tag (e.g.
+ * ["food", "멕시칸"] -> "멕시칸"). Never reads `description` -- that field is
+ * operational text (hours/break/last order/parking/waiting), Route Guide only.
+ */
+function resolveStopHook(candidate: PlaceCandidate): string | undefined {
+  if (candidate.hook) {
+    return candidate.hook;
+  }
+  return candidate.tags.find((tag) => !PREFERENCE_TAG_TOKENS.has(tag));
 }
 
 /**
@@ -344,6 +364,7 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
     address: candidate.address,
     mapLinks: candidate.mapLinks,
     tips: candidate.description,
+    hook: resolveStopHook(candidate),
   }));
 
   // 8. Construct final RouteResult with estimated duration calculation
@@ -358,7 +379,7 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
     preference,
     title,
     stops,
-    mission: undefined,
+    mission: pickRandomItem(BONUS_QUEST_MISSIONS, random),
     estimatedTotalMinutes,
     createdAt: new Date().toISOString(),
   };

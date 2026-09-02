@@ -77,6 +77,23 @@ export const OUTPUT_SLIT = {
   left: '20.33%',
   width: '52.80%',
   top: '97.2%',
+  // Moved out of SlotOutputLayer's own hard-coded '8%' so all output-slit
+  // geometry lives in one place (Result Quest redesign).
+  height: '8%',
+} as const;
+
+/**
+ * Dormant peek travel, keyed by `peekPhase` (see MainExperience's `peekPhase`
+ * state and motionConfig's PEEK_EDGE_AT_MS/PEEK_HOLD_AT_MS). Values are
+ * PLACEHOLDERS only -- final travel distance and easing for the "paper begins
+ * deep inside the cavity and gradually emerges" direction are Figma-dependent.
+ * Expressed as 0-100 so SlotOutputLayer can resolve a single 0-1 progress value
+ * from them once OUTPUT_PEEK_ENABLED flips true.
+ */
+export const OUTPUT_PEEK_PROGRESS_BY_PHASE = {
+  inside: 0,
+  edge: 50,
+  hold: 100,
 } as const;
 
 // Fluid physical width of SlotVisualFrame. Column-aware (never exceeds the
