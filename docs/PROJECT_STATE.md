@@ -186,7 +186,7 @@ All items below are **deliberately out of scope for `feat/product-visual-polish`
 - ~~Output-slit ticket peek visual asset (Slot Peek)~~ — **implemented and enabled**, `feat/slot-peek`, ADR-036 (no longer deferred; see **A**/**C**).
 - **Performance profiling** — no formal profiling has been done on the SPIN → Result sequence or on the now-shipped SPIN → Peek → Result sequence. Deferred.
 - **GA4 / GTM custom instrumentation** — see above; no GTM container exists either (GA4 loads directly via `@next/third-parties`, not a container — see **D**).
-- **Place Data Refresh + Content Resilience** — the 163 provisional place candidates await final team-dataset integration and tourism verification; business-hours data is not yet normalized to a consistent format; long-text resilience (place names/tips that overflow current card layouts) has not been stress-tested against the final dataset.
+- **Place Data Refresh + Content Resilience** ? **COMPLETE**. The obsolete 163-place provisional dataset was discarded. The normalized 258-place dataset is now the production place-data Source of Truth, containing 256 active and 2 inactive (REVIEW) records across 16 canonical route zones. Food, walk, and photo preferences are now deterministically generated. Long Korean place-name resilience (wrapping without clipping) was fixed in the Result StopCard, and Route Guide output verified. The recommendation engine required no changes.
 - **Production-environment OG preview verification** — the OG image + shared-route mystery metadata (ADR-035) were verified against a local dev server and real generated share codes only. Kakao/message-app crawler and cache behavior (image fetch, cache TTL, re-crawl on update) must be checked after a real deployment; local/ngrok preview behavior must not be treated as final production acceptance.
 - **ExploreMore banner destination** — no URL, route, modal, or analytics event decided; renders as a non-interactive prompt.
 - **Editorial Rail hrefs & banner-click tracking** — shell supports optional external links; none are seeded; impression/click analytics TBD.
@@ -218,7 +218,7 @@ All items below are **deliberately out of scope for `feat/product-visual-polish`
 6. ~~Result/Route Guide Slot Peek follow-through~~ — **done** (`feat/slot-peek`, ADR-036; Human Browser E2E accepted).
 7. **Editorial Rail follow-ups**: seed real `href`/`external` destinations; decide banner-click/impression tracking (TBD in `docs/ANALYTICS.md` §3.4).
 8. **Result action tap-target remediation** (painted wells <44px) — needs design input on raster geometry, not a pure code fix.
-9. **Place Data Refresh + Content Resilience**: final team dataset integration, business-hours normalization, and long-text resilience testing for the 163 provisional place candidates.
+9. ~~**Place Data Refresh + Content Resilience**~~ ? **done** (Actualized to 258 normalized production dataset, StopCard text resilience fixed).
 10. **Documentation gap (partially closed this pass)**: `docs/DECISIONS.md` now records ADR-032–ADR-035 for this branch's own decisions (INTRO, Route Guide DOM/CSS rebuild superseding `6560a5b`'s Route Guide half, Memory Log rename, share/OG mystery metadata). **Still missing**: a dedicated ADR for the Result Card's own raster skin redesign from `6560a5b` (still current/unchanged, never separately recorded) and for the GA4 base integration (`6ae03c4`). Governance/documentation gap, not a code defect.
 
 ---
