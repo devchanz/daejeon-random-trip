@@ -5,9 +5,9 @@ import type { VisualAssetKey } from '../config/visualAssets';
  * Editorial rail data model.
  *
  * Deliberately NOT named or shaped after the feature that currently renders it. The
- * landing page calls this surface "TODAY'S PICK", but that name is expected to change,
- * so it appears exactly once in the codebase -- as a `heading` prop passed from
- * RightSidebar -- and never in a type, file, id, or asset key.
+ * landing page calls this surface "TODAY'S DAEJEON", but that name is expected to
+ * change again, so it appears exactly once in the codebase -- as a `heading` prop
+ * passed from RightSidebar -- and never in a type, file, id, or asset key.
  *
  * This is also deliberately NOT `TodaysPickItem` (src/lib/random/types.ts). That model
  * has 17 fields built for a `/pick/[slug]` detail page that does not exist, and it lives
@@ -35,6 +35,17 @@ export interface EditorialItem {
    */
   title: string;
   bannerAssetKey: VisualAssetKey;
+  /**
+   * CSS `object-position` for this item's banner inside the shared, fixed
+   * `aspect-[15/8]` carousel viewport (EditorialSpotlightCard). Defaults to
+   * `'center'`. The carousel viewport's aspect is fixed for every item
+   * regardless of the source raster's own aspect -- assets narrower than 15:8
+   * (the ~16:9 pair) get a small top/bottom crop via `object-cover`; this
+   * escape hatch exists only to nudge which part of THAT crop is kept, for an
+   * item whose baked-in copy would otherwise sit too close to the cropped edge.
+   * Never used to compensate for stretching -- the raster is never stretched.
+   */
+  bannerObjectPosition?: string;
   /** Rendered only when non-empty. */
   tags?: readonly string[];
   /** Short flag shown inline in the header row, so it costs no extra height. */
@@ -50,52 +61,59 @@ export interface EditorialItem {
 }
 
 /**
- * Seed set. Titles are the artwork's own wording; no tags or tourism claims are
- * invented for items whose banners do not already state them, and no `href` is set
- * because no destination exists yet.
+ * Production TODAY'S DAEJEON carousel set -- 5 approved banners, each with a real
+ * outbound destination (product-confirmed; see PROJECT_STATE/AGENTS for the "no
+ * invented URLs" rule this satisfies). The previous `night-view` banner
+ * (Editorial/Banner/NightView, Figma node 160:60) is the obsolete uncaptioned
+ * artwork and is deliberately EXCLUDED -- `expo-bridge-night` (node 193:6) is its
+ * approved replacement and already bakes the "밤에도 만나!" caption into the raster,
+ * so no caption is ever reconstructed in DOM/CSS here.
+ *
+ * All 5 assets are already registered in src/config/visualAssets.ts (Visual Detail
+ * Pass) -- no new export or artwork was introduced for this carousel.
  */
 export const EDITORIAL_ITEMS: readonly EditorialItem[] = [
   {
-    id: 'night-view',
-    kind: 'spot',
-    title: '대전 야경이 숨은 스팟',
-    bannerAssetKey: 'editorial.banner.nightView',
-    tags: ['#야경맛집', '#뷰맛집', '#감성여행'],
-    badge: 'BEST',
-  },
-  {
-    id: 'september-events',
-    kind: 'event',
-    title: '9월 행사 안내',
-    bannerAssetKey: 'editorial.banner.septemberEvents',
-    activeFrom: '2026-09-01',
-    activeUntil: '2026-10-01',
-  },
-  {
-    id: 'tashu',
-    kind: 'experience',
-    title: '그냥 타슈~',
-    bannerAssetKey: 'editorial.banner.tashu',
+    id: 'kkumssi-family',
+    kind: 'campaign',
+    title: '우리가 누구냐면...',
+    bannerAssetKey: 'editorial.banner.kkumssiFamily',
+    href: 'https://www.daejeon.go.kr/drh/DrhContentsHtmlView.do?menuSeq=7425',
+    external: true,
   },
   {
     id: 'bread-tour',
     kind: 'theme',
     title: '대전 빵지순례',
     bannerAssetKey: 'editorial.banner.breadTour',
+    href: 'https://www.daejeoncitytour.co.kr/kor/tourCourse/07_02.php',
+    external: true,
   },
   {
-    // Mascot family introduction -- brand/promotional content rather than a
-    // place, travel theme or dated event, which is what `campaign` is for.
-    id: 'kkumssi-family',
-    kind: 'campaign',
-    title: '우리가 누구냐면...',
-    bannerAssetKey: 'editorial.banner.kkumssiFamily',
+    id: 'tashu',
+    kind: 'experience',
+    title: '그냥 타슈~',
+    bannerAssetKey: 'editorial.banner.tashu',
+    href: 'https://www.tashu.or.kr/main.do#guide',
+    external: true,
   },
   {
     id: 'expo-bridge-night',
     kind: 'spot',
     title: '밤에도 만나!',
     bannerAssetKey: 'editorial.banner.expoBridgeNight',
+    href: 'https://www.djto.kr/kor/page.do?menuIdx=789',
+    external: true,
+  },
+  {
+    id: 'september-events',
+    kind: 'event',
+    title: '9월 행사 안내',
+    bannerAssetKey: 'editorial.banner.septemberEvents',
+    href: 'https://daejeontour.co.kr/festival_djt',
+    external: true,
+    activeFrom: '2026-09-01',
+    activeUntil: '2026-10-01',
   },
 ];
 
@@ -114,30 +132,16 @@ export function isEditorialItemActive(item: EditorialItem, dateStr: string): boo
   return true;
 }
 
-/** Whole days since the Unix epoch for a YYYY-MM-DD string. */
-function toDayIndex(dateStr: string): number {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return Math.floor(Date.UTC(year, month - 1, day) / 86_400_000);
-}
-
 /**
- * Selects the item to feature: filter by validity window first, then rotate
- * deterministically over the surviving pool by Asia/Seoul calendar date.
- *
- * Deterministic per date on purpose -- server and client derive the same item from the
- * same date string, so there is no hydration mismatch, and no autoplay or carousel is
- * involved. Returns null only if every item has expired, which the card renders as an
- * explicit empty state rather than a blank hole.
+ * Items eligible for the carousel on the given Asia/Seoul date: every item passes
+ * `isEditorialItemActive`, in seed order. Deterministic and identical between server
+ * and client render (both derive from the same date string), so there is no hydration
+ * mismatch -- unlike the retired single-item daily rotation, nothing here depends on
+ * which item was "picked" for today.
  */
-export function selectEditorialItem(
+export function getActiveEditorialItems(
   dateStr: string = getSeoulDateString(),
   items: readonly EditorialItem[] = EDITORIAL_ITEMS
-): EditorialItem | null {
-  const eligible = items.filter((item) => isEditorialItemActive(item, dateStr));
-  if (eligible.length === 0) {
-    return null;
-  }
-  const dayIndex = toDayIndex(dateStr);
-  const offset = ((dayIndex % eligible.length) + eligible.length) % eligible.length;
-  return eligible[offset];
+): EditorialItem[] {
+  return items.filter((item) => isEditorialItemActive(item, dateStr));
 }

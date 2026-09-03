@@ -129,6 +129,10 @@ export function GuestbookComposer({
           zoneId: routeResult.zoneId,
           durationType: routeResult.durationType,
           preferenceType: routeResult.preference,
+          // Immutable snapshot of the actual generated place names (max 4, per
+          // ADR-018/ADR-019's stop-count contract) so a Memory Log entry visibly
+          // differs from another entry sharing the same duration/preference/zone.
+          placeNames: (routeResult.stops ?? []).slice(0, 4).map((stop) => stop.name),
         }),
       });
 

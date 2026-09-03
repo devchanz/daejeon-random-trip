@@ -67,7 +67,21 @@ export interface ExperienceEngine {
   handleGuestbookSuccess: (entry: GuestbookEntryRecord) => void;
   handleMinimizeResult: () => void;
   handleReopenResult: () => void;
+  handleExploreMore: () => void;
 }
+
+/**
+ * Shared marker attribute on the two page-level TODAY'S DAEJEON rail wrappers
+ * (desktop column + mobile `#mobile-right-rail`, see page.tsx). `RightSidebar`
+ * itself dual-mounts (desktop/mobile), so this can never live inside it --
+ * exactly the same reason the existing `#mobile-right-rail` id lives on the
+ * page's own mobile wrapper rather than the component. Resolving "which one
+ * is visible" at click time via `offsetParent` (instead of a hardcoded
+ * `min-width` breakpoint check) means this behavior automatically tracks
+ * whichever CSS rule (`hidden lg:flex` / `lg:hidden`) actually governs
+ * visibility, rather than re-encoding that rule a second time here.
+ */
+export const TODAYS_DAEJEON_RAIL_ATTR = 'data-today-daejeon-rail';
 
 const ExperienceContext = createContext<ExperienceEngine | null>(null);
 
@@ -458,6 +472,44 @@ export function ExperienceProvider({
     }
   };
 
+  // ExploreMore (half-day 4th cell, "대전 더 둘러보기"): minimizes Result --
+  // never resets/discards it, same non-destructive contract as 결과 접기 above
+  // -- then scrolls to whichever TODAY'S DAEJEON rail wrapper is currently
+  // visible. Never both: page.tsx dual-mounts the responsive rail exactly
+  // like it dual-mounts MainExperience, so at most one marked wrapper has a
+  // non-null offsetParent at a time.
+  const handleExploreMore = () => {
+    if (revealStage === 'revealed') {
+      setRevealStage('minimized');
+    }
+
+    if (typeof window === 'undefined') return;
+
+    // Deferred one frame: the Result overlay's display:none (from the
+    // minimize above) must actually apply before scrollIntoView measures
+    // layout, otherwise a still-scroll-locked/overlay-obscured document can
+    // resolve a stale target position.
+    requestAnimationFrame(() => {
+      const candidates = Array.from(
+        document.querySelectorAll<HTMLElement>(`[${TODAYS_DAEJEON_RAIL_ATTR}]`)
+      );
+      const visibleRail = candidates.find((el) => el.offsetParent !== null);
+      if (!visibleRail) return;
+
+      visibleRail.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+
+      // Optional a11y landing: move focus onto the visible rail wrapper itself
+      // (tabIndex={-1} + outline-none on the wrapper, see page.tsx) -- the same
+      // "focus the container, not the first control" pattern ResultArea's own
+      // dialog already uses, so a screen reader announces the section without
+      // a visible focus ring appearing around it.
+      visibleRail.focus();
+    });
+  };
+
   const engine: ExperienceEngine = {
     state,
     dispatch,
@@ -481,6 +533,7 @@ export function ExperienceProvider({
     handleGuestbookSuccess,
     handleMinimizeResult,
     handleReopenResult,
+    handleExploreMore,
   };
 
   return <ExperienceContext.Provider value={engine}>{children}</ExperienceContext.Provider>;

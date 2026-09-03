@@ -39,6 +39,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // placeNames is optional/additive: normalize defensively here (array + string
+    // entries only) rather than rejecting the whole submission for a malformed
+    // value -- the strict sanitize/length/count cap happens in
+    // validateAndSanitizeGuestbookInput (src/lib/database/guestbook.ts).
+    const rawPlaceNames = Array.isArray(body.placeNames)
+      ? body.placeNames.filter((entry): entry is string => typeof entry === 'string')
+      : undefined;
+
     const payload: CreateGuestbookEntryInput = {
       avatarId: body.avatarId,
       nickname: body.nickname,
@@ -47,6 +55,7 @@ export async function POST(request: Request) {
       zoneId: body.zoneId,
       durationType: body.durationType as CreateGuestbookEntryInput['durationType'],
       preferenceType: body.preferenceType as CreateGuestbookEntryInput['preferenceType'],
+      ...(rawPlaceNames ? { placeNames: rawPlaceNames } : {}),
     };
 
     const result = await createGuestbookEntry(payload);

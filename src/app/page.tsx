@@ -107,8 +107,20 @@ export default function Home() {
               </div>
             </main>
 
-            {/* Right Column: TODAY'S PICK + MEMORY LOG */}
-            <div className="relative w-[clamp(260px,21vw,360px)] shrink-0 flex flex-col gap-3.5">
+            {/* Right Column: TODAY'S DAEJEON + MEMORY LOG.
+                `data-today-daejeon-rail` marks this as one of the two page-level rail
+                wrappers ExploreMoreBanner's CTA scrolls to (see
+                ExperienceProvider.tsx's handleExploreMore) -- resolved at click time via
+                `offsetParent` rather than a hardcoded breakpoint, so it automatically
+                tracks whichever of `hidden lg:flex` (this column's ancestor) / `lg:hidden`
+                (the mobile section below) is actually governing visibility.
+                `tabIndex={-1}` + `outline-none` let that same handler move focus here
+                after scrolling without a visible focus ring, mirroring ResultArea's own
+                dialog-container focus pattern. */}
+            <div
+              data-today-daejeon-rail
+              tabIndex={-1}
+              className="relative w-[clamp(260px,21vw,360px)] shrink-0 flex flex-col gap-3.5 outline-none">
               {/* Ambient Cloud behind top-right sidebar. Kept off the right edge: that
                   corner is occupied by the editorial card's perched mascot.
                   Vertically this cloud has to clear BOTH the chrome divider (y=75) and the
@@ -193,7 +205,7 @@ export default function Home() {
               className="h-[clamp(78px,min(30svh,var(--logo-budget)),127px)] w-auto max-w-[min(72vw,300px)] aspect-[311/132]"
             />
               {/* Mobile-only quick-jump to the stacked right rail. On mobile the rails stack
-                  below the hero, so Today’s Pick sits behind the whole hero plus three
+                  below the hero, so TODAY'S DAEJEON sits behind the whole hero plus three
                   LeftSidebar cards. A plain in-page anchor is enough -- no state, no scroll
                   listener, and this file stays a Server Component. Absolutely positioned so the
                   logo stays optically centred and the arrow can never overlap the artwork, so it
@@ -201,7 +213,7 @@ export default function Home() {
                   rail is already on screen. */}
               <a
                 href="#mobile-right-rail"
-                aria-label="Today’s Pick과 Random Log로 이동"
+                aria-label="TODAY'S DAEJEON과 메모리 로그로 이동"
                 className="group lg:hidden absolute right-0 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center outline-none"
               >
                 {/* The 44x44 anchor is the touch target; the 36px circle below is the
@@ -256,7 +268,12 @@ export default function Home() {
                 RightSidebar: that component renders twice (desktop + mobile) and both
                 mounts are always in the DOM, so an id on the component itself would
                 duplicate. */}
-            <div id="mobile-right-rail" className="scroll-mt-4">
+            <div
+              id="mobile-right-rail"
+              data-today-daejeon-rail
+              tabIndex={-1}
+              className="scroll-mt-4 outline-none"
+            >
               <RightSidebar className="mt-5" />
             </div>
         </section>

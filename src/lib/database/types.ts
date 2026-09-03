@@ -20,6 +20,14 @@ export interface GuestbookEntryRecord {
   preference_type: PreferenceType; // 'anything' | 'food' | 'walk' | 'photo'
   status: GuestbookModerationStatus; // Moderation status ('visible' | 'hidden')
   created_at: string;            // ISO submission timestamp
+  /**
+   * Immutable snapshot of the generated route's place names (max 4), captured
+   * at submission time -- so two logs sharing the same duration/preference/zone
+   * still visibly differ. Nullable: NULL for every entry submitted before this
+   * column existed, and never backfilled. Presentation must treat NULL/empty
+   * the same (render nothing), never an empty placeholder list.
+   */
+  route_place_names: string[] | null;
 }
 
 /**
@@ -33,6 +41,8 @@ export interface CreateGuestbookEntryInput {
   zoneId: string;
   durationType: DurationType;
   preferenceType: PreferenceType;
+  /** Optional: the current RouteResult's stop names, max 4 -- see guestbook.ts's sanitizer. */
+  placeNames?: string[];
 }
 
 /**

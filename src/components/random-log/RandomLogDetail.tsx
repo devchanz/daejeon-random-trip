@@ -100,6 +100,21 @@ export function RandomLogDetail({ entry, className = '' }: RandomLogDetailProps)
           </span>
         </div>
 
+        {/* Actual generated place names (route_place_names) -- NULL/empty (logs
+            submitted before this column existed, never backfilled) renders nothing,
+            never an empty placeholder list. Names only, no hours/description/map
+            details -- this stays a log entry, not a Route Guide. */}
+        {entry.route_place_names && entry.route_place_names.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <span className="font-mono text-[10px] font-black uppercase tracking-widest text-[#8c8273]">
+              뽑은 코스
+            </span>
+            <p className="text-sm font-bold text-[#2b2520]">
+              {entry.route_place_names.join(' · ')}
+            </p>
+          </div>
+        )}
+
         <div className="border-t-2 border-line-soft pt-3">
           <Link
             href="/random-log"
