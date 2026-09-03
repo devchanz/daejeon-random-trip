@@ -424,6 +424,26 @@ body {
   animation: scroll-cue-bob 1.1s ease-in-out 2;
 }
 
+/*
+ * BGM equalizer bars (BgmPlayerWidget.tsx). Scales each bar vertically from
+ * its own base height, transform-origin bottom, so it reads as a level
+ * meter rather than a generic bounce. The animation is applied ONLY when
+ * `!prefersReducedMotion` (checked in JS, matching this codebase's existing
+ * JS-gated-motion convention -- see usePrefersReducedMotion) and stays
+ * mounted at all times once applied; play/pause toggles only
+ * `animation-play-state` (set inline), so pausing visibly freezes a bar
+ * mid-cycle instead of the animation unmounting and resetting it.
+ */
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(0.35);
+  }
+}
+
 /* Reduced-motion reel settle: opacity only -- no translateY, no scale, no
    brightness bounce. Softens the roll -> final value transition without
    reintroducing spatial motion. */

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { FittedAsset } from '../common';
 import { SETUP_INTRO_COPY } from '../../content/setup';
 import { usePrefersReducedMotion } from './motionConfig';
+import { useBgm } from '../../lib/audio/bgmContext';
 
 export interface IntroGateProps {
   onStart: () => void;
@@ -35,9 +36,16 @@ const EXIT_TRANSITION_MS = 200;
 export function IntroGate({ onStart }: IntroGateProps) {
   const [isExiting, setIsExiting] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
+  const { startPlayback } = useBgm();
 
   const handleStart = () => {
     if (isExiting) return;
+    // First BGM playback gesture: called synchronously, in this click
+    // handler's own call stack, so it is a direct consequence of the real
+    // user gesture (the strongest possible autoplay-policy guarantee) --
+    // deliberately BEFORE the exit-transition delay below, so playback start
+    // is never coupled to (or delayed by) the INTRO->Q1 phase transition.
+    startPlayback();
     setIsExiting(true);
     // Let the fade/scale-out actually play before the phase flips (which
     // unmounts this overlay via MainExperience's state.phase check) --

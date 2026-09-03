@@ -8,6 +8,8 @@ import { visualAsset } from '../config/visualAssets';
 import { FittedAsset } from '../components/common';
 import { ZONES, PLACE_CANDIDATES } from '../data';
 import { MOBILE_SLOT_FRAME_HEIGHT } from '../components/experience/slotGeometry';
+import { BgmProvider } from '../lib/audio/bgmContext';
+import { VisitBeacon } from '../components/analytics/VisitBeacon';
 
 // Mobile hero short-height viewport budget: the height left for the brand logo
 // once the chrome, Setup card, Setup<->Slot gap and the Slot chassis have each
@@ -30,7 +32,13 @@ export const dynamic = 'force-dynamic';
 
 export default function Home() {
   return (
-    <div className="relative flex min-h-screen flex-col bg-[#fdfbf7] text-[#2b2520] overflow-x-clip">
+    <BgmProvider>
+      <div className="relative flex min-h-screen flex-col bg-[#fdfbf7] text-[#2b2520] overflow-x-clip">
+      {/* Records exactly one visit per browser tab-session; mounted once here
+          (not inside LeftSidebar, which mounts twice for the desktop/mobile
+          responsive stages) so a real visit is never double-counted. */}
+      <VisitBeacon />
+
       {/* 1. Retro OS & Browser Chrome Header */}
       <Header />
 
@@ -244,6 +252,7 @@ export default function Home() {
             </div>
         </section>
       </div>
-    </div>
+      </div>
+    </BgmProvider>
   );
 }
