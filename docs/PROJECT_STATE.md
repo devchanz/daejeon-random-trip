@@ -16,6 +16,7 @@ This document is organized as: **A** what's merged, **B** the confirmed product 
 
 Most recent first:
 
+- **Mobile short-height Slot viewport fix** (branch `fix/mobile-slot-short-viewport`, not yet merged to `main`; ADR-031) — Human Browser E2E passed on a real iPhone XS-class Safari device. See **C** below for the height-budget contract.
 - **GA4 base analytics integration** (`6ae03c4`) — `@next/third-parties`'s `GoogleAnalytics` mounted once in root layout, gated on `NEXT_PUBLIC_GA_MEASUREMENT_ID`. See **D** below and `docs/ANALYTICS.md` §9.
 - **Result Quest & Route Guide visual redesign** (`6560a5b`) — production-raster redesign of both the Result Card and the in-app Route Guide. See **C** below for the architecture; no corresponding ADR was recorded for this pass (flagged in **G**).
 - **Visual Detail Pass** (`65f3546`, ADR-027–ADR-030) — DOS Gothic finalized as the production Korean/UI typeface; 31 production PNG assets integrated via a central visual asset registry (`src/config/visualAssets.ts`); Editorial Rail rebuilt (`EditorialItem` + `EditorialSpotlightCard`, 6 seeded items); Final CSS Polish (decorative shadow removal, decoration normalization, spacing/logo scale tuning).
@@ -113,6 +114,7 @@ SlotStage
 - State position lock: `Q1`/`Q2`/`READY`/`SPINNING` share pixel-identical Setup/Slot/Helper geometry across viewports.
 - In-flow `fixed` overlay stacking contract: because `MainExperience` dual-mounts (desktop/mobile, `hidden lg:flex` / `lg:hidden`), Result Card and Guestbook Composer render as in-flow `fixed` elements, never a Portal (a Portal would escape the responsive gate). `RouteGuideModal` is the one exception — it *is* a Portal, but is not gated by the dual mount the same way and needs to escape ancestor transform/containing-block traps.
 - Responsive Slot width baseline: ~360px @400px mobile, ~518px @1200px, ~614px @1440px, ~700px @1920px.
+- **Mobile short-height viewport contract** (ADR-031, Human Browser validated on a real iPhone XS-class Safari device): full Slot chassis is the first-view target for supported portrait mobile viewports (~≥600svh); below that floor the page degrades to natural document scrolling rather than shrinking the Slot further. Hero height budgeting is driven entirely by `svh` tokens — never `dvh` — with no device-name/UA-specific rules. Mobile `SetupArea` stays a fixed 200px card (`sm:` 186px, unchanged); Q2's mobile option grid is two 44px rows in a 96px box with an 8px gap (Q1's grid, a single 88px row, is untouched). The Q1/Q2/READY/SPINNING position lock above is preserved throughout; the completed Result/Route Guide/Guestbook overlay hotfix is unaffected.
 
 ---
 
@@ -179,6 +181,7 @@ status → branch check → clean/latest main → feature branch → implementat
 - **Figma MCP** is enabled only when exact asset/design token extraction is needed.
 - **No agent may execute mutating git operations** (`git commit`, `git push`, `git merge`, branch deletion) without explicit user instruction.
 - **Snapshot-Only Isolation**: Shared routes and metadata must never join back to live place datasets or expose internal database IDs.
+- **Mobile hero height budgeting uses `svh`, never `dvh`, and never a device-name/UA-specific rule** (ADR-031) — `dvh` re-resolves as the mobile browser toolbar retracts, reflowing the hero mid-scroll; `svh` is static. The Slot is never shrunk further to force a fit — below the supported short-height floor (~600svh), the page degrades to natural document scrolling instead.
 
 ### Module boundaries (from `AGENTS.md`)
 - `src/lib/random`: recommendation logic only — no UI, no runtime LLM, seedable/injectable randomness.

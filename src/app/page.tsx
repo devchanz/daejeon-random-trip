@@ -7,6 +7,19 @@ import { PixelCloud, PixelSparkle } from '../components/layout/AmbientDecoration
 import { visualAsset } from '../config/visualAssets';
 import { FittedAsset } from '../components/common';
 import { ZONES, PLACE_CANDIDATES } from '../data';
+import { MOBILE_SLOT_FRAME_HEIGHT } from '../components/experience/slotGeometry';
+
+// Mobile hero short-height viewport budget: the height left for the brand logo
+// once the chrome, Setup card, Setup<->Slot gap and the Slot chassis have each
+// taken their token-driven share of `100svh` (see globals.css's hero token
+// block for what each term means and why `svh`, never `dvh`). Deliberately
+// stops at the chassis, not the helper band below it -- the approved contract
+// is "full Slot chassis above the fold on supported short-height viewports;
+// the helper band may sit below it and be reached by a natural scroll" (see
+// docs/PROJECT_STATE.md). Consumed as a CSS custom property (not a literal)
+// so it stays a single source of truth the browser recomputes on resize/rotate,
+// rather than a value computed once in JS.
+const MOBILE_LOGO_BUDGET = `calc(100svh - var(--chrome-h) - var(--hero-pad-t) - var(--hero-logo-pt) - var(--hero-setup-h) - var(--hero-stage-gap) - (${MOBILE_SLOT_FRAME_HEIGHT}))`;
 
 // RightSidebar now embeds a live Random Log DB read (RandomLogRightRailPreview).
 // Without this, `pnpm build` prerenders "/" as a static route and the preview's
@@ -24,7 +37,7 @@ export default function Home() {
       {/* 2. DESKTOP / TABLET VISUAL STAGE (lg:block hidden)
           One unified visual stage with left sidebar, center experience, right sidebar,
           and a decorative ground layer anchored beneath the lower cards. */}
-      <div className="relative hidden lg:flex flex-1 flex-col justify-between overflow-x-clip min-h-[calc(100svh-48px)]">
+      <div className="relative hidden lg:flex flex-1 flex-col justify-between overflow-x-clip min-h-[calc(100svh-var(--chrome-h))]">
         {/* Main Content Stage with Fluid Max-Width up to 1760px */}
         <div className="relative z-10 mx-auto w-full max-w-[1760px] px-4 pt-5 pb-4 sm:px-6 lg:px-8 xl:px-12">
           {/* Floating Ambient Sparkles */}
@@ -132,20 +145,35 @@ export default function Home() {
 
       {/* 3. MOBILE DEDICATED HERO & SECONDARY SECTION (lg:hidden) */}
       <div className="lg:hidden flex flex-col w-full">
-        {/* Mobile First-View Core Hero: Fills initial viewport with core travel interaction */}
-        <section className="flex flex-col justify-between min-h-[calc(100svh-48px)] py-1.5 px-3">
-          {/* Mobile Brand Logo. Same opaque-aspect box as desktop, sized by width but with
-              an `svh` term inside the clamp: `min(52vw, 28svh)` means a short viewport
-              shrinks the logo automatically rather than pushing the Setup/Slot core hero
-              below the fold. The hero's content floor (Setup + Slot + helper) is fixed, so
-              the title is the only element here that is allowed to give. */}
-          <div className="relative flex items-center justify-center pt-[clamp(6px,2.2svh,20px)] pb-0.5 select-none">
+        {/* Mobile First-View Core Hero: Fills initial viewport with core travel interaction.
+            Short-height viewport hotfix (docs/PROJECT_STATE.md): `min-h` now reads the
+            measured `--chrome-h` token (was a stale hard-coded 48px, ~24px short of the
+            real Header height) and the section carries a real bottom gutter
+            (`--hero-pad-b`) instead of a 2px anchor, so the fold never slices flush at
+            the Slot artwork with nothing below it in view. */}
+        <section className="flex flex-col justify-between min-h-[calc(100svh-var(--chrome-h))] pt-[var(--hero-pad-t)] px-3 pb-[var(--hero-pad-b)]">
+          {/* Mobile Brand Logo. Same opaque-aspect box as desktop, but sized by HEIGHT
+              (width follows from `aspect-[311/132]`, which keeps FittedAsset's
+              aspect-preserving opaque-fit compensation valid) via a clamp whose middle
+              term is `MOBILE_LOGO_BUDGET` -- the exact height left over, on THIS
+              viewport, once the chrome/Setup card/Setup-Slot gap/Slot chassis have each
+              taken their share of `100svh` (see globals.css's hero token block). This is
+              what lets the logo give exactly enough to keep the Slot chassis above the
+              fold instead of a hand-picked `vw`/`svh` guess: 78px/127px are the approved
+              184px/300px width floor and ceiling re-expressed as heights (184 * 132/311,
+              300 * 132/311). Below the supported short-height floor the clamp bottoms out
+              at 78px and the page degrades to a natural document scroll, per the approved
+              contract -- the Slot itself is never shrunk to force a fit. */}
+          <div
+            className="relative flex items-center justify-center pt-[var(--hero-logo-pt)] pb-0 select-none"
+            style={{ ['--logo-budget' as string]: MOBILE_LOGO_BUDGET } as React.CSSProperties}
+          >
             <FittedAsset
               assetKey="brand.logo.primary"
               alt="오늘 대전 갈래!"
               width={680}
               height={408}
-              className="h-auto w-[clamp(200px,min(72vw,34svh),300px)] aspect-[311/132]"
+              className="h-[clamp(78px,min(30svh,var(--logo-budget)),127px)] w-auto max-w-[min(72vw,300px)] aspect-[311/132]"
             />
               {/* Mobile-only quick-jump to the stacked right rail. On mobile the rails stack
                   below the hero, so Today’s Pick sits behind the whole hero plus three
@@ -183,9 +211,6 @@ export default function Home() {
           <main className="flex-1 flex flex-col items-center justify-center w-full max-w-[480px] mx-auto">
             <MainExperience zones={[...ZONES]} candidates={[...PLACE_CANDIDATES]} />
           </main>
-
-          {/* Bottom spacing anchor */}
-          <div className="h-0.5" />
         </section>
 
         {/* Mobile Secondary Content: Discoverable below the initial fold */}

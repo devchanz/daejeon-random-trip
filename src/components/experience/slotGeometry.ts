@@ -106,3 +106,20 @@ export const OUTPUT_PEEK_PROGRESS_BY_PHASE = {
 //   1920px viewport -> ~700px physical (was ~730, -4%)
 export const SLOT_FRAME_RESPONSIVE_WIDTH =
   'min(100%, clamp(360px, calc(38px + 40vw), 700px))';
+
+/**
+ * Mobile-hero resolution of SLOT_FRAME_RESPONSIVE_WIDTH's `min(100%, ...)` term,
+ * with the hero column's own bounds substituted for "100%" (page.tsx's mobile
+ * `<main>` is `w-full max-w-[480px]` inside a `px-3` section, so its available
+ * width is `min(100vw - 24px, 480px)`).
+ *
+ * Exists so page.tsx can compute the mobile hero's height budget (short-height
+ * viewport hotfix, docs/PROJECT_STATE.md) without hard-coding a second copy of
+ * the slot-frame width expression -- this file stays the single source of truth
+ * for slot geometry (AGENTS.md Sec.3: no UI hard-coding of business/layout
+ * constants). If page.tsx's mobile hero column width or padding ever changes,
+ * update the two literals below (24px, 480px) to match.
+ */
+export const MOBILE_SLOT_FRAME_WIDTH =
+  'min(min(100vw - 24px, 480px), clamp(360px, 38px + 40vw, 700px))';
+export const MOBILE_SLOT_FRAME_HEIGHT = `calc((${MOBILE_SLOT_FRAME_WIDTH}) / ${SLOT_FRAME_ASPECT_RATIO})`;
