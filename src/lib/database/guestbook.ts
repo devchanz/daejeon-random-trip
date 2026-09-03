@@ -17,6 +17,11 @@ import {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+/** Route stops render 1-4 (ADR-018/ADR-019) -- the snapshot can never need more. */
+const MAX_ROUTE_PLACE_NAMES = 4;
+/** Generous ceiling for a curated place name (longest current production names run ~20-24 chars). */
+const MAX_PLACE_NAME_LENGTH = 60;
+
 /**
  * Validates whether a given string is a well-formed UUID.
  */
@@ -33,12 +38,36 @@ function sanitizeText(text: string): string {
 }
 
 /**
+ * Defensively normalizes a candidate route-place-names snapshot: array-only,
+ * string entries only, each sanitized + length-capped, capped to
+ * MAX_ROUTE_PLACE_NAMES entries, empty entries dropped. Never throws --
+ * invalid input normalizes to `undefined` (stored as NULL) rather than
+ * rejecting the whole submission, since this snapshot is additive/optional.
+ */
+function sanitizePlaceNames(input: unknown): string[] | undefined {
+  if (!Array.isArray(input)) {
+    return undefined;
+  }
+
+  const cleaned = input
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => sanitizeText(entry).slice(0, MAX_PLACE_NAME_LENGTH))
+    .filter((entry) => entry.length > 0)
+    .slice(0, MAX_ROUTE_PLACE_NAMES);
+
+  return cleaned.length > 0 ? cleaned : undefined;
+}
+
+/**
  * Validates and sanitizes guestbook entry submission input.
  * Strict rules:
  * - Avatar ID: Required, must be one of the configured GUESTBOOK_AVATARS IDs (1–32 characters)
  * - Nickname: Required, 2–12 characters
  * - Message: Required, 1–50 characters
  * - Route Info: routeId (1–64), zoneId (1–32), durationType & preferenceType in supported list
+ * - Place names snapshot: optional, array only, max 4 entries, each sanitized and
+ *   length-capped; invalid/absent normalizes to omitted (stored as NULL), never rejects
+ *   the submission
  */
 export function validateAndSanitizeGuestbookInput(
   input: CreateGuestbookEntryInput
@@ -85,6 +114,8 @@ export function validateAndSanitizeGuestbookInput(
     return { valid: false, error: '유효하지 않은 여행 취향 유형입니다.' };
   }
 
+  const placeNames = sanitizePlaceNames(input.placeNames);
+
   return {
     valid: true,
     data: {
@@ -95,6 +126,7 @@ export function validateAndSanitizeGuestbookInput(
       zoneId,
       durationType: input.durationType,
       preferenceType: input.preferenceType,
+      ...(placeNames ? { placeNames } : {}),
     },
   };
 }
@@ -113,8 +145,16 @@ export async function createGuestbookEntry(
   }
 
   try {
-    const { avatarId, nickname, message, routeId, zoneId, durationType, preferenceType } =
-      validation.data;
+    const {
+      avatarId,
+      nickname,
+      message,
+      routeId,
+      zoneId,
+      durationType,
+      preferenceType,
+      placeNames,
+    } = validation.data;
 
     const record = await client.insertGuestbookEntry({
       avatar_id: avatarId,
@@ -125,6 +165,7 @@ export async function createGuestbookEntry(
       duration_type: durationType,
       preference_type: preferenceType,
       status: 'visible',
+      route_place_names: placeNames ?? null,
     });
 
     return { success: true, data: record };

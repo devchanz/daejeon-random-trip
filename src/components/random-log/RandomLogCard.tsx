@@ -44,6 +44,16 @@ export function RandomLogCard({ entry }: RandomLogCardProps) {
           {getPreferenceLabel(entry.preference_type)}
         </span>
       </div>
+
+      {/* Actual generated place names (route_place_names), when this log carries a
+          snapshot -- makes two logs with identical duration/preference/zone visibly
+          different. NULL/empty (every entry submitted before this column existed,
+          and never backfilled) renders nothing here, never an empty placeholder. */}
+      {entry.route_place_names && entry.route_place_names.length > 0 && (
+        <p className="truncate text-[11px] font-bold text-[#8a7a5c]">
+          {entry.route_place_names.join(' · ')}
+        </p>
+      )}
     </Link>
   );
 }

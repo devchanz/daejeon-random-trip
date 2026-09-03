@@ -1,34 +1,34 @@
 import React from 'react';
 import { RandomLogRightRailPreview } from '../random-log';
 import { EditorialSpotlightCard } from '../editorial';
-import { selectEditorialItem } from '../../data/editorial';
+import { getActiveEditorialItems } from '../../data/editorial';
 import { FittedAsset } from '../common';
 import {
   RIGHT_SIDEBAR_ARIA_LABEL,
-  TODAYS_PICK_HEADING,
+  TODAYS_DAEJEON_HEADING,
   VISITOR_LOG_COPY,
 } from '../../content/sidebar';
 
 /**
  * Right rail.
- * 1. Editorial spotlight: one featured banner, rotated daily over the currently valid
- *    pool. The feature name lives only in the `heading` prop below -- see
+ * 1. Editorial spotlight: manual 5-item carousel over the currently valid pool. The
+ *    feature name lives only in the `heading` prop below -- see
  *    src/components/editorial/EditorialSpotlightCard.tsx and src/data/editorial.ts.
  * 2. MEMORY LOG (user-facing name; component/route/DB layer is still RandomLog*):
  *    live preview (recent 3 entries) linking to /random-log.
  */
 export function RightSidebar({ className = '' }: { className?: string }) {
-  const editorialItem = selectEditorialItem();
+  const editorialItems = getActiveEditorialItems();
 
   return (
     <aside
       aria-label={RIGHT_SIDEBAR_ARIA_LABEL}
       className={`flex flex-col gap-4 ${className}`}
     >
-      {/* 1. Editorial Spotlight. "TODAY'S PICK" is passed in as copy, not baked into the
-             component, the data model, or any asset key -- renaming the feature later is
-             a one-string change here. */}
-      <EditorialSpotlightCard item={editorialItem} heading={TODAYS_PICK_HEADING} />
+      {/* 1. Editorial Spotlight. "TODAY'S DAEJEON" is passed in as copy, not baked into
+             the component, the data model, or any asset key -- renaming the feature
+             later is a one-string change here. */}
+      <EditorialSpotlightCard items={editorialItems} heading={TODAYS_DAEJEON_HEADING} />
 
       {/* 2. MEMORY LOG (Live Random Log Preview) */}
       <section

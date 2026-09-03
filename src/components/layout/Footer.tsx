@@ -15,7 +15,7 @@ export function Footer() {
         <p className="text-[11px] text-[#8e8477]">
           시간과 취향만 고르면 시작되는 대전 랜덤 여행
         </p>
-        <p className="text-[10px] text-[#aaa092]">
+        <p className="text-[10px] text-[#2b2520]">
           Made by TEAM ALJJA &middot;{' '}
           <a href="mailto:onethingtoall@gmail.com" className="hover:underline">
             문의 onethingtoall@gmail.com

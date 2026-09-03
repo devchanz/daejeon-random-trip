@@ -55,6 +55,14 @@ export async function RandomLogRightRailPreview() {
                 <p className="mt-0.5 truncate text-xs leading-tight text-[#5c5244] sm:text-sm">
                   {entry.message}
                 </p>
+                {/* Actual generated place names, when this entry carries a snapshot
+                    (route_place_names) -- see RandomLogCard.tsx for the same rule:
+                    NULL/empty renders nothing, never a placeholder line. */}
+                {entry.route_place_names && entry.route_place_names.length > 0 && (
+                  <p className="truncate text-[10px] font-bold text-[#8a7a5c]">
+                    {entry.route_place_names.join(' · ')}
+                  </p>
+                )}
               </div>
             </Link>
           ))

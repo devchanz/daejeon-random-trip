@@ -163,7 +163,7 @@ export const VISUAL_ASSETS = {
 
   // --- 07_DECORATION ---
   // Feature-agnostic identities. Current standalone consumers:
-  //   star   -> Header title-bar, Setup header, Editorial / TODAY'S PICK header
+  //   star   -> Header title-bar, Setup header, Editorial / TODAY'S DAEJEON header
   //   clover -> MY PROFILE header, MEMORY LOG header (user-facing name; the
   //             component/route/DB naming underneath is still RandomLog*)
   // Each consumer is an explicit approved decision; only the box size differs between

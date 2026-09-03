@@ -6,7 +6,7 @@ This specification defines the Google Analytics 4 (GA4) telemetry plan for the D
 2. **Participation & Reward**: Result Card → Memory Log → Reroll Unlock → Second Spin. *(User-facing name; ADR-034 in `docs/DECISIONS.md`. Event names below (`guestbook_*`) are unrenamed technical identifiers, unaffected by the copy rename.)*
 3. **Referral Loop**: Result Card → Share Snapshot → `/r/[shareCode]` → New User Slot Spin.
 
-> **Today's Pick is not a growth loop.** It is a simple Right Rail editorial banner (ADR-015, revised) with no detail page, Q2 seeding, or Slot funnel. Banner-click/impression tracking, if desired, is **TBD** and deferred until the banner's actual implementation is designed — no events are currently defined for it (see §3.4).
+> **TODAY'S DAEJEON (renamed from Today's Pick) is not a growth loop.** It is a Right Rail editorial carousel (ADR-015 revised, ADR-038) with no detail page, Q2 seeding, or Slot funnel. Banner-click/impression tracking, if desired, is **TBD** — real per-item destination URLs now exist (ADR-038), but no click/impression event has been defined or instrumented (see §3.4).
 
 ---
 
@@ -83,10 +83,10 @@ flowchart TD
 
 > **Telemetry Rule on Referral Identifiers**: High-cardinality user-specific referral codes (`share_code`) are **never** transmitted to GA4 as event parameters. Aggregate viral performance is tracked via standardized funnel events (`route_share_complete`, `shared_route_view`, `shared_route_slot_click`) and low-cardinality categorical dimensions.
 
-### 3.4 Today's Pick (Deferred — No Events Defined)
-Today's Pick is a simple Right Rail editorial banner (ADR-015, revised): no detail page, no Q2 preference seeding, no Slot funnel. The `pick_click` / `pick_view` / `pick_slot_click` / `pick_map_click` events previously specified here existed solely for that unapproved detail-page/seeding flow and have been removed along with it — they must not be reintroduced without a new product decision.
+### 3.4 TODAY'S DAEJEON (Deferred — No Events Defined)
+TODAY'S DAEJEON (renamed from Today's Pick) is a Right Rail editorial carousel (ADR-015 revised, ADR-038): no detail page, no Q2 preference seeding, no Slot funnel. The `pick_click` / `pick_view` / `pick_slot_click` / `pick_map_click` events previously specified here existed solely for an unapproved detail-page/seeding flow and have been removed along with it — they must not be reintroduced without a new product decision.
 
-Banner-click or impression tracking, if desired, is **TBD** and deferred until the banner's actual implementation (rotation mechanism, optional external link) is designed. No replacement event taxonomy is defined at this time.
+Banner-click or impression tracking, if desired, is **TBD**. The carousel's implementation (manual prev/next over 5 items, real per-item outbound `href`s) is now finalized (ADR-038), but no click/impression event taxonomy has been defined or instrumented at this time — left for the analytics lane.
 
 ---
 
@@ -206,6 +206,6 @@ All dashboard views rely **strictly** on the events, dimensions, and parameters 
   - A campaign/UTM naming convention is not finalized.
   - **None** of the custom events in the §3 Event Catalog are instrumented — all of §3.1–3.3 (`quick_setup_start` through `shared_route_slot_click`) remain spec only, and `src/lib/analytics/` does not exist yet.
   - The Campaign & Funnel Analysis Dashboard (§8) is not built.
-  - Today's Pick banner tracking remains TBD per §3.4.
-  - **Not accounted for above**: `feat/product-visual-polish` added a new INTRO phase ahead of Q1 (`docs/DECISIONS.md` ADR-032) and renamed Random Log's user-facing copy to Memory Log (ADR-034). Neither change added or renamed any event in this spec — `quick_setup_start` still conceptually maps to "first Setup interaction," now reached only after the user presses INTRO's `여행 시작하기` CTA, and no `trip_start_click`-style INTRO-specific event exists yet. This is a **spec gap to resolve during instrumentation**, not an implemented behavior — see `docs/PROJECT_STATE.md` §D for the current framing.
+  - TODAY'S DAEJEON banner tracking remains TBD per §3.4 (real per-item `href`s exist as of ADR-038; no click/impression event does).
+  - **Not accounted for above**: `feat/product-visual-polish` added a new INTRO phase ahead of Q1 (`docs/DECISIONS.md` ADR-032) and renamed Random Log's user-facing copy to Memory Log (ADR-034); `feat/todays-daejeon-discovery` renamed Today's Pick to TODAY'S DAEJEON and added a `route_place_names` snapshot to Memory Log entries (ADR-038). None of these changes added or renamed any event in this spec — `quick_setup_start` still conceptually maps to "first Setup interaction," now reached only after the user presses INTRO's `여행 시작하기` CTA, and no `trip_start_click`-style INTRO-specific event exists yet. This is a **spec gap to resolve during instrumentation**, not an implemented behavior — see `docs/PROJECT_STATE.md` §D for the current framing.
 - **Next step**: implement `src/lib/analytics/` event dispatchers against §3's Event Catalog, enforcing §4's parameter whitelist, then re-verify each event in GA4 DebugView per §7 before any paid campaign launch.

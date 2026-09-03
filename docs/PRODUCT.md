@@ -50,7 +50,7 @@ flowchart LR
    Result Card ──► Share Route ──► /r/[shareCode] ──► Friend Reads ──► "나도 여행 뽑아보기" ──► New Landing User
 ```
 
-> **Today's Pick is not a growth loop.** It is a simple Right Rail editorial / visual banner (see §6.4) — it does not feed into or seed the Slot, and has no detail-page or funnel of its own.
+> **TODAY'S DAEJEON is not a growth loop.** It is a Right Rail editorial / visual carousel (see §6.4) — it does not feed into or seed the Slot, and has no detail-page or funnel of its own.
 
 ---
 
@@ -69,7 +69,7 @@ flowchart LR
     - `Result Overlay` (Front-facing centered Result Card modal triggered post-spin).
     - `Route Guide` (In-app itinerary breakdown viewed upon clicking `“이 코스로 가보기”`).
   - **RIGHT SIDEBAR (Content Discovery & Social Proof)**:
-    - `TODAY’S PICK`: Editorial banner featuring rotating pixel artwork; no detail page. The label is presentation copy only — the underlying surface is deliberately feature-name-agnostic and may be renamed without code changes (ADR-028).
+    - `TODAY'S DAEJEON` (renamed from `TODAY'S PICK`): manual 5-item carousel over the approved production banner set, each opening a real outbound destination in a new tab; no detail page. The label is presentation copy only — the underlying surface is deliberately feature-name-agnostic and may be renamed without code changes (ADR-028).
     - `MEMORY LOG`: Preview showing the latest ~3 visible Memory Log entries with a link to `/random-log`. *(User-facing name; ADR-034. Technical routes/components remain `/random-log` / `RandomLog*`.)*
 - **Brand Wordmark**: The landing hero renders the production brand logo artwork, whose wordmark reads **“오늘 대전 갈래!”**. This supersedes the earlier text-rendered “대전 갈래..?” and the wording still shown in the historical Figma landing reference. Site metadata (`대전 랜덤 여행 | DAEJEON RANDOM TRIP`) is unaffected.
 
@@ -101,7 +101,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
    - One unified CTA driven by the reroll reward state: while `locked`, it opens the Memory Log composer in-flow (successful server validation and DB save unlocks 1 reward reroll); once `available`, the same CTA executes the reroll directly; once `consumed`, the CTA is not shown (hidden, not disabled).
    - There is no separate, always-present "leave a Random Log" row in the Result Card body — participation is reached solely through this one action.
 
-**Result Card content composition**: The route stops render in a fixed four-cell grid (2×2 desktop, 1-column ×4 mobile). Half-day routes (3 stops) fill the fourth cell with an "Explore More" banner (`“조금 더 놀다 갈래?”`) rather than leaving it empty or stretching STOP 3 — this banner is presentation-only, is never a domain stop, and carries no place data. Its downstream destination is not yet decided; until it is, the banner renders as a non-interactive prompt. An optional **Bonus Quest** mission line, drawn from a small curated pool of generic playful prompts (not per-place data, not a recommendation axis), may also appear.
+**Result Card content composition**: The route stops render in a fixed four-cell grid (2×2 desktop, 1-column ×4 mobile). Half-day routes (3 stops) fill the fourth cell with an "Explore More" banner (`“조금 더 놀다 갈래?”`) rather than leaving it empty or stretching STOP 3 — this banner is presentation-only, is never a domain stop, and carries no place data. Its CTA (`“대전 더 둘러보기”`, a lightweight text link, visually subordinate to the primary `“이 코스로 가보기”` action) minimizes the Result and scrolls to TODAY'S DAEJEON (§6.4) — it never discards the generated route. An optional **Bonus Quest** mission line, drawn from a curated pool of short generic playful prompts (not per-place data, not a recommendation axis), may also appear.
 
 ---
 
@@ -117,6 +117,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 
 ### 6.2 Guestbook / Memory Log & 1-Time Reroll Reward
 - **Memory Log Role**: Delivers social proof and incentivizes participation. *(User-facing name, ADR-034; the underlying architecture/DB table is still `guestbook_entries`, and the technical component family is still `RandomLog*`.)*
+- **Route identity**: each entry snapshots the actual generated route's place names at submission time (alongside zone/duration/preference), so two logs sharing the same conditions still visibly differ — a route is random, and the log should read that way. Historical entries predating this snapshot remain valid and simply show the condition summary alone (ADR-038).
 - **Composer UX**: Opens exclusively within the Result Card flow, via the unified `“다시 뽑기”` CTA while the reroll reward is `locked`. `/random-log` serves as the dedicated social proof archive and full log stream (read-only archive, no standalone composer there).
 - **Input Fields & Constraints**:
   - **Avatar**: Selectable Kkumssi Family avatar (mandatory; shared asset IDs across preview and `/random-log`).
@@ -146,13 +147,13 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
   - A single **static** (not dynamically generated) verified 1200×630 opaque brand image (`public/og-daejeon-random-trip.png`) is wired into both the root landing metadata and every `/r/[shareCode]` branch, with `twitter.card: summary_large_image`. Dynamic per-route OG image generation was considered and explicitly not pursued — the shared-route metadata instead withholds route detail entirely (see next bullet) rather than illustrating it.
   - **Mystery link-preview title/description**: a valid shared route's pre-click preview intentionally does **not** reveal the drawn zone/dong or the itinerary. Title: `` `??동 · {반나절|하루종일} | 대전 랜덤 여행` `` (`??동` is a fixed placeholder, never a real zone). Description: the fixed line `어디로 갈지는 링크를 열어 확인해보세요 👀`. Once the recipient actually opens the link, the real zone/itinerary render normally — only the pre-click metadata withholds it.
 
-### 6.4 Editorial Rail (Right Rail Banner, labelled "TODAY'S PICK") — Revised Scope (ADR-015, superseded by ADR-028)
-- **Concept**: A simple Right Rail editorial / visual banner surface. It is **not** a detail-page flow, a discovery funnel, or a Q2-seeding mechanism.
-- **Naming**: "TODAY'S PICK" is display copy passed in as a prop, nothing more. The component, data model, ids, and asset keys are all feature-name-agnostic, so renaming the surface later is a one-string change.
-- **Artwork**: 6 production banners ship — **5 evergreen**: night view (`spot`), Tashu (`experience`), bread tour (`theme`), Kkumssi family (`campaign`), Expo bridge night (`spot`); and **1 date-bound**: September events (`event`). Each carries its own baked-in title copy, so the card does not duplicate it as a separate visible text row; the title remains the banner's accessible name.
-- **Rotation**: Items are filtered by an optional validity window first (`activeFrom` inclusive, `activeUntil` exclusive), then rotated deterministically by Asia/Seoul calendar date. Date-bound content therefore retires on schedule — the September banner is bounded to 2026-09-01 → 2026-10-01 and cannot surface in October.
-- **Composition**: one featured banner at a time. No tabs, no carousel, no autoplay, and no separate `자세히 보기` button — an item with a destination makes the banner itself the link.
-- **Optional External Link**: A banner may optionally hyperlink to an external site related to the featured artwork/place/theme. No destinations are seeded in the current pass.
+### 6.4 Editorial Rail (Right Rail Carousel, labelled "TODAY'S DAEJEON") — Revised Scope (ADR-015, superseded by ADR-028, carousel + real destinations added by ADR-038)
+- **Concept**: A Right Rail editorial / visual carousel surface. It is **not** a detail-page flow, a discovery funnel, or a Q2-seeding mechanism.
+- **Naming**: "TODAY'S DAEJEON" (renamed from "TODAY'S PICK", ADR-038) is display copy passed in as a prop, nothing more. The component, data model, ids, and asset keys are all feature-name-agnostic, so renaming the surface later is a one-string change.
+- **Artwork**: **5 production banners** ship — Kkumssi family (`campaign`), bread tour (`theme`), Tashu (`experience`), Expo bridge night (`spot`, evergreen), and September events (`event`, date-bound). Each carries its own baked-in title copy, so the card does not duplicate it as a separate visible text row; the title remains the banner's accessible name. The earlier 6th item (night view, obsolete uncaptioned artwork) is retired — its concept lives on via the captioned Expo bridge night banner.
+- **Rotation**: Items are filtered by an optional validity window first (`activeFrom` inclusive, `activeUntil` exclusive) — only the September banner is date-bound (`2026-09-01` → `2026-10-01` exclusive) — and all currently-eligible items are then browsable in the carousel, in seed order.
+- **Composition**: **manual carousel** (ADR-038, supersedes ADR-028's original "one featured banner, no carousel" scope) — one banner visible at a time inside a fixed-aspect media viewport (so browsing never shifts the card's height, regardless of which item's raster loads), with prev/next chevrons, a position indicator, and touch swipe. No autoplay, no tabs, no separate `자세히 보기` button — an item with a destination makes the banner itself the link, opened in a new tab.
+- **External Links**: All 5 items carry a real outbound destination (product-confirmed URLs — see ADR-038). An item without a destination still renders as non-interactive content, not a dead link.
 - **Explicit Exclusions**: No dedicated `/pick/[slug]` detail page. No Q2 preference-seeding CTA. No editorial → Slot funnel. No voting / Weekly Pick.
 - **Data Management**: 100% static TypeScript data (`src/data/editorial.ts`); no Supabase or CMS overhead. The legacy `src/data/picks.ts` (`TODAYS_PICKS = []`) is retained but referenced by no UI.
 
@@ -169,7 +170,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 - Memory Log (Landing preview + `/random-log` read-only archive + in-flow composer with Kkumssi family avatars).
 - 1-Time Reroll Reward unlocked via successful server validation and guestbook DB submission.
 - Referral Share with server snapshot storage and dedicated `/r/[shareCode]` page.
-- Today's Pick Right Rail editorial banner (6 rotating pixel-art variants — 5 evergreen + 1 date-bound; optional external hyperlink; no detail page, no Q2 seeding).
+- TODAY'S DAEJEON Right Rail editorial carousel (5 production banners, manual prev/next, real outbound hyperlinks; no detail page, no Q2 seeding).
 - GA4 telemetry tracking across all 3 growth loops with strict PII prohibition.
 
 ### Explicitly Out-of-Scope (MVP)
@@ -180,10 +181,10 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 - Real-time business hours, dynamic table booking, or live wait-time checking.
 - Itinerary spot swapping or custom route editing (prevents decision fatigue).
 - Kakao SDK, Kakao Login, or Kakao Talk messaging API integration.
-- CMS / Supabase storage for Today's Pick (must remain static TS data).
-- **Today's Pick `/pick/[slug]` detail page** (revised out of scope, ADR-015).
-- **Today's Pick Q2 preference-seeding CTA** (revised out of scope, ADR-015).
-- **Today's Pick → Slot funnel** of any kind (revised out of scope, ADR-015).
+- CMS / Supabase storage for TODAY'S DAEJEON (must remain static TS data).
+- **TODAY'S DAEJEON `/pick/[slug]` detail page** (revised out of scope, ADR-015).
+- **TODAY'S DAEJEON Q2 preference-seeding CTA** (revised out of scope, ADR-015).
+- **TODAY'S DAEJEON → Slot funnel** of any kind (revised out of scope, ADR-015).
 - Full-screen image slicing (all UI panels and Result Card body must remain semantic React/DOM/CSS).
 
 ---
@@ -193,13 +194,13 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 | Item | Status | Details |
 | :--- | :--- | :--- |
 | **Controlled Random Travel** | **Fixed Product Decision** | Structured recommendation flow separated from visual slot animation. |
-| **Three Core Growth Loops** | **Fixed Growth Decision** | Core Conversion, Participation & Reward, and Referral. Today's Pick is a separate Right Rail editorial banner, not a growth loop. |
+| **Three Core Growth Loops** | **Fixed Growth Decision** | Core Conversion, Participation & Reward, and Referral. TODAY'S DAEJEON is a separate Right Rail editorial carousel, not a growth loop. |
 | **In-App Route Guide** | **Fixed Product Decision** | Result CTA opens in-app Route Guide before external map redirection. |
 | **1-Time Reroll Reward** | **Fixed Product Decision** | Replaces free reroll; unlocks 1 reroll upon guestbook DB submission. |
 | **Referral Snapshot Model** | **Fixed Architecture Decision** | Immutable snapshots in `shared_routes` accessed via `/r/[shareCode]`. |
-| **Today's Pick Editorial Banner** | **Fixed Content Decision** | Static TS data; 6 rotating pixel-art variants (5 evergreen + 1 date-bound); optional external hyperlink. No detail page, no Q2 seeding, no Slot funnel (ADR-015, revised). |
+| **TODAY'S DAEJEON Editorial Carousel** | **Fixed Content Decision** | Static TS data; 5 production banners, manual carousel (no autoplay), real outbound hyperlinks (ADR-038). No detail page, no Q2 seeding, no Slot funnel (ADR-015, revised). |
 | **Top Nav Elimination** | **Fixed Layout Decision** | Top tabs removed to maximize viewport priority for Setup & Slot Anchor. |
-| **Proxy Conversion Model** | **Fixed Measurement Decision** | Route Guide map clicks (`place_map_click`) serve as the primary high-intent proxy metric. Today's Pick banner-click tracking is TBD/deferred (see `docs/ANALYTICS.md`). |
+| **Proxy Conversion Model** | **Fixed Measurement Decision** | Route Guide map clicks (`place_map_click`) serve as the primary high-intent proxy metric. TODAY'S DAEJEON banner-click tracking is TBD/deferred (see `docs/ANALYTICS.md`). |
 | **No Runtime LLM / No PII** | **Fixed Engineering Decision** | Curated static seed templates; zero PII or free-text in GA4. |
 | **Target Demographic (20–30s)** | *Working Hypothesis* | Operational target for marketing copy/ads; not a rigid product limit. |
 | **Initial Zone Coverage** | *Tentative* | Centered on Daejeon Station / old downtown; expandable post-MVP. |
@@ -209,6 +210,6 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 ## 9. Success Behavior & Measurable Signals
 - **Setup Funnel Progression**: User progression through Q1/Q2 to READY produces clear completion and drop-off metrics in GA4.
 - **Recommendation & Spin Experience**: The recommendation engine and slot animation deliver a coherent itinerary with acceptable perceived latency without blocking runtime delays.
-- **Primary Proxy Conversion**: Clicks on outbound map links within the in-app Route Guide (`place_map_click`) serve as the primary proxy conversion indicating high travel intent. Today's Pick banner-click tracking is TBD/deferred until the banner's actual implementation is designed.
+- **Primary Proxy Conversion**: Clicks on outbound map links within the in-app Route Guide (`place_map_click`) serve as the primary proxy conversion indicating high travel intent. TODAY'S DAEJEON banner-click tracking is TBD/deferred pending an analytics-lane decision (real destinations now exist as of ADR-038).
 - **Participation & Referral Loops**: Visitor log submissions (`guestbook_submit`) and route sharing completions (`route_share_complete`) operate seamlessly with zero PII or free-text leakage into analytics.
 - **Honest Metric Evaluation**: Map clicks represent high-intent interest and are not conflated with guaranteed physical travel attendance.

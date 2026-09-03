@@ -64,7 +64,7 @@ export const RIGHT_SIDEBAR_ARIA_LABEL = '추천 스팟 및 방명록 (Right Side
  * Passed as EditorialSpotlightCard's `heading` prop (ADR-028): the ONLY place
  * this feature name appears, so renaming it later is a one-string change here.
  */
-export const TODAYS_PICK_HEADING = "TODAY'S PICK";
+export const TODAYS_DAEJEON_HEADING = "TODAY'S DAEJEON";
 
 /**
  * Identifier kept as VISITOR_LOG_COPY (technical/internal, unchanged) --

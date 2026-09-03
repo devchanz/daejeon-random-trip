@@ -66,6 +66,7 @@ export function ExperienceOverlays() {
         onExecuteReroll={engine.handleExecuteReroll}
         onOpenRouteGuide={() => engine.setIsRouteGuideOpen(true)}
         onMinimize={engine.handleMinimizeResult}
+        onExploreMore={engine.handleExploreMore}
         isNestedOverlayOpen={isGuestbookOpen || isRouteGuideOpen}
       />
 

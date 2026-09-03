@@ -8,7 +8,7 @@ The data architecture separates data into three distinct lifecycle tiers to mini
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 1. Static Configuration & Seed Tier (src/data, src/config)             │
 │    - Place Candidates, Route Templates, Zones                          │
-│    - Today's Pick editorial banner content (TS/JSON) — planned          │
+│    - TODAY'S DAEJEON editorial carousel content (TS, §4) — implemented │
 │    - Product Policies (Duration budgets, reroll limits, weights)       │
 ├────────────────────────────────────────────────────────────────────────┤
 │ 2. Client / Anonymous Session Tier (sessionStorage / Browser Session)  │
@@ -21,6 +21,7 @@ The data architecture separates data into three distinct lifecycle tiers to mini
 │ 3. Persistent Database Tier (Supabase via Server/API Boundary)         │
 │    - guestbook_entries (Community social proof; visible / hidden)      │
 │    - shared_routes (Immutable snapshots with UUID PK + unique shareCode)│
+│    - site_visits (Append-only visit event log)                         │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -169,6 +170,7 @@ Stores Random Log entries submitted exclusively from the Result Card composer fl
 | `preference_type` | `VARCHAR(16)` | No | `'anything'`, `'food'`, `'walk'`, or `'photo'` |
 | `status` | `VARCHAR(16)` | No | Moderation status: `'visible'` (default) or `'hidden'` |
 | `created_at` | `TIMESTAMPTZ` | No | Submission timestamp (default `now()`); also the cursor column for `/random-log` board pagination |
+| `route_place_names` | `TEXT[]` | **Yes** | Immutable snapshot of the generated route's actual stop names (max 4), captured at submission time so two logs sharing the same duration/preference/zone still visibly differ. Added additively (`20260904000002_add_route_place_names_to_guestbook_entries.sql`) — every row submitted before that migration is `NULL` and is never backfilled; all three read surfaces treat `NULL`/empty the same (render nothing), never an empty placeholder list. |
 
 > **Privacy Guardrails**:
 > - No phone numbers, email addresses, or demographic identifiers are ever collected or stored in `guestbook_entries`.
@@ -195,23 +197,43 @@ Stores immutable snapshots of itineraries when users click `“내 루트 공유
 | `schema_version` | `INT` | No | Data contract version (default `1`) |
 | `created_at` | `TIMESTAMPTZ` | No | Creation timestamp (default `now()`) |
 
+### 3.3 `site_visits` Table
+Append-only visit event log — one row per counted visit (one browser tab-session, de-duplicated client-side before `POST /api/visits` is ever called; see `src/lib/visitor/visitSession.ts` / `VisitBeacon.tsx`). No other columns: `TOTAL VISIT` is a row count, `TODAY` is a row count filtered to `created_at >= <KST midnight>`, both recomputed at read time by `src/lib/database/visits.ts` — no daily reset job needed.
+
+| Column | Type | Nullable | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | No | Primary Key (default `gen_random_uuid()`) |
+| `created_at` | `TIMESTAMPTZ` | No | Visit timestamp (default `now()`); the only column ever queried (count / count-since) |
+
+Migrations: `20260904000000_create_site_visits.sql` (table + `created_at` index), `20260904000001_configure_site_visits_grants.sql` (revokes `anon`/`authenticated`, grants `SELECT, INSERT` to `service_role`). Both applied; `TOTAL VISIT`/`TODAY` confirmed showing real counts in Human Browser.
+
 ---
 
-## 4. Today's Pick Static Data Model (Planned — Not Yet Implemented, ADR-015 Revised Scope)
+## 4. TODAY'S DAEJEON Editorial Carousel Data Model (Implemented, `src/data/editorial.ts`, ADR-028/ADR-038)
 
-Today's Pick is a simple Right Rail editorial / visual banner — not a detail page, discovery funnel, or Q2-seeding mechanism. It is managed entirely via static TypeScript data (`src/data/picks.ts`, currently `TODAYS_PICKS = []`) without Supabase or CMS overhead. The shape below describes only the confirmed banner concept:
+The Right Rail editorial carousel ("TODAY'S DAEJEON", renamed from "TODAY'S PICK") is 100% static TypeScript data — no Supabase or CMS overhead. `EditorialItem` (not `TodaysPickItem` — see the retired-concept note below) is deliberately feature-name-agnostic: the current display name appears nowhere in this type.
 
 ```typescript
-interface TodaysPickItem {
-  id: string;                    // Pick identifier
-  title: string;                 // Headline / short caption for the banner
-  pixelAsset: string;            // Pixel artwork path (~5 production variants planned)
-  rotationKey?: string;          // Simple rotation key (e.g. weekday) selecting the displayed variant -- exact schedule mechanism TBD
-  externalLink?: string;         // Optional outbound hyperlink to an external site related to the featured artwork/place/theme
+type EditorialKind = 'spot' | 'theme' | 'event' | 'experience' | 'campaign';
+
+interface EditorialItem {
+  id: string;                       // Stable, feature-name-agnostic identifier
+  kind: EditorialKind;               // Semantic role; describes an item, never forks the layout
+  title: string;                     // Accessible name -- surfaced as the banner's alt text, not a visible row
+  bannerAssetKey: VisualAssetKey;     // src/config/visualAssets.ts registry key
+  bannerObjectPosition?: string;      // CSS object-position inside the shared fixed aspect-[15/8] carousel viewport (default 'center')
+  tags?: readonly string[];
+  badge?: string;                     // Short inline flag in the header row
+  href?: string;                      // Real outbound destination; absent items render non-interactive
+  external?: boolean;                 // Opens href in a new tab (target/rel)
+  activeFrom?: string;                // YYYY-MM-DD, Asia/Seoul, inclusive
+  activeUntil?: string;               // YYYY-MM-DD, Asia/Seoul, exclusive
 }
 ```
 
-> **Note**: The `TodaysPickItem` type currently declared in `src/lib/random/types.ts` additionally carries `slug`, `campaignDate`, `photos`, `characterId`/`characterAsset`, `tags`, `recommendedPreference`, `recommendationReason`, `stayDuration`, `recommendedTime`, `access`, `caution`, and `mapLinks` fields left over from the previously documented (and unimplemented) detail-page / Q2-seeding concept. These are unreferenced by any route or call site today and should be trimmed to the shape above when the banner is actually implemented — this document describes the confirmed target contract, not the current unused type declaration.
+- **Production seed** (`EDITORIAL_ITEMS`, 5 entries): `kkumssi-family`, `bread-tour`, `tashu`, `expo-bridge-night`, `september-events` (date-bound `2026-09-01`–`2026-10-01` exclusive; the other 4 are evergreen). Each carries a real `href` + `external: true`. The earlier 6th seed item (`night-view`, obsolete uncaptioned artwork) is removed, not merely deactivated.
+- **Selection**: `getActiveEditorialItems(dateStr, items)` filters by validity window only (no per-day rotation/pick — every eligible item is browsable in the carousel). Deterministic between server and client render (same Asia/Seoul date string), so no hydration mismatch.
+- **Retired concept**: this is deliberately **not** `TodaysPickItem` (`src/lib/random/types.ts`) — that 17-field shape was built for an unimplemented `/pick/[slug]` detail page + Q2-seeding flow (ADR-015, revised out of scope) and lives behind the recommendation-engine boundary. It remains unreferenced by any route or call site; `src/data/picks.ts` (`TODAYS_PICKS = []`) is dead code, kept only for its `getSeoulDateString` helper (reused by `editorial.ts`).
 
 ---
 
