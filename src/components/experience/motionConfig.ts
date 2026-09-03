@@ -37,14 +37,14 @@ export const MOTION_TIMINGS = {
    */
   OUTPUT_PEEK_TO_CARD_MS: 400,
   /**
-   * Sub-beat offsets within 'peek' (measured from the start of 'peek'), driving
-   * `peekPhase` in MainExperience for the dormant Slot Peek cavity-emergence
-   * architecture (see SlotOutputLayer.tsx). Both stay inside OUTPUT_PEEK_TO_CARD_MS
-   * -- they subdivide the existing Fixed 300-500ms product window, they don't
-   * extend it.
+   * Slot Peek paper travel duration (SlotOutputLayer.tsx). Stays inside
+   * OUTPUT_PEEK_TO_CARD_MS so the sheet visibly settles at HOLD before the
+   * Result Card takes over. Reduced motion never plays this animation (the
+   * class is suppressed in globals.css, and the paper's base CSS state IS
+   * the HOLD position) -- listed in REDUCED_MOTION_TIMINGS too only so both
+   * tables stay shape-identical.
    */
-  PEEK_EDGE_AT_MS: 150,
-  PEEK_HOLD_AT_MS: 300,
+  PEEK_TRAVEL_MS: 260,
 } as const;
 
 const REDUCED_REEL_1_STOP_MS = 650;
@@ -74,9 +74,9 @@ export const REDUCED_MOTION_TIMINGS = {
   // contract (docs/PRODUCT.md 5.1, docs/ARCHITECTURE.md 5.1) and is a timing
   // beat, not a motion effect.
   OUTPUT_PEEK_TO_CARD_MS: MOTION_TIMINGS.OUTPUT_PEEK_TO_CARD_MS,
-  // Same reasoning: these subdivide the beat above, not a motion effect.
-  PEEK_EDGE_AT_MS: MOTION_TIMINGS.PEEK_EDGE_AT_MS,
-  PEEK_HOLD_AT_MS: MOTION_TIMINGS.PEEK_HOLD_AT_MS,
+  // Never actually played under reduced motion (see MOTION_TIMINGS.PEEK_TRAVEL_MS) --
+  // kept only so both tables share the same shape.
+  PEEK_TRAVEL_MS: MOTION_TIMINGS.PEEK_TRAVEL_MS,
 } as const;
 
 /** Selects the active timing table based on the user's motion preference. */

@@ -2,7 +2,7 @@ import React from 'react';
 import { Header } from '../components/layout/Header';
 import { LeftSidebar } from '../components/sidebar/LeftSidebar';
 import { RightSidebar } from '../components/sidebar/RightSidebar';
-import { MainExperience } from '../components/experience';
+import { MainExperience, ExperienceProvider, ExperienceOverlays } from '../components/experience';
 import { PixelCloud, PixelSparkle } from '../components/layout/AmbientDecorations';
 import { visualAsset } from '../config/visualAssets';
 import { FittedAsset } from '../components/common';
@@ -33,6 +33,15 @@ export const dynamic = 'force-dynamic';
 export default function Home() {
   return (
     <BgmProvider>
+      {/* ExperienceProvider: the SINGLE shared experience engine (state, spin/
+          reveal/Peek timers, handlers), mounted once around BOTH the desktop
+          and mobile MainExperience (Hero) presentations below, plus the
+          single-instance ExperienceOverlays. See docs/DECISIONS.md ADR-036 --
+          this is what makes crossing the 1024px breakpoint mid-flow (READY /
+          SPINNING / PEEK / RESULT) never lose or duplicate state, and what
+          makes the Result Card / Guestbook Composer / Route Guide Modal /
+          reveal-emphasis backdrop structurally impossible to duplicate. */}
+      <ExperienceProvider zones={[...ZONES]} candidates={[...PLACE_CANDIDATES]}>
       <div className="relative flex min-h-screen flex-col bg-[#fdfbf7] text-[#2b2520] overflow-x-clip">
       {/* Records exactly one visit per browser tab-session; mounted once here
           (not inside LeftSidebar, which mounts twice for the desktop/mobile
@@ -94,7 +103,7 @@ export default function Home() {
             {/* Center Column: Dominant Hero Experience (Setup -> Slot -> Result) */}
             <main className="flex-1 max-w-[clamp(620px,46vw,840px)] mx-auto flex flex-col items-center gap-2 min-w-0">
               <div className="w-full">
-                <MainExperience zones={[...ZONES]} candidates={[...PLACE_CANDIDATES]} />
+                <MainExperience />
               </div>
             </main>
 
@@ -236,7 +245,7 @@ export default function Home() {
 
           {/* Core Interactive Center (Setup + Large Slot + Helper) */}
           <main className="flex-1 flex flex-col items-center justify-center w-full max-w-[480px] mx-auto">
-            <MainExperience zones={[...ZONES]} candidates={[...PLACE_CANDIDATES]} />
+            <MainExperience />
           </main>
         </section>
 
@@ -252,7 +261,14 @@ export default function Home() {
             </div>
         </section>
       </div>
+
+      {/* ExperienceOverlays: the SINGLE render site for the Result Card, Guestbook
+          Composer, Route Guide Modal (a Portal to document.body), and the reveal-
+          emphasis backdrop -- deliberately OUTSIDE both dual-mount trees above, so
+          none of them can ever be instantiated twice. See ExperienceOverlays.tsx. */}
+      <ExperienceOverlays />
       </div>
+    </ExperienceProvider>
     </BgmProvider>
   );
 }

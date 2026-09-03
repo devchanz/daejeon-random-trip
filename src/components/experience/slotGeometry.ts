@@ -68,33 +68,83 @@ export const CTA_BUTTON = {
   height: '6.0%',
 } as const;
 
-// Reserved for the future Ticket/Result output reveal (ADR-008 output slit
-// peek cue), expressed as a fraction of SlotVisualFrame (not LogicalCanvas)
-// so it stays valid once the canvas is visually cropped from the frame.
-// Not implemented yet — SlotStage exists so this can be added as a sibling
-// of SlotVisualFrame without being constrained by the frame's geometry.
-export const OUTPUT_SLIT = {
-  left: '20.33%',
-  width: '52.80%',
-  top: '97.2%',
-  // Moved out of SlotOutputLayer's own hard-coded '8%' so all output-slit
-  // geometry lives in one place (Result Quest redesign).
-  height: '8%',
+/**
+ * Slot Peek geometry (docs/DECISIONS.md ADR-036) -- measured by direct PNG
+ * decoding of the production chassis art (slot-idle.png / slot-pulled.png,
+ * 1800x1500px = exactly 3x the 600x500 logical canvas). All three rects are
+ * expressed as fractions of SlotVisualFrame (not LogicalCanvas), matching
+ * every other constant in this file's "Reserved for the future Ticket/Result
+ * output reveal" contract, so they stay valid once the canvas is visually
+ * cropped from the frame and remain correct at any responsive width/DPR with
+ * zero measured pixels and zero JS geometry reads.
+ *
+ * This SUPERSEDES the historical `OUTPUT_SLIT` constant (removed): that
+ * rect's x-range was actually the PEDESTAL footprint, not the slit, and its
+ * `top: 97.2%` placed it below the cavity, extending past the chassis bottom
+ * into the helper band beneath SlotStage -- the documented root cause of the
+ * DEV placeholder's "plain white rectangle... collided with the helper copy"
+ * rejection. The rects below were re-measured from scratch against the
+ * chassis's actual opaque/dark pixel bounds, not carried forward.
+ *
+ * Verified: the cavity/lip pixels are byte-identical between slot-idle.png
+ * and slot-pulled.png (0 differing pixels across the scanned region), so this
+ * geometry is lever-state-independent -- one set of rects serves both states.
+ *
+ *   SLOT_OUTPUT_LIP     the painted lip's front face (logical x 233.67-364.67,
+ *                       y 323-331.67) -- the foreground occluder re-instances
+ *                       the chassis raster clipped to exactly this rect.
+ *   SLOT_OUTPUT_CAVITY  the recessed, fully-opaque-in-the-source-art cavity
+ *                       mouth/interior (logical x 252.33-345.33, y 332-344).
+ *   SLOT_PEEK_WINDOW    the lip-top -> cavity-bottom span the paper strip is
+ *                       clipped to (union of the two rects above); its bottom
+ *                       edge lands on the cavity's own dark bottom rim, so
+ *                       paper can never visually reach the pedestal or the
+ *                       helper band below the chassis.
+ */
+export const SLOT_OUTPUT_LIP = {
+  left: '23.43%',
+  width: '46.73%',
+  top: '85.02%',
+  height: '4.23%',
+} as const;
+
+export const SLOT_OUTPUT_CAVITY = {
+  left: '30.08%',
+  width: '33.17%',
+  top: '89.41%',
+  height: '5.86%',
+} as const;
+
+export const SLOT_PEEK_WINDOW = {
+  left: '30.08%',
+  width: '33.17%',
+  top: '85.02%',
+  height: '10.26%',
 } as const;
 
 /**
- * Dormant peek travel, keyed by `peekPhase` (see MainExperience's `peekPhase`
- * state and motionConfig's PEEK_EDGE_AT_MS/PEEK_HOLD_AT_MS). Values are
- * PLACEHOLDERS only -- final travel distance and easing for the "paper begins
- * deep inside the cavity and gradually emerges" direction are Figma-dependent.
- * Expressed as 0-100 so SlotOutputLayer can resolve a single 0-1 progress value
- * from them once OUTPUT_PEEK_ENABLED flips true.
+ * `left/width/top/height` -> a `clip-path: inset(top right bottom left)`
+ * string, derived (not independently re-typed) from SLOT_OUTPUT_LIP so the
+ * foreground-lip clip in SlotOutputLayer.tsx can never drift from the same
+ * single measured rect above.
  */
-export const OUTPUT_PEEK_PROGRESS_BY_PHASE = {
-  inside: 0,
-  edge: 50,
-  hold: 100,
-} as const;
+function rectToInsetClipPath(rect: {
+  left: string;
+  width: string;
+  top: string;
+  height: string;
+}): string {
+  const left = parseFloat(rect.left);
+  const width = parseFloat(rect.width);
+  const top = parseFloat(rect.top);
+  const height = parseFloat(rect.height);
+  const right = 100 - (left + width);
+  const bottom = 100 - (top + height);
+  return `inset(${top}% ${right}% ${bottom}% ${left}%)`;
+}
+
+/** `clip-path` for the foreground lip re-instance -- see SlotOutputLayer.tsx. */
+export const SLOT_OUTPUT_LIP_CLIP_PATH = rectToInsetClipPath(SLOT_OUTPUT_LIP);
 
 // Fluid physical width of SlotVisualFrame. Column-aware (never exceeds the
 // available width). Desktop targets are ~4% below the original hero-scale
