@@ -90,7 +90,7 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
   return (
     <section
       aria-label="여행 조건 설정 (Setup Area)"
-      className="relative w-full rounded-2xl sm:rounded-3xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-6 overflow-hidden h-[218px] sm:h-[186px] flex flex-col justify-between"
+      className="relative w-full rounded-2xl sm:rounded-3xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-6 overflow-hidden h-[var(--hero-setup-h)] flex flex-col justify-between"
     >
       <div className="flex flex-col gap-2.5 sm:gap-3.5">
         {/* Header Bar: Step Status Indicator */}
@@ -167,7 +167,18 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 h-[88px] sm:h-[64px]">
+              {/*
+               * Mobile-only h-[96px]/gap-2 (was h-[88px]/gap-2.5): honest box for what
+               * this grid actually contains. 4 buttons in a 2-across grid make 2 rows,
+               * and at OptionButton's mobile min-content (36px, see its py-1 comment)
+               * `2 * 36 + gap-2 (8) = 80` fits inside 96 with headroom; the grid then
+               * stretches each row to 44px (96 - 8) / 2, which is what actually renders.
+               * The card's total height token (--hero-setup-h) is unchanged -- this
+               * fits inside the SAME 128px question-area lock (label 24 + gap-2 8 +
+               * grid 96 = 128), it was never a card-height problem. `sm:` untouched: the
+               * 4-across desktop row is a single 64px track that never overflowed.
+               */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-2.5 h-[96px] sm:h-[64px]">
                 {SUPPORTED_PREFERENCES.map((pref) => (
                   <OptionButton
                     key={pref}

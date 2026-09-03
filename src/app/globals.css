@@ -11,6 +11,68 @@
   --retro-emerald: #10b981;
 }
 
+/*
+ * Mobile hero height budget (short-height viewport hotfix).
+ *
+ * The landing hero's first view is composed of fixed-height blocks (Setup card,
+ * Slot chassis, helper band) whose total exceeds iOS Safari's SMALL viewport on
+ * short portrait devices. These tokens are the single place that budget is
+ * written, so page.tsx can derive the brand logo's remaining height from them in
+ * one calc() rather than from hand-tuned per-block guesses. Every term is
+ * viewport-derived -- there is no UA, device or model branching anywhere.
+ *
+ * WHY `svh` AND NEVER `dvh`: `svh` is static (it is the viewport with the mobile
+ * toolbar EXPANDED), so retracting the toolbar only ever reveals more of the page.
+ * `dvh` would re-resolve mid-scroll and visibly reflow the logo and the Setup ->
+ * Slot gap as the toolbar retracts. Do not "modernize" these to dvh.
+ *
+ *  --chrome-h        measured Header.tsx height: titlebar h-8 (32) + border-b (1)
+ *                    + nav row (py-1.5 12 + 24px content = 36; sm:py-2 -> 40)
+ *                    + border-b-2 (2). Replaces a stale hard-coded 48px that
+ *                    under-reserved by ~24px in both page.tsx mounts.
+ *  --hero-setup-h    SetupArea's state-locked card height (see SetupArea.tsx).
+ *                    Mobile content measures EXACTLY 200px with border-box
+ *                    accounted for (border 4 + padding 32 + header row 26 +
+ *                    gap-2.5 10 + question area 128 = 200) -- there is no
+ *                    card-level slack to spare. That card is `overflow-hidden`,
+ *                    so any internal box that doesn't honestly fit its share of
+ *                    the fixed 128px question area clips silently instead of
+ *                    growing -- this is exactly what happened when Q2's mobile
+ *                    option grid (a declared box shorter than its own two-row
+ *                    content) was fixed to fit inside that 128px honestly,
+ *                    rather than relying on hidden slack anywhere in this outer
+ *                    card. The sm value is that breakpoint's exact measured
+ *                    content (48 + 32 + 14 + 92 = 186), also with zero slack.
+ *  --hero-stage-gap  MainExperience's Setup <-> Slot gap. Pinned to a flat 24px
+ *                    from `sm` up so the desktop mount is provably unchanged --
+ *                    that component is shared by both of page.tsx's mounts.
+ *  --hero-pad-t      the mobile hero section's own top padding.
+ *  --hero-pad-b      the mobile hero section's own bottom gutter. Replaces a 2px
+ *                    anchor that let the fold slice flush at the chassis artwork
+ *                    with nothing below it in view.
+ *  --hero-logo-pt    the logo row's top padding, a term inside the budget above.
+ */
+:root {
+  --chrome-h: 72px;
+  --hero-setup-h: 200px;
+  --hero-stage-gap: clamp(16px, 3svh, 24px);
+  --hero-pad-t: 4px;
+  --hero-pad-b: clamp(8px, 2svh, 20px);
+  --hero-logo-pt: clamp(4px, 1.8svh, 20px);
+}
+
+@media (min-width: 640px) {
+  :root {
+    /* Header switches to sm:py-2 here, so the chrome grows 3px. That is also why
+       this bump sits at 640px rather than at the `lg` (1024px) mount boundary:
+       between 640 and 1023 the MOBILE hero renders under the DESKTOP-height
+       header, a case the single hard-coded 48px could never express. */
+    --chrome-h: 75px;
+    --hero-setup-h: 186px;
+    --hero-stage-gap: 24px;
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
