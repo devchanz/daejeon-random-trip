@@ -41,13 +41,13 @@ export function StopCard({ stop, accentIndex = 0, className = '' }: StopCardProp
   return (
     <article
       data-testid="stop-card"
-      className={`flex h-full min-h-0 w-full flex-col justify-center gap-[3%] overflow-hidden px-[5%] py-[4%] ${className}`}
+      className={`flex h-full min-h-0 min-w-0 w-full flex-col justify-center gap-[3%] overflow-hidden px-[5%] py-[4%] ${className}`}
     >
       {categoryLabel && (
         <span className={`${RESULT_CELL_PILL} ${accent.pill}`}>{categoryLabel}</span>
       )}
 
-      <div className="flex min-h-0 flex-1 items-center gap-[3%]">
+      <div className="flex min-h-0 min-w-0 flex-1 items-center gap-[3%]">
         {assetKey ? (
           <FittedAsset
             assetKey={assetKey}
@@ -66,11 +66,11 @@ export function StopCard({ stop, accentIndex = 0, className = '' }: StopCardProp
         <div aria-hidden="true" className={`${RESULT_CELL_DIVIDER} ${accent.divider}`} />
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-[2%]">
-          <h3 className="line-clamp-2 break-keep text-[clamp(14px,4.2vw,19px)] font-black leading-[1.2] text-[#2b2520]">
+          <h3 className="line-clamp-2 break-words text-[clamp(14px,4.2vw,19px)] font-black leading-[1.3] text-[#2b2520]">
             {stop.name}
           </h3>
           {stop.hook && (
-            <p className="line-clamp-2 break-keep text-[clamp(10px,3vw,13px)] font-bold leading-[1.3] text-[#7d7364]">
+            <p className="line-clamp-2 break-words text-[clamp(10px,3vw,13px)] font-bold leading-[1.3] text-[#7d7364]">
               {stop.hook}
             </p>
           )}

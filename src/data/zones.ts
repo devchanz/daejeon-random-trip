@@ -1,12 +1,5 @@
 import type { Zone } from '../lib/random/types';
 
-/**
- * Curated travel zones across Daejeon for Controlled Random Travel.
- *
- * NOTE on Banseok (반석동):
- * The provisional dataset currently has no anchor or discovery candidates in Banseok.
- * It is temporarily set to active: false pending provisional role-data review.
- */
 export const ZONES = [
   {
     id: 'soje',
@@ -46,6 +39,46 @@ export const ZONES = [
   {
     id: 'banseok',
     name: '반석동',
-    active: false, // Temporarily inactive pending provisional role-data review
+    active: true, // Now active since fallback 3-stop works fine
+  },
+  {
+    id: 'bongmyeong',
+    name: '봉명동',
+    active: true,
+  },
+  {
+    id: 'gwanjeo',
+    name: '관저동',
+    active: true,
+  },
+  {
+    id: 'eunhaeng',
+    name: '은행동',
+    active: true,
+  },
+  {
+    id: 'daesa',
+    name: '대사동',
+    active: true,
+  },
+  {
+    id: 'jukdong',
+    name: '죽동',
+    active: true,
+  },
+  {
+    id: 'tanbang',
+    name: '탄방동',
+    active: true,
+  },
+  {
+    id: 'songchon',
+    name: '송촌동',
+    active: true,
+  },
+  {
+    id: 'daedong',
+    name: '대동',
+    active: true,
   },
 ] as const satisfies readonly Zone[];
