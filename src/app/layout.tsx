@@ -59,10 +59,39 @@ const dosGothic = localFont({
   preload: false,
 });
 
+const SITE_TITLE = "대전 랜덤 여행 | DAEJEON RANDOM TRIP";
+const SITE_DESCRIPTION = "시간과 취향만 고르면 시작되는 대전 랜덤 여행";
+
+/**
+ * Single static brand OG asset (public/og-daejeon-random-trip.png, verified
+ * 1200x630 opaque PNG). Not a src/config/visualAssets.ts entry -- that
+ * registry is scoped to in-app game-art assets, this is a crawler/metadata
+ * asset served directly from public/. Reused as-is (never route-specific,
+ * never dynamically generated) by both this root default and
+ * /r/[shareCode]'s per-route metadata.
+ */
+const OG_IMAGE = {
+  url: "/og-daejeon-random-trip.png",
+  width: 1200,
+  height: 630,
+  alt: SITE_TITLE,
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteOrigin()),
-  title: "대전 랜덤 여행 | DAEJEON RANDOM TRIP",
-  description: "고민 없이 떠나는 대전 당일치기 & 반일 랜덤 여행 코스 추천",
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [OG_IMAGE],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [OG_IMAGE.url],
+  },
 };
 
 const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
@@ -77,7 +106,7 @@ export default function RootLayout({
       lang="ko"
       className={`${dosGothic.variable} ${geistSans.variable} ${geistMono.variable} min-h-full antialiased`}
     >
-      <body className="min-h-screen flex flex-col bg-retro-dots text-[#2b2520]">{children}</body>
+      <body className="min-h-screen flex flex-col bg-[#fdfbf7] text-[#2b2520]">{children}</body>
       {gaMeasurementId ? <GoogleAnalytics gaId={gaMeasurementId} /> : null}
     </html>
   );

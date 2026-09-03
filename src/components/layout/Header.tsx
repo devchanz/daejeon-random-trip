@@ -21,9 +21,9 @@ import { FittedAsset } from '../common';
  */
 export function Header() {
   return (
-    <header className="w-full border-b-2 border-[#2b2520] bg-[#fffef9] shadow-xs">
+    <header className="w-full border-b-2 border-line-soft bg-[#fffef9]">
       {/* 1. Retro OS Window Titlebar */}
-      <div className="flex h-8 w-full items-center justify-between border-b border-[#2b2520] bg-[#f7f3ea] px-3 sm:px-4 text-xs font-black text-[#2b2520]">
+      <div className="flex h-8 w-full items-center justify-between border-b border-line-soft bg-[#f7f3ea] px-3 sm:px-4 text-xs font-black text-[#2b2520]">
         <div className="flex items-center gap-1.5 font-mono text-[11px] sm:text-xs">
           {/* Production Manifest star replaces the standalone glyph. Sized to the titlebar
               hierarchy it inherited (text-[11px] sm:text-xs), NOT enlarged. Reuses the
@@ -68,7 +68,7 @@ export function Header() {
         <Link
           href="/"
           aria-label="대전 랜덤 여행 홈으로 이동"
-          className="flex flex-1 max-w-md items-center justify-center gap-1.5 rounded-full border border-[#2b2520] bg-[#fcf8f0] py-1 px-3 text-[11px] sm:text-xs font-mono font-bold text-[#2b2520] shadow-inner transition-colors hover:bg-[#f7f3ea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff5555] focus-visible:outline-offset-1"
+          className="flex flex-1 max-w-md items-center justify-center gap-1.5 rounded-full border border-line-control bg-[#fcf8f0] py-1 px-3 text-[11px] sm:text-xs font-mono font-bold text-[#2b2520] transition-colors hover:bg-[#f7f3ea] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ff5555] focus-visible:outline-offset-1"
         >
           <span className="text-[#ff5555]">❤️</span>
           <span>letsgo-daejeon.com</span>

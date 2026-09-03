@@ -1,68 +1,44 @@
-import type { VisualAssetKey } from '../../config/visualAssets';
-
 /**
- * Route Guide production-skin geometry -- the single place its crop coordinates
- * live. Measured by decoding the approved sources (`RouteGuide/Skin/{Desktop,
- * Mobile}`, 09_ROUTE_GUIDE), not eyeballed.
+ * Route Guide visual config -- the single home for the shell's shared colour
+ * tokens and the per-stop accent resolver. Route Guide is fully DOM/CSS now:
+ * it ships zero raster assets of its own.
  *
- * These skins are deliberately MINIMAL: a cobalt outer frame, cream paper, and one
- * Mission decorative shell. Design's own note is explicit -- "treat both skins as
- * background/surface assets, not complete screens", "do not bake stop count into
- * the image", and "Mission box geometry is the only fixed interior decorative
- * region". So the body is an ornament-free strip that tiles on Y while the long,
- * variable-length timeline stays entirely DOM-driven.
+ * Phase 4 (DOM/CSS rebuild) first replaced the full-frame raster skin with a
+ * thick painted-looking cobalt frame reproduced in CSS. Human Browser E2E
+ * rejected that direction: imitating Result's raster frame in CSS made the
+ * two surfaces read as MORE different, not more coherent, since one is a
+ * painted PNG and the other can never quite match it. The approved
+ * correction instead models the shell on the existing Random Log / paper-card
+ * family (RandomLogCard, RandomLogDetail, GuestbookComposer) -- a restrained
+ * cream sheet with a light `line-soft` border -- and uses the Result-measured
+ * accent colours (see resolveResultAccent below) as identity accents on the
+ * per-stop timeline, never as a generic outer frame colour. There is
+ * therefore no cobalt/blue shell token any more: `GUIDE_COBALT` and
+ * `--color-guide-cobalt` only ever existed to support the rejected direction
+ * and have been removed, not just retired.
  *
- * Measured frame bounds within each source:
- *   mobile   x 0-886   y 0-1773  (887x1774)  mission shell rows 287-435
- *   desktop  x 11-1524 y 8-1012  (1514x1005) mission shell rows 218-305
- * The desktop source carries ~11px of cream padding outside its dark frame
- * outline; the crops start at the outline so no pale edge shows around the frame.
- * The mobile source's black outer ring is part of the artwork and is kept.
- *
- * Band crops: header = top 10% of the frame, footer = bottom 8%, body = a uniform
- * slice from 58-62% (verified ornament-free), mission = the amber dashed box inset
- * horizontally to the inner cream edge so it never double-draws the cobalt rails.
+ * A second correction then retired the one raster this shell had kept -- the
+ * mission shell (a small dashed-border decorative crop). It is not an
+ * exception any more: the mission section is now the same DOM/CSS
+ * paper-card language as everything else in Route Guide (see
+ * RouteGuideModal.tsx). `routeGuide.missionShell` is removed from the asset
+ * registry and its file deleted from public/assets, not just unregistered.
  */
 
-export interface GuideSkinBandKeys {
-  mobile: VisualAssetKey;
-  desktop: VisualAssetKey;
-}
-
-export const GUIDE_HEADER_BAND: GuideSkinBandKeys = {
-  mobile: 'routeGuide.skin.mobile.header',
-  desktop: 'routeGuide.skin.desktop.header',
-};
-
-/** Ornament-free cream+rails strip; tiles vertically behind the timeline. */
-export const GUIDE_BODY_STRIP: GuideSkinBandKeys = {
-  mobile: 'routeGuide.skin.mobile.body',
-  desktop: 'routeGuide.skin.desktop.body',
-};
-
-export const GUIDE_FOOTER_BAND: GuideSkinBandKeys = {
-  mobile: 'routeGuide.skin.mobile.footer',
-  desktop: 'routeGuide.skin.desktop.footer',
-};
+export { resolveResultAccent } from '../../config/resultAccents';
 
 /**
- * The one fixed interior decorative region, applied as the mission section's
- * background so it tracks the DOM mission block rather than a page offset.
+ * Warm cream surface colour -- the SAME cream the Random Log / paper-card
+ * family already uses everywhere else in the app (RandomLogCard,
+ * RandomLogDetail, GuestbookComposer all use this exact value), not a
+ * Route-Guide-specific tone. Kept as one named token (rather than switching
+ * every consumer to the raw literal) purely for the ring/surface-match
+ * contract below.
  *
- * ONE asset serves both breakpoints, and it is **aspect-locked and never
- * stretched**: the dashed border and its sparkles would visibly distort under a
- * vertical stretch. The desktop RouteGuide skin's own mission crop is ~15:1
- * (proportioned for a 760x505 landscape modal) which cannot hold a label plus two
- * lines at our portrait modal width, so the 5.1:1 mobile shell is used throughout.
- * Mission text is clamped to 2 lines and its type scales responsively to fit
- * inside the locked height.
+ * CRITICAL CONTRACT: RouteGuideTimeline's stop-number stamp ring MUST use the
+ * `ring-guide-paper` Tailwind class (never a hardcoded hex) so the ring can
+ * never mismatch the surface it sits on -- the exact failure mode a
+ * hardcoded `ring-[#f7efe3]` (and, briefly, `#fcf2e4`) was silently exposed
+ * to the moment the paper colour changed underneath it.
  */
-export const GUIDE_MISSION_SHELL_KEY = 'routeGuide.missionShell' as const;
-
-/** Native size of the mission shell crop, for aspect-locking. */
-export const GUIDE_MISSION_SHELL_SIZE = { w: 834, h: 163 } as const;
-/** Literal aspect class (Tailwind scans source text statically). */
-export const GUIDE_MISSION_SHELL_ASPECT = 'aspect-[834/163]';
-
-/** Sampled cream paper colour, painted behind the tiling strip as a seam guard. */
-export const GUIDE_PAPER = '#f7efe3';
+export const GUIDE_PAPER = '#fffef9';

@@ -1,28 +1,11 @@
 import { ZONES } from '../../data/zones';
 
-const DURATION_LABELS: Record<string, string> = {
-  half: '반나절',
-  full: '하루종일',
-};
+/** Canonical duration/preference labels -- see src/content/labels.ts. */
+export { getDurationLabel, getPreferenceLabel } from '../../content/labels';
 
-const PREFERENCE_LABELS: Record<string, string> = {
-  anything: '아무거나',
-  food: '먹방',
-  walk: '산책',
-  photo: '사진',
-};
-
-/** Minimal trip-context label helpers shared by the Random Log board and detail views. */
+/** Minimal trip-context label helper shared by the Random Log board and detail views. */
 export function getZoneLabel(zoneId: string): string {
   return ZONES.find((zone) => zone.id === zoneId)?.name ?? zoneId;
-}
-
-export function getDurationLabel(durationType: string): string {
-  return DURATION_LABELS[durationType] ?? durationType;
-}
-
-export function getPreferenceLabel(preferenceType: string): string {
-  return PREFERENCE_LABELS[preferenceType] ?? preferenceType;
 }
 
 /**

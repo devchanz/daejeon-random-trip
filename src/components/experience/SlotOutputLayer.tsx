@@ -96,7 +96,7 @@ export function SlotOutputLayer({ revealStage, peekPhase = 'inside' }: SlotOutpu
     >
       <div
         data-testid="slot-output-layer"
-        className="absolute rounded-sm border-2 border-[#2b2520] bg-[#fffef9] shadow-retro-sm animate-output-peek"
+        className="absolute rounded-sm border-2 border-[#2b2520] bg-[#fffef9] animate-output-peek"
         style={{
           left: OUTPUT_SLIT.left,
           width: OUTPUT_SLIT.width,

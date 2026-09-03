@@ -90,7 +90,7 @@ export default function Home() {
               </div>
             </main>
 
-            {/* Right Column: TODAY'S PICK + VISITOR LOG */}
+            {/* Right Column: TODAY'S PICK + MEMORY LOG */}
             <div className="relative w-[clamp(260px,21vw,360px)] shrink-0 flex flex-col gap-3.5">
               {/* Ambient Cloud behind top-right sidebar. Kept off the right edge: that
                   corner is occupied by the editorial card's perched mascot.
@@ -187,22 +187,41 @@ export default function Home() {
                 aria-label="Today’s Pick과 Random Log로 이동"
                 className="group lg:hidden absolute right-0 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center outline-none"
               >
-                {/* The 44x44 anchor is the touch target; the 30px box below is the visible control.
-                    TEMPORARY VISUAL SHELL -- a dedicated pixel-art down-arrow PNG is deferred to a
-                    later branch, which must change only this representation and preserve the href,
-                    the #mobile-right-rail target, the plain-anchor semantics, the accessibility
-                    contract and the lg:hidden visibility rule.
-                    The chevron is drawn as stepped CSS blocks rather than a glyph on purpose:
-                    DOSGothic contains none of the geometric down-glyphs (verified against its cmap --
-                    U+25BC/25BE/25BD/2193/25A0/25B6 are all absent), so a text arrow silently fell back
-                    to Geist Sans and rendered as a smooth vector triangle. */}
+                {/* The 44x44 anchor is the touch target; the 36px circle below is the
+                    visible control. FINAL Phase 6 redesign: the pixel-arrow direction
+                    (crispEdges 8x8 rects, coral fill) was rejected outright by Human Browser
+                    + team review -- this control intentionally stops imitating the rest of
+                    the retro/pixel/Y2K landing system. Its role is plain navigation utility
+                    (jump to the mobile right rail), not expressive brand identity, so it now
+                    reads as a familiar, neutral circular utility button (ChatGPT-style down-
+                    arrow reference) instead: white circle, a light neutral border (not the
+                    app's warm `line-control` token -- deliberately closer to true neutral
+                    gray here, since this control is the one deliberate exception to the warm
+                    palette), and a simple stroke-based arrow icon. No shadow -- the project's
+                    global no-decorative-shadow contract holds; the light border alone gives
+                    enough separation from the page. */}
                 <span
                   aria-hidden="true"
-                  className="flex h-[30px] w-[30px] flex-col items-center justify-center gap-[2px] rounded-[2px] border-2 border-[#2b2520] bg-[#fffef9] transition-transform group-active:translate-x-[1px] group-active:translate-y-[1px] group-focus-visible:ring-2 group-focus-visible:ring-[#ff5555]"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e5e5e5] bg-white transition-all group-hover:bg-[#f7f7f7] group-active:translate-x-[1px] group-active:translate-y-[1px] group-focus-visible:ring-2 group-focus-visible:ring-[#2b2520] group-focus-visible:ring-offset-2"
                 >
-                  <span className="h-[3px] w-[15px] bg-[#2b2520]" />
-                  <span className="h-[3px] w-[9px] bg-[#2b2520]" />
-                  <span className="h-[3px] w-[3px] bg-[#2b2520]" />
+                  <svg
+                    viewBox="0 0 20 20"
+                    width="20"
+                    height="20"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                    className="text-[#2b2520]"
+                  >
+                    {/* Simple vertical stem + two-stroke V arrowhead -- a plain modern
+                        down-arrow glyph, not filled/blocky geometry. */}
+                    <line x1="10" y1="4" x2="10" y2="14" />
+                    <polyline points="5,9 10,14 15,9" />
+                  </svg>
                 </span>
               </a>
             </div>
@@ -214,7 +233,7 @@ export default function Home() {
         </section>
 
         {/* Mobile Secondary Content: Discoverable below the initial fold */}
-        <section className="flex flex-col gap-4 py-6 px-3 bg-[#faf7f0]/60 border-t-2 border-[#2b2520]/10">
+        <section className="flex flex-col gap-4 py-6 px-3 bg-[#faf7f0]/60 border-t-2 border-line-soft">
           <LeftSidebar />
           {/* Quick-jump target. The id lives on this MOBILE-ONLY wrapper, never inside
                 RightSidebar: that component renders twice (desktop + mobile) and both

@@ -200,7 +200,7 @@ export function ResultArea({
             onClick={onMinimize}
             data-testid="result-minimize-button"
             aria-label="결과 접기"
-            className="rounded-full border-2 border-[#2b2520] bg-[#fffef9] px-3 py-1.5 text-xs font-black text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+            className="rounded-full border-2 border-line-control bg-[#fffef9] px-3 py-1.5 text-xs font-black text-[#2b2520] cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
           >
             결과 접기 ▾
           </button>

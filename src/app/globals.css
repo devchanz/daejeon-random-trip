@@ -76,6 +76,49 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* Global light-border / no-decorative-shadow visual contract -- a THREE-tier
+     border hierarchy, not a two-tone swap. Same warm pink-beige family at
+     increasing weight, so a component's border always tells you its role:
+       line-soft    passive structural chrome -- card/panel/modal frames,
+                    dividers, section separators, metadata pills, tinted
+                    info boxes. Meant to almost disappear.
+       line-control ordinary neutral controls/chrome -- secondary/tertiary
+                    buttons, icon/close/back buttons, default unselected
+                    control states, default input borders, browser-chrome
+                    decoration, the Header URL pill. Visible enough to read
+                    as a control, without competing with primary content.
+       line-ink     reserved for STRONG/intentional contrast only -- focus
+                    rings, selected/active state indicators, true primary/
+                    branded actions, intentional pixel-art outlines, Slot/
+                    Result raster-matched treatments, semantic/brand colors
+                    (Naver/Kakao). "Interactive" alone is never sufficient
+                    reason to use this tier -- a generic button does not
+                    automatically need a black border.
+     Registered under @theme (not plain :root) so Tailwind 4 emits
+     border-line-soft / divide-line-soft / border-line-control /
+     border-line-ink utilities. */
+  --color-line-soft: #f4e9e4;
+  /* #ddcec8 (first pass) read too weak specifically on Q1/Q2's option buttons
+     -- the highest-visibility, most primary-interaction consumer of this
+     tier -- once their card's background reverted to the neutral #fffef9
+     cream. Deepened once, through this single shared token (never a
+     component-local override), so every line-control consumer moves
+     together and stays one family with line-soft/line-ink. */
+  --color-line-control: #d7c5be;
+  --color-line-ink: #2b2520;
+  /* Route Guide shell token. A Phase 4 first pass rebuilt the retired
+     full-frame raster skin as a thick cobalt CSS frame measured from the
+     Figma reference (nodes 290:10/290:12) -- Human Browser E2E rejected
+     that direction (imitating Result's painted-PNG frame in CSS read as
+     LESS coherent with Result, not more) in favour of modelling the shell on
+     the existing Random Log / paper-card family instead. `--color-guide-cobalt`
+     accordingly no longer exists: it only ever supported the rejected frame.
+     `guide-paper` remains -- now valued at the SAME cream the Random Log
+     family already uses everywhere (#fffef9), not a Route-Guide-specific
+     tone -- purely so RouteGuideTimeline's stop-stamp ring can reference one
+     token rather than a hardcoded hex that could drift from the surface it
+     sits on. See guideSkin.ts and RouteGuideTimeline.tsx. */
+  --color-guide-paper: #fffef9;
   /* `--font-ui` is the role-named UI font slot, defined by the selected
      production Korean/UI typeface (DOS Gothic, registered in src/app/layout.tsx). It is
      role-named rather than font-named so this file need not change if the typeface does.
@@ -85,7 +128,7 @@
      line is what applies the Korean/UI font across the interface. */
   --font-sans: var(--font-ui), var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   /* Deliberately unchanged: the 29 `font-mono` sites are the retro English pixel
-     labels (MY PROFILE, VISITOR LOG, STEP 1/2, TOTAL VISIT, timestamps, URL pill)
+     labels (MY PROFILE, MEMORY LOG, STEP 1/2, TOTAL VISIT, timestamps, URL pill)
      whose identity depends on staying monospaced. */
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
@@ -109,48 +152,24 @@ body {
   background-size: 16px 16px;
 }
 
-/* Retro shadow presets */
-.shadow-retro-xs {
-  box-shadow: 1.5px 1.5px 0px #2b2520;
-}
-
-.shadow-retro-sm {
-  box-shadow: 2px 2px 0px #2b2520;
-}
-
-.shadow-retro {
-  box-shadow: 3.5px 3.5px 0px #2b2520;
-}
-
-.shadow-retro-lg {
-  box-shadow: 5px 5px 0px #2b2520;
-}
-
-.shadow-retro-xl {
-  box-shadow: 7px 7px 0px #2b2520;
-}
-
-/* Tactile button press simulation */
-.btn-press:active {
-  transform: translate(2px, 2px);
-  box-shadow: 0px 0px 0px #2b2520;
-}
-
-/* Washi tape decoration */
-.washi-tape {
-  background-color: rgba(254, 240, 138, 0.85);
-  border: 1px dashed rgba(43, 37, 32, 0.2);
-  box-shadow: 0 1px 2px rgba(43, 37, 32, 0.1);
-}
-
-.washi-tape-pink {
-  background-color: rgba(254, 205, 211, 0.85);
-  border: 1px dashed rgba(43, 37, 32, 0.2);
-  box-shadow: 0 1px 2px rgba(43, 37, 32, 0.1);
-}
+/*
+ * Retro shadow presets -- REMOVED (Phase 2, global light-border/no-shadow
+ * contract). Migration order followed: (A) zero-consumer rules deleted
+ * immediately -- `.shadow-retro` (bare), `.shadow-retro-lg`, `.btn-press`,
+ * `.washi-tape`/`.washi-tape-pink`. (B) every live consumer of
+ * `.shadow-retro-xs/-sm/-xl` was migrated off the class (verified by grep
+ * across src). (C) with zero consumers remaining, all three definitions are
+ * deleted here too, rather than kept dormant. Exempted from the shadow
+ * removal (kept as inline `drop-shadow-[...]`, not this class): SlotAnchor's
+ * painted CTA white-text guard and ResultActions' ON_WELL_LIGHT guard --
+ * both raster-text legibility guards, not decoration.
+ */
 
 /*
- * Production skin bands (Result / Route Guide).
+ * Production skin bands -- Result ONLY. Route Guide's shell went DOM/CSS in
+ * Phase 4 (see guideSkin.ts), and a later correction retired its one
+ * remaining raster (the mission shell) too, so Route Guide has zero
+ * consumers of this mechanism now.
  *
  * Each consumer passes BOTH breakpoint variants in as CSS custom properties,
  * resolved through `visualAsset()` so the asset registry stays the single source
@@ -167,12 +186,6 @@ body {
  * source asset is missing) the media block resolves to nothing and the band falls
  * back to its DOM/CSS styling.
  */
-.skin-band {
-  background-image: var(--skin-m);
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
-}
-
 /*
  * Non-repeating, NEVER-STRETCHED raster. `100% auto` locks the image to the
  * element's width and lets the artwork's own aspect set the height, so it is never
@@ -182,10 +195,11 @@ body {
  * Used by:
  *  - the Result body canvas (Summary shell / MAIN QUEST ribbon / four cells /
  *    BONUS QUEST shell), and
- *  - the Result ACTION bands, which moved here from `.skin-band`: sizing the
- *    footer from the DOM buttons and stretching the raster to fit measured
- *    1.43-1.60x on mobile consumed and visibly distorted the painted wells and
- *    the cobalt bottom frame.
+ *  - the Result ACTION bands: sizing the footer from the DOM buttons and
+ *    stretching the raster to fit measured 1.43-1.60x on mobile consumed
+ *    visibly distorted the painted wells and the cobalt bottom frame.
+ * (Route Guide's mission shell was the one other consumer of this class;
+ * it is retired -- Route Guide is fully DOM/CSS now, see guideSkin.ts.)
  * It must never become repeat-y.
  */
 .skin-canvas {
@@ -193,17 +207,6 @@ body {
   background-size: 100% auto;
   background-repeat: no-repeat;
   background-position: top center;
-}
-
-/*
- * Route Guide body ONLY: its approved skin is intentionally minimal (cobalt frame
- * + cream paper) and its content area is deliberately DOM-driven and long, so a
- * neutral vertically-tiling paper treatment is correct there.
- */
-.skin-strip {
-  background-image: var(--skin-m);
-  background-size: 100% auto;
-  background-repeat: repeat-y;
 }
 
 /*
@@ -216,9 +219,7 @@ body {
  * geometry must stay in step with this query.
  */
 @media (min-width: 1024px) {
-  .skin-band,
-  .skin-canvas,
-  .skin-strip {
+  .skin-canvas {
     background-image: var(--skin-d);
   }
 }
@@ -249,8 +250,9 @@ body {
 
 /*
  * Route Guide body: a thin, muted scrollbar instead of the thick OS default.
- * Applied to an INNER scroller that is inset from the skin's cobalt rails, so the
- * thumb sits in the cream gutter and never paints over the painted frame.
+ * Applied to an INNER scroller that is inset from the DOM cobalt frame (see
+ * guideSkin.ts / RouteGuideModal.tsx), so the thumb sits in the cream gutter
+ * and never paints over the frame.
  */
 .scrollbar-subtle {
   scrollbar-width: thin;
@@ -396,6 +398,30 @@ body {
 
 .animate-output-peek {
   animation: output-peek 0.3s ease-out forwards;
+}
+
+/*
+ * Scroll continuation cue (ScrollContinuationCue.tsx): a small nudge so the
+ * chevron reads as "look, more below" rather than a static icon, without
+ * ever becoming a distracting perpetual bounce. Two finite cycles then the
+ * animation ends and the chevron simply sits still (`forwards` holds the
+ * final, at-rest frame) -- there is no infinite loop to gate behind
+ * reduced-motion in the first place, but the component still only applies
+ * this class under `motion-safe:` so a reduced-motion viewer gets the static
+ * chevron immediately, with zero motion at any point.
+ */
+@keyframes scroll-cue-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+
+.animate-scroll-cue-bob {
+  animation: scroll-cue-bob 1.1s ease-in-out 2;
 }
 
 /* Reduced-motion reel settle: opacity only -- no translateY, no scale, no

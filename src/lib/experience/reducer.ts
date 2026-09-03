@@ -3,19 +3,25 @@ import type { RouteResult } from '../random/types';
 import type {
   ExperienceAction,
   ExperienceState,
-  Q1ExperienceState,
+  IntroExperienceState,
 } from './types';
 
 /**
- * Initial experience state starting at Q1 with no choices selected.
+ * Initial experience state starting at INTRO (the entry gate, rendered inside
+ * the same SetupArea card Q1/Q2/READY/SPINNING share) with no choices selected.
+ * The user must intentionally activate START to reach Q1 -- see START_INTRO.
  */
-export const INITIAL_EXPERIENCE_STATE: Q1ExperienceState = {
-  phase: 'q1',
+export const INITIAL_EXPERIENCE_STATE: IntroExperienceState = {
+  phase: 'intro',
 };
 
 /**
  * Action creators for experience state transitions.
  */
+export function startIntro(): ExperienceAction {
+  return { type: 'START_INTRO' };
+}
+
 export function selectDuration(duration: DurationType): ExperienceAction {
   return { type: 'SELECT_DURATION', duration };
 }
@@ -37,6 +43,7 @@ export function completeSpin(result: RouteResult): ExperienceAction {
  * Guarantees strictly defined forward transitions and rejects invalid state jumps safely.
  *
  * Valid forward transition pathways:
+ * - intro + START_INTRO -> q1
  * - q1 + SELECT_DURATION -> q2
  * - q2 + SELECT_PREFERENCE -> ready
  * - ready + START_SPIN -> spinning
@@ -47,6 +54,13 @@ export function experienceReducer(
   action: ExperienceAction
 ): ExperienceState {
   switch (action.type) {
+    case 'START_INTRO': {
+      if (state.phase === 'intro') {
+        return { phase: 'q1' };
+      }
+      return state;
+    }
+
     case 'SELECT_DURATION': {
       if (state.phase === 'q1') {
         return {

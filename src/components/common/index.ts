@@ -2,6 +2,8 @@ export { FittedAsset, type FittedAssetProps } from './FittedAsset';
 export { skinBandStyle } from './skinBand';
 export { OVERLAY_BACKDROP, OVERLAY_DIALOG, OVERLAY_STATIC_ZONE } from './overlayShell';
 export { useScrollLock } from './useScrollLock';
+export { useScrollContinuationCue } from './scrollContinuation';
+export { ScrollContinuationCue, type ScrollContinuationCueProps } from './ScrollContinuationCue';
 export {
   STOP_CATEGORY_ASSET_KEYS,
   STOP_PLACE_ASSET_KEYS,

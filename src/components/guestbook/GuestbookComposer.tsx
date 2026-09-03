@@ -178,7 +178,7 @@ export function GuestbookComposer({
       className={`${OVERLAY_BACKDROP} bg-[#2b2520]/50 backdrop-blur-xs animate-reveal-fade-in`}
     >
       <div
-        className={`${OVERLAY_DIALOG} w-full max-w-lg rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] p-5 sm:p-7 text-[#2b2520] shadow-retro-xl animate-ticket-entrance`}
+        className={`${OVERLAY_DIALOG} w-full max-w-lg rounded-3xl border-3 border-line-soft bg-[#fffef9] py-5 sm:py-7 text-[#2b2520] animate-ticket-entrance`}
       >
         {/* Top Perforation Deco */}
         <div
@@ -188,18 +188,18 @@ export function GuestbookComposer({
 
         {/* Header: always reachable and non-scrolling */}
         <div
-          className={`flex items-start justify-between border-b-2 border-[#2b2520] pb-3 mb-4 ${OVERLAY_STATIC_ZONE}`}
+          className={`flex items-start justify-between border-b-2 border-line-soft px-5 sm:px-7 pb-3 mb-4 ${OVERLAY_STATIC_ZONE}`}
         >
           <div>
             <span className="font-mono text-[11px] font-black tracking-widest text-[#ff5555] uppercase flex items-center gap-1 mb-0.5">
               <span>📓</span>
-              <span>VISITOR LOG COMPOSER</span>
+              <span>MEMORY LOG COMPOSER</span>
             </span>
             <h2
               id="guestbook-composer-title"
               className="text-lg sm:text-xl font-black text-[#2b2520]"
             >
-              {rewardEligible ? '랜덤 로그 남기고 1회 더 뽑기' : '랜덤 로그 남기기'}
+              {rewardEligible ? 'MEMORY LOG 남기고 1회 더 뽑기' : '메모리 로그 남기기'}
             </h2>
           </div>
           <button
@@ -207,7 +207,7 @@ export function GuestbookComposer({
             onClick={handleClose}
             disabled={isSubmitting}
             aria-label="닫기"
-            className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[#2b2520] bg-[#faf6ee] text-sm font-black text-[#2b2520] shadow-retro-xs hover:bg-[#f0eae0] cursor-pointer"
+            className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-line-control bg-[#faf6ee] text-sm font-black text-[#2b2520] hover:bg-[#f0eae0] cursor-pointer"
           >
             &times;
           </button>
@@ -216,12 +216,12 @@ export function GuestbookComposer({
         {isSuccess ? (
           rewardGrantedThisSubmission ? (
             /* CASE A: this submission actually unlocked the reroll reward. */
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto overscroll-none py-8 text-center animate-ticket-entrance">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto overscroll-none px-5 sm:px-7 py-8 text-center animate-ticket-entrance">
               <span className="text-4xl" role="img" aria-label="Party Popper">
                 🎉
               </span>
               <h3 className="text-lg font-black text-[#10b981]">
-                랜덤 로그가 등록되었습니다!
+                메모리 로그가 등록되었습니다!
               </h3>
               <p className="text-xs font-bold text-[#6b6257]">
                 🎁 1회 더 뽑기 기회가 잠금 해제되었습니다!
@@ -230,12 +230,12 @@ export function GuestbookComposer({
           ) : (
             /* CASE B: reward already consumed this session -- quiet gratitude,
                no reroll/reward wording, no confetti-style icon. */
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto overscroll-none py-8 text-center animate-ticket-entrance">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 overflow-y-auto overscroll-none px-5 sm:px-7 py-8 text-center animate-ticket-entrance">
               <span className="text-4xl" role="img" aria-label="Check Mark">
                 ✅
               </span>
               <h3 className="text-lg font-black text-[#2b2520]">
-                랜덤 로그를 남겨주셔서 고마워요.
+                메모리 로그를 남겨주셔서 고마워요.
               </h3>
               <p className="text-xs font-bold text-[#6b6257]">
                 당신의 한 줄이 다음 여행자에게 대전 힌트가 될 거예요.
@@ -250,108 +250,124 @@ export function GuestbookComposer({
              submit button stays natively associated with this form and every
              validation/submit code path below is untouched. */
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-none">
-              {/* Auto-attached Route Info Tag */}
-              <div className="rounded-xl border border-[#e4dcce] bg-[#faf6ee] p-3 text-xs">
-                <div className="font-mono text-[10px] font-black text-[#8c8273] uppercase mb-1">
-                  ATTACHED ROUTE
-                </div>
-                <div className="font-bold text-[#2b2520] flex flex-wrap items-center gap-1.5">
-                  <span>{routeResult.title}</span>
-                  <span className="rounded-md border border-[#d8d0c2] bg-white px-1.5 py-0.2 text-[10px] font-bold text-[#7d7364]">
-                    {routeResult.stops?.length ?? 0}곳 코스
-                  </span>
+            {/*
+             * SCROLLBAR ARCHITECTURE CORRECTION (same principle as
+             * RouteGuideModal): the scroll container used to carry the same
+             * horizontal inset as its content, so the scrollbar track
+             * rendered right against the character grid/inputs. Fixed by
+             * moving the inset down a level -- this outer box is just the
+             * `relative` full-width flex zone with no horizontal padding, the
+             * scrolling box spans that full width (its scrollbar renders
+             * near the dialog's own right edge, in the paper gutter), and a
+             * separate non-scrolling content wrapper carries the actual
+             * left/right inset for the route tag, avatar grid and inputs.
+             */}
+            <div className="relative flex min-h-0 flex-1">
+              <div className="scrollbar-subtle flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none pr-1">
+                <div className="flex flex-col gap-4 px-5 sm:px-7">
+                  {/* Auto-attached Route Info Tag */}
+                  <div className="rounded-xl border border-line-soft bg-[#faf6ee] p-3 text-xs">
+                    <div className="font-mono text-[10px] font-black text-[#8c8273] uppercase mb-1">
+                      ATTACHED ROUTE
+                    </div>
+                    <div className="font-bold text-[#2b2520] flex flex-wrap items-center gap-1.5">
+                      <span>{routeResult.title}</span>
+                      <span className="rounded-md border border-line-soft bg-white px-1.5 py-0.2 text-[10px] font-bold text-[#7d7364]">
+                        {routeResult.stops?.length ?? 0}곳 코스
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 1. Avatar Selection */}
+                  <CharacterSelector
+                    avatars={GUESTBOOK_AVATARS}
+                    selectedId={selectedAvatarId}
+                    onSelect={handleAvatarSelect}
+                  />
+
+                  {/* 2. Nickname Input */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="guestbook-nickname"
+                        className="text-xs font-black text-[#2b2520]"
+                      >
+                        닉네임 (2~12자) <span className="text-[#ff5555]">*</span>
+                      </label>
+                      <span className="font-mono text-[10px] text-[#8c8273]">
+                        {nickname.length}/12
+                      </span>
+                    </div>
+                    <input
+                      id="guestbook-nickname"
+                      type="text"
+                      maxLength={12}
+                      value={nickname}
+                      onChange={handleNicknameChange}
+                      placeholder="여행자 닉네임을 입력하세요"
+                      disabled={isSubmitting}
+                      className="w-full rounded-xl border-2 border-line-control bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
+                    />
+                  </div>
+
+                  {/* 3. Message Input */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center justify-between">
+                      <label
+                        htmlFor="guestbook-message"
+                        className="text-xs font-black text-[#2b2520]"
+                      >
+                        한 줄 로그 메시지 (1~50자) <span className="text-[#ff5555]">*</span>
+                      </label>
+                      <span className="font-mono text-[10px] text-[#8c8273]">
+                        {message.length}/50
+                      </span>
+                    </div>
+                    <input
+                      id="guestbook-message"
+                      type="text"
+                      maxLength={50}
+                      value={message}
+                      onChange={handleMessageChange}
+                      placeholder="코스 소감이나 기대되는 점을 남겨보세요!"
+                      disabled={isSubmitting}
+                      className="w-full rounded-xl border-2 border-line-control bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
+                    />
+                  </div>
+
+                  {/* Error Message Alert */}
+                  {errorMessage && (
+                    <div
+                      role="alert"
+                      className="rounded-xl border-2 border-[#ff5555] bg-[#fef2f2] p-2.5 text-xs font-black text-[#991b1b]"
+                    >
+                      ⚠️ {errorMessage}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {/* 1. Avatar Selection */}
-              <CharacterSelector
-                avatars={GUESTBOOK_AVATARS}
-                selectedId={selectedAvatarId}
-                onSelect={handleAvatarSelect}
-              />
-
-              {/* 2. Nickname Input */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="guestbook-nickname"
-                    className="text-xs font-black text-[#2b2520]"
-                  >
-                    닉네임 (2~12자) <span className="text-[#ff5555]">*</span>
-                  </label>
-                  <span className="font-mono text-[10px] text-[#8c8273]">
-                    {nickname.length}/12
-                  </span>
-                </div>
-                <input
-                  id="guestbook-nickname"
-                  type="text"
-                  maxLength={12}
-                  value={nickname}
-                  onChange={handleNicknameChange}
-                  placeholder="여행자 닉네임을 입력하세요"
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
-                />
-              </div>
-
-              {/* 3. Message Input */}
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between">
-                  <label
-                    htmlFor="guestbook-message"
-                    className="text-xs font-black text-[#2b2520]"
-                  >
-                    한 줄 로그 메시지 (1~50자) <span className="text-[#ff5555]">*</span>
-                  </label>
-                  <span className="font-mono text-[10px] text-[#8c8273]">
-                    {message.length}/50
-                  </span>
-                </div>
-                <input
-                  id="guestbook-message"
-                  type="text"
-                  maxLength={50}
-                  value={message}
-                  onChange={handleMessageChange}
-                  placeholder="코스 소감이나 기대되는 점을 남겨보세요!"
-                  disabled={isSubmitting}
-                  className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] px-3 py-2 text-sm font-bold text-[#2b2520] placeholder-[#a89f91] focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#ff5555]"
-                />
-              </div>
-
-              {/* Error Message Alert */}
-              {errorMessage && (
-                <div
-                  role="alert"
-                  className="rounded-xl border-2 border-[#ff5555] bg-[#fef2f2] p-2.5 text-xs font-black text-[#991b1b]"
-                >
-                  ⚠️ {errorMessage}
-                </div>
-              )}
             </div>
 
             {/* Actions: always reachable and non-scrolling, but still inside
                 the <form> so the submit button keeps native form association. */}
             <div
-              className={`flex gap-2 pt-2 border-t border-[#e4dcce] ${OVERLAY_STATIC_ZONE}`}
+              className={`flex gap-2 pt-2 px-5 sm:px-7 border-t border-line-soft ${OVERLAY_STATIC_ZONE}`}
             >
               <button
                 type="button"
                 onClick={handleClose}
                 disabled={isSubmitting}
-                className="flex-1 rounded-xl border-2 border-[#d8d0c2] bg-[#faf6ee] py-2.5 text-xs font-bold text-[#7d7364] hover:bg-[#f0eae0] cursor-pointer"
+                className="flex-1 rounded-xl border-2 border-line-control bg-[#faf6ee] py-2.5 text-xs font-bold text-[#7d7364] hover:bg-[#f0eae0] cursor-pointer"
               >
                 취소
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`flex-2 rounded-xl border-2 border-[#2b2520] py-2.5 px-4 text-xs font-black text-white transition-all ${
+                className={`flex-2 rounded-xl border-2 border-line-ink py-2.5 px-4 text-xs font-black text-white transition-all ${
                   isSubmitting
                     ? 'bg-[#ffa8a8] text-[#782424] cursor-wait'
-                    : 'bg-[#ff5555] hover:bg-[#ff3b3b] shadow-retro-xs cursor-pointer active:translate-x-[1px] active:translate-y-[1px]'
+                    : 'bg-[#ff5555] hover:bg-[#ff3b3b] cursor-pointer active:translate-x-[1px] active:translate-y-[1px]'
                 }`}
               >
                 {isSubmitting

@@ -15,14 +15,26 @@
  *   `character.avatar.*` keys are asset identity only; the stable application ids
  *   (`mongmong`, `kkumdongi`, ...) live in `src/config/avatars.ts` and are frozen.
  *
- * 62 entries = 31 assets exported in the first visual-detail pass
+ * 55 entries = 31 assets exported in the first visual-detail pass
  *            +  3 added in the final closeout (playback controls + 2 editorial banners)
  *            +  5 pre-existing production assets adopted for single-source-of-truth
  *            +  4 Result StopVisual category defaults (08_RESULT handoff)
  *            + 12 Result skin bands (08_RESULT: 4 complete states x header/body/actions)
- *            +  7 Route Guide skin bands + 1 shared mission shell (09_ROUTE_GUIDE).
- * (Two further closeout assets -- Setup/Preference/Food and Editorial/Banner/Tashu --
- * were replacements overwritten in place, so they add no new entry.)
+ * (Several closeout/correction assets -- Setup/Preference/Food, Editorial/Banner/Tashu,
+ * Character/Profile/Kkumdori, Media/Playback/Controls -- were replacements overwritten
+ * in place, so they add no new entry.)
+ *
+ * Phase 4 retired the 6 Route Guide header/body/footer skin bands (both
+ * breakpoints); a later correction retired the mission shell too (see the
+ * 09_ROUTE_GUIDE section below) -- Route Guide is fully DOM/CSS now, with
+ * zero registered rasters of its own.
+ *
+ * `setup.intro.start` (Setup/Intro/StartButton, node 354:2) was registered
+ * ahead of the INTRO phase implementation but was never consumed -- the
+ * shipped INTRO (Phase 5, `IntroGate.tsx`) renders a DOM/CSS ticket card and
+ * button instead. Retired in the Phase 8 closeout audit (zero runtime
+ * consumers verified): the registry entries below and
+ * `public/assets/setup-intro-start.png` were both removed, not left dormant.
  *
  * (`slot-shell.png` is present in `public/assets/` but referenced by no component and
  * is deliberately not registered.)
@@ -108,24 +120,13 @@ export const VISUAL_ASSETS = {
   'result.skin.desktop.consumedHeader': '/assets/result-skin-desktop-consumed-header.png',
   'result.skin.desktop.consumedBody': '/assets/result-skin-desktop-consumed-body.png',
 
-  // --- 09_ROUTE_GUIDE / Skin bands ---
-  // Crops of `RouteGuide/Skin/{Desktop,Mobile}`. These skins are intentionally
-  // minimal (cobalt frame + cream paper + one Mission decorative shell), so the
-  // body is a uniform ornament-free strip that tiles on Y while the long content
-  // area stays DOM-driven. The mission shell is cropped separately -- baking it
-  // into the tiling strip would repeat it down the page.
-  'routeGuide.skin.desktop.header': '/assets/route-guide-skin-desktop-header.png',
-  'routeGuide.skin.desktop.body': '/assets/route-guide-skin-desktop-body.png',
-  'routeGuide.skin.desktop.footer': '/assets/route-guide-skin-desktop-footer.png',
-  'routeGuide.skin.mobile.header': '/assets/route-guide-skin-mobile-header.png',
-  'routeGuide.skin.mobile.body': '/assets/route-guide-skin-mobile-body.png',
-  'routeGuide.skin.mobile.footer': '/assets/route-guide-skin-mobile-footer.png',
-  // ONE mission shell for both breakpoints. The desktop RouteGuide skin is
-  // proportioned for a 760x505 landscape modal, so its mission crop is ~15:1 --
-  // at our portrait modal width that would be ~44px tall and could not hold the
-  // label plus two lines without vertically stretching the dashed border, which
-  // is forbidden. The mobile crop's 5.1:1 shell serves both widths undistorted.
-  'routeGuide.missionShell': '/assets/route-guide-mission-shell.png',
+  // --- 09_ROUTE_GUIDE ---
+  // Route Guide is fully DOM/CSS now -- no entries in this section. Phase 4
+  // retired the 6 header/body/footer skin bands; a later correction retired
+  // the one remaining raster (the mission shell) too, moving that section to
+  // the same Random Log / paper-card DOM language as the rest of the shell
+  // (see RouteGuideModal.tsx). `route-guide-mission-shell.png` is deleted
+  // from public/assets, not just unregistered.
 
   // --- 05_EDITORIAL ---
   'editorial.mascotPerched': '/assets/editorial-mascot-perched.png',
@@ -141,12 +142,18 @@ export const VISUAL_ASSETS = {
   // Single composite strip containing all four transport controls
   // (previous / pause / next / stop). Never split or cropped -- it is placed as
   // one visual layer with DOM control regions overlaid on top; see LeftSidebar.
+  // Replaced in place from node 352:166's raw source fill (1662x946, alpha
+  // verified), vertically cropped to the frame's own 238x53 (4.4906:1)
+  // composition -- the flattened frame export was a 100% opaque #FBFBFB
+  // plate, so the crop was reproduced from the raw source instead of the
+  // frame export. See crop math in the asset-hygiene notes in PROJECT_STATE.
   'media.playbackControls': '/assets/media-playback-controls.png',
 
   // --- 07_DECORATION ---
   // Feature-agnostic identities. Current standalone consumers:
   //   star   -> Header title-bar, Setup header, Editorial / TODAY'S PICK header
-  //   clover -> MY PROFILE header, VISITOR LOG header
+  //   clover -> MY PROFILE header, MEMORY LOG header (user-facing name; the
+  //             component/route/DB naming underneath is still RandomLog*)
   // Each consumer is an explicit approved decision; only the box size differs between
   // them, since compensation is a property of the artwork (see VISUAL_ASSET_OPAQUE_FIT).
   // Do not add a consumer merely because the asset exists.
@@ -154,10 +161,13 @@ export const VISUAL_ASSETS = {
   'decoration.symbol.star': '/assets/decoration-symbol-star.png',
 
   // --- Pre-existing production assets (already in public/assets) ---
-  // `character.main.kkumdori` is the static brand illustration and is a different
-  // role from the selectable `character.avatar.kkumdori`; never alias the two.
   'slot.production.idle': '/assets/slot-idle.png',
   'slot.production.pulled': '/assets/slot-pulled.png',
+  // `character.main.kkumdori` is the static brand illustration and is a different
+  // role from the selectable `character.avatar.kkumdori`; never alias the two.
+  // Replaced in place from node 354:4's raw source fill (3495x4096, alpha
+  // verified) -- the previously committed file was itself a 100% opaque
+  // 149x206 flattened plate, the same defect class as the frame export.
   'character.main.kkumdori': '/assets/kkumdori-main.png',
   'footer.landscape.left': '/assets/footer-landscape-left.png',
   'footer.landscape.right': '/assets/footer-landscape-right.png',

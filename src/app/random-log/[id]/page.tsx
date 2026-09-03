@@ -22,8 +22,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   if (!result.success || !result.data) {
     return {
-      title: '랜덤 로그를 찾을 수 없습니다 | 대전 랜덤 여행',
-      description: '존재하지 않거나 삭제된 랜덤 로그입니다.',
+      title: '메모리 로그를 찾을 수 없습니다 | 대전 랜덤 여행',
+      description: '존재하지 않거나 삭제된 메모리 로그입니다.',
       robots: { index: false, follow: false },
     };
   }
@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const entry = result.data;
 
   return {
-    title: `${entry.nickname}님의 랜덤 로그 | 대전 랜덤 여행`,
+    title: `${entry.nickname}님의 메모리 로그 | 대전 랜덤 여행`,
     description: entry.message,
     robots: { index: false, follow: false },
   };
@@ -49,7 +49,7 @@ export default async function RandomLogDetailPage({ params }: PageProps) {
   const entry = result.success ? result.data : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-retro-dots text-[#2b2520]">
+    <div className="flex min-h-screen flex-col bg-[#fdfbf7] text-[#2b2520]">
       <Header />
 
       <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col items-center justify-center px-4 py-6 sm:px-6 sm:py-10">

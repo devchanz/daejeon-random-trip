@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useRef } from 'react';
 import type { RouteResult } from '../../../lib/random';
 import type { RerollRewardState } from '../../../lib/experience';
 import { QuestHeader } from './QuestHeader';
@@ -10,6 +10,7 @@ import { ResultSummary } from './ResultSummary';
 import { MainQuest } from './MainQuest';
 import { BonusQuest } from './BonusQuest';
 import { ResultActions } from './ResultActions';
+import { ScrollContinuationCue } from '../../common';
 
 export interface ResultQuestProps {
   result: RouteResult;
@@ -40,6 +41,7 @@ export function ResultQuest({
   // Both states go through the same shell and renderer; only the asset and the
   // action layout differ.
   const skin = resolveResultSkin(rerollReward);
+  const scrollRef = useRef<HTMLDivElement>(null);
   // No DOM frame on the <article>: the approved skin bands carry the cobalt outer
   // frame, its dark pixel-art outline and the rounded corners, so the previous
   // `rounded-3xl border-3 ... shadow-retro-xl` shell and the dashed perforation
@@ -69,27 +71,57 @@ export function ResultQuest({
           it on a touch drag past either end. `none` suppresses that directly; the
           document-level chaining concern it also used to cover is now handled by
           the shared `useScrollLock` in ResultArea instead. */}
-      <div
-        style={{ backgroundColor: RESULT_BODY_PAPER }}
-        className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none"
-      >
-        {/* Each child registers against the painted composition by measured
-            percentage (skin.regions); inside a region, layout is ordinary
-            flex/grid. The painted MAIN QUEST / BONUS QUEST ribbons carry their own
-            labels, so no DOM heading is drawn for them. */}
-        <ResultBodySkinCanvas rerollReward={rerollReward}>
-          <div className={skin.regions.summary}>
-            <ResultSummary result={result} />
-          </div>
+      {/* Non-scrolling wrapper the cue is pinned against: only its child below
+          scrolls, so the cue's `absolute bottom-0` always tracks the visible
+          bottom edge of the viewport, never the bottom of the full (taller)
+          scrolled content. */}
+      <div className="relative flex min-h-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          style={{ backgroundColor: RESULT_BODY_PAPER }}
+          className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none"
+        >
+          {/* Each child registers against the painted composition by measured
+              percentage (skin.regions); inside a region, layout is ordinary
+              flex/grid. The painted MAIN QUEST / BONUS QUEST ribbons carry their own
+              labels, so no DOM heading is drawn for them. */}
+          <ResultBodySkinCanvas rerollReward={rerollReward}>
+            <div className={skin.regions.summary}>
+              <ResultSummary result={result} />
+            </div>
 
-          <div className={skin.regions.cells}>
-            <MainQuest stops={result.stops || []} onExploreMore={onExploreMore} />
-          </div>
+            <div className={skin.regions.cells}>
+              <MainQuest stops={result.stops || []} onExploreMore={onExploreMore} />
+            </div>
 
-          <div className={skin.regions.bonus}>
-            <BonusQuest mission={result.mission} />
-          </div>
-        </ResultBodySkinCanvas>
+            <div className={skin.regions.bonus}>
+              <BonusQuest mission={result.mission} />
+            </div>
+          </ResultBodySkinCanvas>
+        </div>
+
+        {/* Mobile-only: the first mobile viewport can show a full row of
+            painted cells and read as a complete Result when more (BONUS QUEST,
+            or additional cells) sits below. Result's raster/geometry are
+            untouched -- this is a DOM overlay pinned to the scroll viewport's
+            own edge, not a change to the canvas underneath it.
+
+            Fade-only, no chevron: Human Browser E2E read the floating
+            chevron as a separately bolted-on control here. Result's primary
+            continuation signal is content itself -- the raster's own cells
+            naturally run past the fold on a short viewport, so a partial
+            slice of the next section is already visible without any DOM
+            change. This mask only softens that visible edge (an extremely
+            light version of the exact paper colour, not a fog/toolbar), and
+            still fully respects the same overflow/scroll-position gating as
+            Route Guide's cue -- it is not a permanent fixture. */}
+        <ScrollContinuationCue
+          containerRef={scrollRef}
+          edgeColor={RESULT_BODY_PAPER}
+          showChevron={false}
+          heightClassName="h-8"
+          className="lg:hidden"
+        />
       </div>
 
       <ResultActions

@@ -5,23 +5,14 @@ import Link from 'next/link';
 import type { SharedRouteRecord } from '../../lib/database/types';
 import { normalizeSharedRouteRecord } from '../../lib/guide';
 import { RouteGuideModal } from '../guide';
+import { getDurationLabel, getPreferenceLabel } from '../../content/labels';
+import { FittedAsset, resolveStopAssetKeyByCategory } from '../common';
+import { resolveResultAccent } from '../../config/resultAccents';
 
 export interface SharedRouteViewProps {
   record: SharedRouteRecord | null;
   className?: string;
 }
-
-const DURATION_LABELS: Record<string, string> = {
-  half: '반나절',
-  full: '하루종일',
-};
-
-const PREFERENCE_LABELS: Record<string, string> = {
-  anything: '아무거나',
-  food: '먹방',
-  walk: '산책',
-  photo: '사진',
-};
 
 /**
  * Functional, semantic presentation component for the dedicated Shared Route landing view (/r/[shareCode]).
@@ -37,7 +28,7 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
     return (
       <article
         data-testid="shared-route-not-found"
-        className={`relative w-full max-w-xl mx-auto rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] p-6 sm:p-8 shadow-retro-xl overflow-hidden animate-ticket-entrance text-center ${className}`}
+        className={`relative w-full max-w-xl mx-auto rounded-3xl border-3 border-line-soft bg-[#fffef9] p-6 sm:p-8 overflow-hidden animate-ticket-entrance text-center ${className}`}
       >
         {/* Top Perforation Deco */}
         <div
@@ -63,10 +54,10 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
             대전의 새로운 랜덤 여행을 직접 뽑아보세요!
           </p>
 
-          <div className="w-full pt-4 border-t-2 border-[#2b2520] mt-2">
+          <div className="w-full pt-4 border-t-2 border-line-soft mt-2">
             <Link
               href="/"
-              className="inline-flex w-full items-center justify-center rounded-2xl border-2 border-[#2b2520] bg-[#ff5555] hover:bg-[#ff3b3b] py-3.5 px-6 text-sm font-black text-white shadow-retro-xs transition-all active:translate-x-[1px] active:translate-y-[1px]"
+              className="inline-flex w-full items-center justify-center rounded-2xl border-2 border-[#ff3b3b] bg-[#ff5555] hover:bg-[#ff3b3b] py-3.5 px-6 text-sm font-black text-white transition-all active:translate-x-[1px] active:translate-y-[1px]"
             >
               🎰 대전 여행 직접 뽑아보기
             </Link>
@@ -78,11 +69,11 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
 
   // 2. Valid Shared Route Ticket View
   const durationLabel = record.duration_type
-    ? DURATION_LABELS[record.duration_type] ?? record.duration_type
+    ? getDurationLabel(record.duration_type)
     : null;
 
   const preferenceLabel = record.preference_type
-    ? PREFERENCE_LABELS[record.preference_type] ?? record.preference_type
+    ? getPreferenceLabel(record.preference_type)
     : null;
 
   const stops = record.stops || [];
@@ -91,7 +82,7 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
     <>
       <article
         data-testid="shared-route-ticket"
-        className={`relative w-full max-w-2xl mx-auto rounded-3xl border-3 border-[#2b2520] bg-[#fffef9] p-5 sm:p-8 shadow-retro-xl overflow-hidden animate-ticket-entrance ${className}`}
+        className={`relative w-full max-w-2xl mx-auto rounded-3xl border-3 border-line-soft bg-[#fffef9] p-5 sm:p-8 overflow-hidden animate-ticket-entrance ${className}`}
       >
         {/* Top Printed Ticket Perforation */}
         <div
@@ -101,13 +92,13 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
 
         <div className="flex flex-col gap-6 pt-1">
           {/* 1. Recipient Hook Banner & Ticket Header */}
-          <header className="flex flex-col gap-3 border-b-2 border-[#2b2520] pb-4">
+          <header className="flex flex-col gap-3 border-b-2 border-line-soft pb-4">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[11px] font-black tracking-widest text-[#ff5555] uppercase flex items-center gap-1">
                 <span>💌</span>
                 <span>SHARED TRIP TICKET</span>
               </span>
-              <span className="rounded-full border-2 border-[#2b2520] bg-[#10b981] px-3 py-0.5 text-[11px] font-black text-white shadow-retro-xs">
+              <span className="rounded-full border-2 border-line-soft bg-[#10b981] px-3 py-0.5 text-[11px] font-black text-white">
                 공유 코스
               </span>
             </div>
@@ -123,24 +114,18 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
 
             <div className="flex flex-wrap items-center gap-1.5 text-xs text-[#6b6257] pt-1">
               {durationLabel && (
-                <span className="rounded-md border-2 border-[#2b2520] bg-[#faf6ee] px-2.5 py-0.5 font-black text-[#2b2520] shadow-retro-xs">
+                <span className="rounded-md border-2 border-line-soft bg-[#faf6ee] px-2.5 py-0.5 font-black text-[#2b2520]">
                   {durationLabel}
                 </span>
               )}
               {preferenceLabel && (
-                <span className="rounded-md border-2 border-[#2b2520] bg-[#faf6ee] px-2.5 py-0.5 font-black text-[#2b2520] shadow-retro-xs">
+                <span className="rounded-md border-2 border-line-soft bg-[#faf6ee] px-2.5 py-0.5 font-black text-[#2b2520]">
                   {preferenceLabel}
                 </span>
               )}
-              <span className="rounded-md border-2 border-[#2b2520] bg-[#faf6ee] px-2.5 py-0.5 font-black text-[#2b2520] shadow-retro-xs">
+              <span className="rounded-md border-2 border-line-soft bg-[#faf6ee] px-2.5 py-0.5 font-black text-[#2b2520]">
                 총 {stops.length}곳
               </span>
-              {typeof record.estimated_total_minutes === 'number' &&
-                record.estimated_total_minutes > 0 && (
-                  <span className="rounded-md border-2 border-[#2b2520] bg-[#faf6ee] px-2.5 py-0.5 font-black text-[#2b2520] shadow-retro-xs">
-                    체류 예상 약 {record.estimated_total_minutes}분
-                  </span>
-                )}
             </div>
           </header>
 
@@ -149,6 +134,16 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
             {stops.map((stop, index) => {
               const isLast = index === stops.length - 1;
               const stopNumber = stop.order ?? index + 1;
+              // Same canonical Result-derived accent (src/config/resultAccents.ts)
+              // Route Guide's timeline uses -- keeps the two surfaces reading as
+              // one colour-coded system rather than each inventing its own.
+              const accentColor = resolveResultAccent(index);
+              // Category-only resolution, same as RouteGuideTimeline: shared-route
+              // stops always carry `category` (SharedRouteStopSnapshot), so this
+              // reuses the existing registry without introducing new data coupling.
+              const stopAssetKey = stop.category
+                ? resolveStopAssetKeyByCategory(stop.category)
+                : null;
 
               return (
                 <li
@@ -158,7 +153,14 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
                 >
                   {/* Timeline Axis: Step Number Stamp + Connector Line */}
                   <div className="flex flex-col items-center self-stretch">
-                    <div className="z-10 flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border-2 border-[#2b2520] bg-[#2b2520] text-xs sm:text-sm font-black text-white shadow-retro-xs ring-4 ring-[#fffef9]">
+                    {/* Final node contract (matches RouteGuideTimeline): accent
+                        fill + accent border, neutral ink number -- no black or
+                        cream fill. Cream ring halo is unchanged, it separates
+                        the node from the connector line, not a colour choice. */}
+                    <div
+                      style={{ borderColor: accentColor, backgroundColor: accentColor }}
+                      className="z-10 flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-full border-2 text-xs sm:text-sm font-black text-[#2b2520] ring-4 ring-[#fffef9]"
+                    >
                       {stopNumber}
                     </div>
                     {!isLast && (
@@ -169,66 +171,81 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
                     )}
                   </div>
 
-                  {/* Stop Content Details */}
+                  {/* Stop Content Details -- now an accent-outlined paper card
+                      (same role/weight as RouteGuideTimeline's StopCard: flat
+                      neutral surface, accent border only, no black outline, no
+                      shadow), so the node and its card read as one colour-coded
+                      step. */}
                   <div className={`flex-1 ${isLast ? 'pb-1' : 'pb-5'} pt-0.5`}>
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-[11px] font-mono font-black uppercase tracking-wider text-[#ff5555]">
-                        STOP {stopNumber}
-                      </span>
-                      {stop.category && (
-                        <span className="rounded-md border border-[#e4dcce] bg-[#faf6ee] px-2 py-0.5 text-[11px] font-bold text-[#6b6257]">
-                          {stop.category}
+                    <div
+                      style={{ borderColor: accentColor }}
+                      className="rounded-2xl border-2 bg-[#fffdf7]/90 p-3.5 sm:p-4"
+                    >
+                      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                        <span className="text-[11px] font-mono font-black uppercase tracking-wider text-[#ff5555]">
+                          STOP {stopNumber}
                         </span>
-                      )}
-                    </div>
-
-                    <h2 className="text-base sm:text-lg font-black text-[#2b2520] break-words leading-snug">
-                      {stop.name}
-                    </h2>
-
-                    {typeof stop.stayDurationMin === 'number' && stop.stayDurationMin > 0 && (
-                      <p className="mt-1 text-xs font-bold text-[#7d7364]">
-                        체류 예상 약 {stop.stayDurationMin}분
-                      </p>
-                    )}
-
-                    {stop.address && (
-                      <p className="mt-1 text-xs font-medium text-[#8c8273]">
-                        📍 {stop.address}
-                      </p>
-                    )}
-
-                    {stop.tips && (
-                      <p className="mt-1.5 rounded-lg border border-[#e4dcce] bg-[#faf6ee] p-2 text-xs font-bold text-[#6b6257] leading-relaxed">
-                        💡 {stop.tips}
-                      </p>
-                    )}
-
-                    {/* Outbound External Map Links */}
-                    {stop.mapLinks && (stop.mapLinks.naver || stop.mapLinks.kakao) && (
-                      <div className="mt-2.5 flex flex-wrap gap-2">
-                        {stop.mapLinks.naver && (
-                          <a
-                            href={stop.mapLinks.naver}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-lg border border-[#2b2520] bg-white px-2.5 py-1 text-xs font-bold text-[#2b2520] shadow-retro-xs hover:bg-[#faf6ee] transition-all"
-                          >
-                            <span>🗺️ 네이버 지도</span>
-                          </a>
-                        )}
-                        {stop.mapLinks.kakao && (
-                          <a
-                            href={stop.mapLinks.kakao}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-lg border border-[#2b2520] bg-white px-2.5 py-1 text-xs font-bold text-[#2b2520] shadow-retro-xs hover:bg-[#faf6ee] transition-all"
-                          >
-                            <span>🗺️ 카카오 맵</span>
-                          </a>
+                        {stop.category && (
+                          <span className="rounded-md border border-line-soft bg-[#faf6ee] px-2 py-0.5 text-[11px] font-bold text-[#6b6257]">
+                            {stop.category}
+                          </span>
                         )}
                       </div>
-                    )}
+
+                      {/* Place name + optional pixel artwork, same alignment
+                          pattern as RouteGuideTimeline: artwork and the
+                          [title + address] block share one items-center row. */}
+                      <div className="flex items-center gap-2.5">
+                        {stopAssetKey && (
+                          <FittedAsset
+                            assetKey={stopAssetKey}
+                            className="h-10 w-10 shrink-0 rounded-md sm:h-11 sm:w-11"
+                          />
+                        )}
+                        <div className="flex min-w-0 flex-col gap-0.5">
+                          <h2 className="text-base sm:text-lg font-black text-[#2b2520] break-words leading-snug">
+                            {stop.name}
+                          </h2>
+                          {stop.address && (
+                            <p className="text-xs font-medium text-[#8c8273]">
+                              📍 {stop.address}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {stop.tips && (
+                        <p className="mt-1.5 rounded-lg border border-line-soft bg-[#faf6ee] p-2 text-xs font-bold text-[#6b6257] leading-relaxed">
+                          💡 {stop.tips}
+                        </p>
+                      )}
+
+                      {/* Outbound External Map Links */}
+                      {stop.mapLinks && (stop.mapLinks.naver || stop.mapLinks.kakao) && (
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          {stop.mapLinks.naver && (
+                            <a
+                              href={stop.mapLinks.naver}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-lg border border-line-control bg-white px-2.5 py-1 text-xs font-bold text-[#2b2520] hover:bg-[#faf6ee] transition-all"
+                            >
+                              <span>🗺️ 네이버 지도</span>
+                            </a>
+                          )}
+                          {stop.mapLinks.kakao && (
+                            <a
+                              href={stop.mapLinks.kakao}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 rounded-lg border border-line-control bg-white px-2.5 py-1 text-xs font-bold text-[#2b2520] hover:bg-[#faf6ee] transition-all"
+                            >
+                              <span>🗺️ 카카오 맵</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </li>
               );
@@ -240,10 +257,10 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
             <section
               aria-label="여행 미션"
               data-testid="shared-route-mission"
-              className="relative rounded-2xl border-2 border-dashed border-[#ffb800] bg-[#fffdf0] p-4 shadow-retro-sm"
+              className="relative rounded-2xl border-2 border-dashed border-[#ffb800] bg-[#fffdf0] p-4"
             >
               <div className="flex items-center gap-2 mb-1.5">
-                <span className="rounded-md border border-[#2b2520] bg-[#ffb800] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#2b2520]">
+                <span className="rounded-md border border-line-soft bg-[#ffb800] px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-[#2b2520]">
                   MISSION
                 </span>
                 <h3 className="text-xs font-black text-[#92400e]">
@@ -259,12 +276,12 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
           {/* 4. Action CTAs (Primary Referral + Secondary RouteGuide Transition) */}
           <div
             data-testid="shared-route-cta-boundary"
-            className="flex flex-col gap-2.5 border-t-2 border-[#2b2520] pt-5"
+            className="flex flex-col gap-2.5 border-t-2 border-line-soft pt-5"
           >
             {/* Primary CTA: Referral Acquisition -> Main Landing */}
             <Link
               href="/"
-              className="w-full rounded-2xl border-2 border-[#2b2520] bg-[#ff5555] hover:bg-[#ff3b3b] py-3.5 px-4 text-center text-sm font-black text-white shadow-retro-xs transition-all active:translate-x-[1px] active:translate-y-[1px]"
+              className="w-full rounded-2xl border-2 border-[#ff3b3b] bg-[#ff5555] hover:bg-[#ff3b3b] py-3.5 px-4 text-center text-sm font-black text-white transition-all active:translate-x-[1px] active:translate-y-[1px]"
             >
               🎰 나도 대전 여행 뽑아보기
             </Link>
@@ -274,7 +291,7 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
               type="button"
               onClick={() => setIsRouteGuideOpen(true)}
               aria-label="이 코스 그대로 가보기 (상세 여행 가이드 열기)"
-              className="w-full rounded-xl border-2 border-[#2b2520] bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+              className="w-full rounded-xl border-2 border-line-control bg-[#faf6ee] hover:bg-[#f0eae0] py-2.5 px-3 text-center text-xs font-bold text-[#2b2520] cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
             >
               이 코스 그대로 가보기
             </button>

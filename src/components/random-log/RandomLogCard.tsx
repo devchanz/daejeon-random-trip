@@ -19,7 +19,7 @@ export function RandomLogCard({ entry }: RandomLogCardProps) {
     <Link
       href={`/random-log/${entry.id}`}
       data-testid="random-log-card"
-      className="flex flex-col gap-2 rounded-2xl border-2 border-[#2b2520] bg-[#fffef9] p-4 shadow-retro-xs transition-all hover:bg-[#faf6ee]"
+      className="flex flex-col gap-2 rounded-2xl border-2 border-line-soft bg-[#fffef9] p-4 transition-all hover:bg-[#faf6ee]"
     >
       <div className="flex items-center gap-2.5">
         <RandomLogAvatarBadge avatarId={entry.avatar_id} className="h-9 w-9 text-xl" />
@@ -34,13 +34,13 @@ export function RandomLogCard({ entry }: RandomLogCardProps) {
       <p className="line-clamp-2 text-sm leading-snug text-[#5c5244]">{entry.message}</p>
 
       <div className="flex flex-wrap gap-1.5 text-[11px] font-bold text-[#6b6257]">
-        <span className="rounded-md border border-[#e4dcce] bg-[#faf6ee] px-2 py-0.5">
+        <span className="rounded-md border border-line-soft bg-[#faf6ee] px-2 py-0.5">
           {getZoneLabel(entry.zone_id)}
         </span>
-        <span className="rounded-md border border-[#e4dcce] bg-[#faf6ee] px-2 py-0.5">
+        <span className="rounded-md border border-line-soft bg-[#faf6ee] px-2 py-0.5">
           {getDurationLabel(entry.duration_type)}
         </span>
-        <span className="rounded-md border border-[#e4dcce] bg-[#faf6ee] px-2 py-0.5">
+        <span className="rounded-md border border-line-soft bg-[#faf6ee] px-2 py-0.5">
           {getPreferenceLabel(entry.preference_type)}
         </span>
       </div>
