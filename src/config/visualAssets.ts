@@ -148,6 +148,18 @@ export const VISUAL_ASSETS = {
   // plate, so the crop was reproduced from the raw source instead of the
   // frame export. See crop math in the asset-hygiene notes in PROJECT_STATE.
   'media.playbackControls': '/assets/media-playback-controls.png',
+  // BGM actualization (feat/sidebar-actualization-bgm): the paused-state
+  // sibling of the composite above, swapped in at runtime when playback is
+  // paused. Sourced from Figma node 377:170 ("play 2", native 218x53),
+  // Figma-exported at 4x then composited -- never CSS-stretched -- onto the
+  // SAME 1662x370 transparent canvas as media.playbackControls (the pixel
+  // dimensions behind that asset's 238x53/4.4906:1 CSS box), centered
+  // horizontally with 70px transparent padding each side (the 1662px-canvas
+  // equivalent of ~10px at the 238px CSS display size). Previous/Next/Stop
+  // are pixel-identical to media.playbackControls in this export -- only the
+  // center button's icon/highlight differs -- so the existing hit-region
+  // percentages in BGM_PLAYING_COPY apply unchanged to both states.
+  'media.playbackControlsPlay': '/assets/media-playback-controls-play.png',
 
   // --- 07_DECORATION ---
   // Feature-agnostic identities. Current standalone consumers:
@@ -205,6 +217,11 @@ export const VISUAL_ASSET_META: Partial<Record<VisualAssetKey, { w: number; h: n
   'editorial.banner.breadTour': { w: 665, h: 374 },
   'editorial.banner.kkumssiFamily': { w: 533, h: 285 },
   'editorial.banner.expoBridgeNight': { w: 533, h: 285 },
+  // Both playback-control composites share identical outer geometry
+  // (1662x370, i.e. the 238x53/4.4906:1 CSS box) so the playing/paused
+  // asset swap in BgmPlayerWidget can never cause layout shift.
+  'media.playbackControls': { w: 1662, h: 370 },
+  'media.playbackControlsPlay': { w: 1662, h: 370 },
 };
 
 /**

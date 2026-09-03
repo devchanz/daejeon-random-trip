@@ -26,19 +26,33 @@ export const MY_PROFILE_COPY = {
 export const TODAY_IS_COPY = {
   heading: 'TODAY IS...',
   mood: '설레는 대전 여행 가는 날! 💕',
-  /** Presentational counters -- not backed by a real visit-tracking metric. */
-  totalVisitLabel: 'TOTAL VISIT : 01234',
-  todayLabel: 'TODAY : 0056',
+  /**
+   * Label prefixes only -- the numbers are real, server-read visit counts
+   * (see src/components/sidebar/VisitCounterRow.tsx), never baked in here.
+   */
+  totalVisitPrefix: 'TOTAL VISIT',
+  todayPrefix: 'TODAY',
 } as const;
 
 export const BGM_PLAYING_COPY = {
   heading: 'BGM PLAYING',
-  /** Presentational track metadata -- no <audio> element or playback state exists. */
   trackTitle: '대전의 오후 (Daejeon Afternoon)',
   trackArtist: 'by DAEJEON BEAT',
-  controls: [
+  /**
+   * The one real playback control (see BgmPlayerWidget.tsx): a focusable
+   * `<button>` toggling play/pause, with its aria-label computed from live
+   * playback state (`Pause track` / `Play track`) rather than hardcoded here.
+   * Geometry measured from the painted export -- see media.playbackControls
+   * in src/config/visualAssets.ts.
+   */
+  playPauseControl: { left: '31.09%', width: '16.81%' },
+  /**
+   * Previous/Next/Stop are decoration only (BGM contract, feat/sidebar-
+   * actualization-bgm): no click behavior, not tabbable, no button
+   * semantics -- rendered as plain aria-hidden regions, not <button>s.
+   */
+  decorativeControls: [
     { label: 'Previous track', left: '9.24%', width: '16.39%' },
-    { label: 'Pause track', left: '31.09%', width: '16.81%' },
     { label: 'Next track', left: '52.52%', width: '15.97%' },
     { label: 'Stop track', left: '73.95%', width: '15.97%' },
   ],

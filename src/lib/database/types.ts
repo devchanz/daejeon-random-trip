@@ -70,6 +70,17 @@ export interface CreateSharedRouteInput {
 }
 
 /**
+ * Database record model for site_visits table.
+ * One row per counted visit (one browser tab-session -- see
+ * src/lib/visitor/visitSession.ts). Append-only event log, no other columns:
+ * TOTAL VISIT is a row count, TODAY is a row count filtered by `created_at`.
+ */
+export interface SiteVisitRecord {
+  id: string;                    // UUID Primary Key
+  created_at: string;            // ISO visit timestamp
+}
+
+/**
  * Generic result envelope for database operations.
  */
 export type DatabaseResult<T> =

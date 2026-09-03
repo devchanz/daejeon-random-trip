@@ -3,6 +3,7 @@ import 'server-only';
 import type {
   GuestbookEntryRecord,
   SharedRouteRecord,
+  SiteVisitRecord,
 } from './types';
 
 /**
@@ -34,6 +35,11 @@ export interface DatabaseClientContract {
   selectSharedRouteBySourceRouteId(
     sourceRouteId: string
   ): Promise<SharedRouteRecord | null>;
+
+  insertSiteVisit(): Promise<SiteVisitRecord>;
+
+  /** Exact row count via PostgREST `Prefer: count=exact`, optionally filtered to `created_at >= sinceIso`. */
+  countSiteVisits(sinceIso?: string): Promise<number>;
 }
 
 /**
@@ -257,6 +263,61 @@ export class SupabaseRestClient implements DatabaseClientContract {
 
     const data = (await response.json()) as SharedRouteRecord[];
     return data.length > 0 ? data[0] : null;
+  }
+
+  async insertSiteVisit(): Promise<SiteVisitRecord> {
+    if (!this.isConfigured()) {
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
+    }
+
+    const endpoint = `${this.url}/rest/v1/site_visits`;
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        ...this.headers,
+        Prefer: 'return=representation',
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Database insert error (${response.status}): ${errorText}`);
+    }
+
+    const data = (await response.json()) as SiteVisitRecord[];
+    if (!data || data.length === 0) {
+      throw new Error('Failed to retrieve inserted site visit record.');
+    }
+
+    return data[0];
+  }
+
+  async countSiteVisits(sinceIso?: string): Promise<number> {
+    if (!this.isConfigured()) {
+      throw new Error('Database is not configured. Missing server Supabase credentials (SUPABASE_URL and SUPABASE_SECRET_KEY).');
+    }
+
+    const sinceFilter = sinceIso
+      ? `&created_at=gte.${encodeURIComponent(sinceIso)}`
+      : '';
+    const endpoint = `${this.url}/rest/v1/site_visits?select=id${sinceFilter}`;
+    const response = await fetch(endpoint, {
+      method: 'HEAD',
+      headers: {
+        ...this.headers,
+        Prefer: 'count=exact',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Database count error (${response.status}): ${errorText}`);
+    }
+
+    const contentRange = response.headers.get('content-range') ?? '';
+    const total = contentRange.split('/')[1];
+    return total && total !== '*' ? parseInt(total, 10) : 0;
   }
 }
 

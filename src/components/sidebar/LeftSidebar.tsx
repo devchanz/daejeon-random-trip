@@ -1,6 +1,8 @@
 import React from 'react';
 import { visualAsset } from '../../config/visualAssets';
 import { FittedAsset } from '../common';
+import { BgmPlayerWidget } from './BgmPlayerWidget';
+import { VisitCounterRow } from './VisitCounterRow';
 import {
   LEFT_SIDEBAR_ARIA_LABEL,
   MY_PROFILE_COPY,
@@ -88,10 +90,7 @@ export function LeftSidebar({ className = '' }: { className?: string }) {
             {TODAY_IS_COPY.mood}
           </p>
 
-          <div className="flex items-center justify-between rounded-xl bg-[#faf6ee] px-3 py-2 font-mono text-xs font-bold text-[#6b6257] border border-line-soft">
-            <span>{TODAY_IS_COPY.totalVisitLabel}</span>
-            <span>{TODAY_IS_COPY.todayLabel}</span>
-          </div>
+          <VisitCounterRow />
         </div>
       </section>
 
@@ -114,64 +113,15 @@ export function LeftSidebar({ className = '' }: { className?: string }) {
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-sm font-black text-[#2b2520] leading-tight">
-                {BGM_PLAYING_COPY.trackTitle}
-              </span>
-              <span className="font-mono text-xs font-bold text-[#8c8273]">
-                {BGM_PLAYING_COPY.trackArtist}
-              </span>
-            </div>
-
-            {/* Graphic Equalizer Bars */}
-            <div className="flex items-end gap-0.5 h-4" aria-hidden="true">
-              <span className="w-1 h-2 bg-[#10b981] rounded-xs" />
-              <span className="w-1 h-3.5 bg-[#ffb800] rounded-xs" />
-              <span className="w-1 h-2.5 bg-[#ff5555] rounded-xs" />
-              <span className="w-1 h-4 bg-[#10b981] rounded-xs" />
-            </div>
-          </div>
-
-          {/*
-            Retro Media Player Controls -- production composite (Figma Media/Playback/Controls).
-
-            The 238x53 export is ONE image containing all four controls together with their
-            own tray background and per-button chrome, so it is never split or cropped, and
-            the previous CSS tray (bg / border / rounded / padding) is gone: keeping it would
-            nest two trays. `max-w-[238px]` means the artwork is never upscaled past native,
-            which keeps this row ~53px tall against the 54px it replaced -- the left column's
-            vertical budget is unaffected.
-
-            The four <button>s below are the SAME contract as before: transparent hit regions
-            over the painted controls, in painted left-to-right order, each individually
-            focusable with its own aria-label, and each still WITHOUT a handler. Their
-            left/width percentages are measured from the export (columns differing from the
-            tray colour), not estimated:
-              previous  x 22..60   -> 9.24% / 16.39%
-              pause     x 74..113  -> 31.09% / 16.81%
-              next      x 125..162 -> 52.52% / 15.97%
-              stop      x 176..213 -> 73.95% / 15.97%
-
-            SCOPE: visual layer only. No <audio>, no playback state, no handlers, and this
-            file stays a Server Component. Functional BGM playback is deferred to a dedicated
-            future feature branch -- it is not implemented, changed or removed here.
-          */}
-          <div className="relative mx-auto w-full max-w-[238px]">
-            <FittedAsset assetKey="media.playbackControls" className="h-auto w-full" />
-
-            {BGM_PLAYING_COPY.controls.map((control) => (
-              <button
-                key={control.label}
-                type="button"
-                aria-label={control.label}
-                style={{ left: control.left, width: control.width }}
-                className="absolute inset-y-0 cursor-pointer rounded-lg bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-[#ff5555]"
-              />
-            ))}
-          </div>
-        </div>
+        {/*
+          Real playback (feat/sidebar-actualization-bgm): track info,
+          equalizer, and controls are all interactive now, so they live in a
+          Client Component -- see BgmPlayerWidget.tsx for the <audio>-backed
+          state, the Play/Pause asset swap, and the decorative-vs-interactive
+          control split. This file (the section header above) stays a Server
+          Component.
+        */}
+        <BgmPlayerWidget />
       </section>
     </aside>
   );
