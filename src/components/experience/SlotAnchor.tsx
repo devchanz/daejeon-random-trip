@@ -46,8 +46,6 @@ export interface SlotAnchorProps {
   pendingResult?: RouteResult | null;
   isLeverActive?: boolean;
   revealStage?: 'hidden' | 'peek' | 'revealed' | 'minimized';
-  /** Sub-beat within 'peek', forwarded to SlotOutputLayer. See motionConfig.ts. */
-  peekPhase?: 'inside' | 'edge' | 'hold';
   onReopenResult?: () => void;
   reopenButtonRef?: React.Ref<HTMLButtonElement>;
 }
@@ -69,9 +67,11 @@ export interface SlotAnchorProps {
  *             2. State Asset Skin (z-10, slot-idle.png or slot-pulled.png)
  *             3. DOM CTA Button   (z-20, interactive hit area mapped onto red button)
  *
- * SlotStage hosts SlotOutputLayer (ADR-008 output slit peek cue) as a sibling
- * of SlotVisualFrame — the Figma reference shows that reveal extending below
- * the physical chassis, so it must not be constrained by the frame's bounds.
+ * SlotStage hosts SlotOutputLayer (Slot Peek, ADR-036) as a sibling of
+ * SlotVisualFrame, mounted only while revealStage === 'peek' — the measured
+ * output cavity sits inside the chassis's own bounds, but the layer is kept
+ * a sibling (never a LogicalCanvas descendant) so it is never subject to the
+ * frame's overflow-hidden clip regardless of exact travel/geometry.
  */
 export function SlotAnchor({
   state,
@@ -82,13 +82,17 @@ export function SlotAnchor({
   pendingResult = null,
   isLeverActive = false,
   revealStage = 'hidden',
-  peekPhase = 'inside',
   onReopenResult,
   reopenButtonRef,
 }: SlotAnchorProps) {
   const isReady = state.phase === 'ready';
   const isSpinning = state.phase === 'spinning';
   const isResult = state.phase === 'result';
+
+  // Single source of truth for which chassis raster is showing, shared with
+  // SlotOutputLayer's foreground-lip re-instance below so it is guaranteed to
+  // be the exact same cached, already-decoded bitmap -- never a second fetch.
+  const chassisSrc = isLeverActive ? '/assets/slot-pulled.png' : '/assets/slot-idle.png';
 
   // Target reel model for stopped reels or final result
   const targetReelDisplay: ReelDisplayModel =
@@ -166,11 +170,13 @@ export function SlotAnchor({
          * overflow-hidden clips LogicalCanvas's transparent margin (by construction
          * 100% empty — the canvas is scaled/translated so every non-transparent
          * pixel already lands inside this box) so it can't inflate document
-         * scrollHeight. Safe for the future output reveal: SlotOutputLayer mounts
-         * as a sibling of this frame (see below), not inside it, so it is never
-         * subject to this clip. Explicit z-10 (Result Quest redesign): gives
-         * SlotOutputLayer's still-hidden cavity portion something explicit to
-         * paint below (see SlotOutputLayer.tsx's occlusion architecture doc).
+         * scrollHeight. Safe for Slot Peek: SlotOutputLayer mounts as a sibling
+         * of this frame (see below), not inside it, so it is never subject to
+         * this clip. Its own z-20 paints ABOVE this frame's z-10 -- Slot Peek's
+         * occlusion is clip-path-based (a re-instanced, clipped copy of this
+         * same chassis raster occludes the paper from the front), not paint-order
+         * based, because the cavity is fully opaque in the source art (see
+         * SlotOutputLayer.tsx's architecture doc).
          */}
         <div
           className="relative z-10 shrink-0 select-none pointer-events-none overflow-hidden"
@@ -298,7 +304,7 @@ export function SlotAnchor({
             {/* LAYER 2 (z-10): Primary Production State Asset (full 600x500 pixel-art chassis skin). */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={isLeverActive ? '/assets/slot-pulled.png' : '/assets/slot-idle.png'}
+              src={chassisSrc}
               alt="대전 여행 슬롯머신"
               className="absolute inset-0 h-full w-full object-contain pointer-events-none select-none z-10"
             />
@@ -333,15 +339,19 @@ export function SlotAnchor({
         </div>
 
         {/*
-         * SlotOutputLayer (Ticket reveal, ADR-008 output slit peek cue), sibling of
-         * SlotVisualFrame so it can extend past the chassis bounds without being constrained
-         * by the frame. Mounted only once revealStage leaves 'hidden' (i.e. never before or
-         * during Q1/Q2/READY/SPINNING), so pre-result states are structurally unaffected —
-         * protects the position-lock and scroll-tail contracts (ADR-020) by construction.
+         * SlotOutputLayer (Slot Peek, ADR-036), sibling of SlotVisualFrame so it can
+         * extend past the chassis bounds without being constrained by the frame.
+         *
+         * Mounted if and only if revealStage === 'peek' -- never before (so
+         * Q1/Q2/READY/SPINNING and the position-lock/scroll-tail contracts, ADR-020,
+         * stay structurally unaffected) and never after: the instant revealStage
+         * becomes 'revealed' or 'minimized', this unmounts and contributes zero
+         * visible pixels, so the approved Result/minimized visuals are never altered
+         * by Slot Peek having existed. On the next spin this is a fresh mount, so
+         * `.animate-output-peek` naturally replays from its own 0% keyframe with no
+         * manual re-keying needed.
          */}
-        {revealStage !== 'hidden' && (
-          <SlotOutputLayer revealStage={revealStage} peekPhase={peekPhase} />
-        )}
+        {revealStage === 'peek' && <SlotOutputLayer chassisSrc={chassisSrc} />}
       </div>
 
       {/*

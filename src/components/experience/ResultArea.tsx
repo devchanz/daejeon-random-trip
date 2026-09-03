@@ -29,11 +29,17 @@ export interface ResultAreaProps {
 /**
  * ResultArea — centered focus Result Card overlay (ADR-008).
  *
- * Renders as an in-flow `fixed` overlay, not a Portal: MainExperience is mounted
- * twice (desktop + mobile, gated by `hidden lg:flex` / `lg:hidden` in page.tsx), and
- * a Portal to document.body would escape that responsive gate — the hidden
- * breakpoint's card could render on top of the other layout. An in-flow `fixed`
- * element stays correctly suppressed by its ancestor's `display:none`.
+ * Renders as an in-flow `fixed` overlay, not a Portal. Rendered from exactly
+ * ONE call site, `ExperienceOverlays` (ADR-036), mounted once in page.tsx
+ * outside both the desktop/mobile `MainExperience` (Hero) presentations —
+ * those two still mount twice (gated by `hidden lg:flex` / `lg:hidden`), but
+ * this component no longer does, which is what makes it structurally
+ * impossible to instantiate twice. The in-flow-`fixed`-not-Portal choice
+ * itself predates that change and is unrelated to it: a Portal to
+ * document.body would still be reachable from inside either Hero's
+ * `display:none` ancestor in a way an in-flow `fixed` element is not, were
+ * this component ever moved back inside them — kept as the safer default
+ * regardless of current mount count.
  *
  * Mounts once phase === 'result' AND revealStage is 'revealed' OR 'minimized' — never
  * during Q1/Q2/READY/SPINNING/peek, so pre-result states stay structurally unaffected

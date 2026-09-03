@@ -7,6 +7,7 @@ export { StopCard, type StopCardProps } from './StopCard';
 export { ExploreMoreBanner, type ExploreMoreBannerProps } from './ExploreMoreBanner';
 export { BonusQuest, type BonusQuestProps } from './BonusQuest';
 export { ResultActions, type ResultActionsProps } from './ResultActions';
+export { ResultSkinPreload, type ResultSkinPreloadProps } from './ResultSkinPreload';
 export {
   RESULT_SKIN_BAND_SIZE,
   RESULT_BODY_PAPER,

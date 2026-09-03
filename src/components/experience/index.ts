@@ -1,6 +1,13 @@
 'use client';
 
 export { MainExperience, type MainExperienceProps } from './MainExperience';
+export {
+  ExperienceProvider,
+  useExperienceEngine,
+  type ExperienceProviderProps,
+  type ExperienceEngine,
+} from './ExperienceProvider';
+export { ExperienceOverlays } from './ExperienceOverlays';
 export { SetupArea } from './SetupArea';
 export { OptionButton } from './OptionButton';
 export { SlotAnchor, type SlotAnchorProps } from './SlotAnchor';
