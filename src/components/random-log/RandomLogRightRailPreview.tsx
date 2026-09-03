@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { getRecentGuestbookEntries } from '../../lib/database/guestbook';
 import { RandomLogAvatarBadge } from './RandomLogAvatarBadge';
 import { formatShortTimestamp } from './randomLogLabels';
+import { VISITOR_LOG_COPY } from '../../content/sidebar';
 
 const PREVIEW_LIMIT = 3;
 
@@ -22,10 +23,10 @@ export async function RandomLogRightRailPreview() {
 
   return (
     <>
-      <div className="flex flex-col divide-y divide-[#eee7d8]">
+      <div className="flex flex-col divide-y divide-line-soft">
         {entries.length === 0 ? (
           <p className="py-3 text-center text-xs font-bold text-[#8c8273]">
-            아직 남겨진 랜덤 로그가 없어요
+            {VISITOR_LOG_COPY.emptyState}
           </p>
         ) : (
           entries.map((entry) => (
@@ -60,12 +61,12 @@ export async function RandomLogRightRailPreview() {
         )}
       </div>
 
-      <div className="mt-1 border-t border-[#eee7d8] pt-2.5">
+      <div className="mt-1 border-t border-line-soft pt-2.5">
         <Link
           href="/random-log"
-          className="flex w-full items-center justify-center rounded-lg border border-[#2b2520] bg-[#e0f2fe] px-2.5 py-1.5 text-xs font-black text-[#0369a1] hover:bg-[#bae6fd]"
+          className="flex w-full items-center justify-center rounded-lg border border-line-control bg-[#e0f2fe] px-2.5 py-1.5 text-xs font-black text-[#0369a1] hover:bg-[#bae6fd]"
         >
-          랜덤 로그 전체보기 &gt;
+          {VISITOR_LOG_COPY.viewAllCta}
         </Link>
       </div>
     </>

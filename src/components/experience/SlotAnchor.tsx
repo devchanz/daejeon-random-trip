@@ -133,7 +133,7 @@ export function SlotAnchor({
     }
     return {
       text: '여행 뽑기!',
-      hint: '체류 시간과 여행 스타일을 선택해 주세요',
+      hint: '시간과 취향을 골라주세요',
     };
   };
 
@@ -222,7 +222,7 @@ export function SlotAnchor({
                           : '회전 중'
                         : '대기 중'
                     }`}
-                    className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-[4px] bg-[#fffef9] text-center shadow-inner"
+                    className="relative flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-[4px] bg-[#fffef9] text-center"
                   >
                     {isSpinning && !isReelStopped ? (
                       // Active Rolling Track
@@ -243,7 +243,7 @@ export function SlotAnchor({
                             (symbol, sIdx) => (
                               <span
                                 key={`roll-sym-${index}-${sIdx}`}
-                                className="text-sm sm:text-base lg:text-xl select-none py-0.5 drop-shadow-2xs leading-none"
+                                className="text-sm sm:text-base lg:text-xl select-none py-0.5 leading-none"
                               >
                                 {symbol}
                               </span>
@@ -361,9 +361,9 @@ export function SlotAnchor({
             onClick={onReopenResult}
             data-testid="reopen-result-affordance"
             aria-label="내 여행 티켓 다시 보기"
-            className="rounded-full border-2 border-[#2b2520] bg-[#fffef9] px-4 py-1.5 text-sm font-black text-[#2b2520] shadow-retro-xs cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
+            className="rounded-full border-2 border-line-control bg-[#fffef9] px-4 py-1.5 text-sm font-black text-[#2b2520] cursor-pointer transition-all active:translate-x-[1px] active:translate-y-[1px]"
           >
-            🎫 내 여행 티켓 다시 보기
+            💌 내 여행 티켓 다시 보기
           </button>
         ) : errorMessage ? (
           <span role="alert" className="line-clamp-2 text-sm sm:text-base font-black text-[#e11d48]">

@@ -4,6 +4,7 @@ import React, { useEffect, useReducer, useRef, useState } from 'react';
 import {
   INITIAL_EXPERIENCE_STATE,
   experienceReducer,
+  startIntro,
   startSpin,
   completeSpin,
   type ExperienceState,
@@ -27,6 +28,7 @@ import { RouteGuideModal } from '../guide';
 import { SetupArea } from './SetupArea';
 import { SlotAnchor } from './SlotAnchor';
 import { ResultArea } from './ResultArea';
+import { IntroGate } from './IntroGate';
 import {
   MOTION_TIMINGS,
   getMotionTimings,
@@ -223,6 +225,13 @@ export function MainExperience({
     }
   }, [revealStage]);
 
+  // INTRO soft entry gate -> Q1. See IntroGate.tsx; the gate itself delays
+  // this call by its own exit-transition duration, so by the time it fires
+  // the overlay has already faded/scaled out.
+  const handleStartIntro = () => {
+    dispatch(startIntro());
+  };
+
   // Primary Spin action triggered from SlotAnchor
   const handleSpin = () => {
     if (state.phase !== 'ready' || !state.duration || !state.preference) {
@@ -376,25 +385,40 @@ export function MainExperience({
         />
       )}
 
-      {/* 1. Setup Area: Q1 -> Q2 -> READY */}
-      <SetupArea state={state} dispatch={dispatch} />
+      {/* 1+2. Setup Area (Q1 -> Q2 -> READY) + Slot Anchor, wrapped in a
+          `display:contents` group so `inert` can suspend BOTH while the
+          INTRO gate overlay (below) is active -- `contents` keeps them direct
+          flex items of this gap-driven column (unchanged geometry), `inert`
+          removes them from focus/tab order and pointer/touch interaction as
+          an explicit guard, not just relying on the Slot CTA's own existing
+          `disabled` state during 'intro'. */}
+      <div className="contents" inert={state.phase === 'intro' ? true : undefined}>
+        <SetupArea state={state} dispatch={dispatch} />
 
-      {/* 2. Slot Anchor: Stable visual anchor across READY -> SPINNING -> RESULT.
-          Also hosts the "내 여행 티켓" reopen affordance in its helper band while
-          Result is minimized -- see SlotAnchor.tsx for why that placement was chosen
-          over a viewport-corner floating button. */}
-      <SlotAnchor
-        state={state}
-        onSpin={handleSpin}
-        errorMessage={state.phase === 'ready' ? recommendationError : null}
-        stoppedReelCount={stoppedReelCount}
-        pendingResult={pendingResult}
-        isLeverActive={isLeverActive}
-        revealStage={revealStage}
-        peekPhase={peekPhase}
-        onReopenResult={handleReopenResult}
-        reopenButtonRef={reopenButtonRef}
-      />
+        {/* Slot Anchor: Stable visual anchor across READY -> SPINNING -> RESULT.
+            Also hosts the "내 여행 티켓" reopen affordance in its helper band while
+            Result is minimized -- see SlotAnchor.tsx for why that placement was chosen
+            over a viewport-corner floating button. */}
+        <SlotAnchor
+          state={state}
+          onSpin={handleSpin}
+          errorMessage={state.phase === 'ready' ? recommendationError : null}
+          stoppedReelCount={stoppedReelCount}
+          pendingResult={pendingResult}
+          isLeverActive={isLeverActive}
+          revealStage={revealStage}
+          peekPhase={peekPhase}
+          onReopenResult={handleReopenResult}
+          reopenButtonRef={reopenButtonRef}
+        />
+      </div>
+
+      {/* INTRO soft entry gate: `absolute inset-0` against this component's
+          `relative` root, layered over the Setup+Slot box above -- it
+          contributes 0px to document layout (removed from flow) and never
+          changes --hero-setup-h, Slot position, or the logo above this
+          component in page.tsx. See IntroGate.tsx. */}
+      {state.phase === 'intro' && <IntroGate onStart={handleStartIntro} />}
 
       {/* 3. Result Area: Centered focus overlay (Result Card), revealed after the output slit peek cue.
           isNestedOverlayOpen suspends Result's own Escape/Tab keyboard ownership while

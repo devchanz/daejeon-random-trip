@@ -69,7 +69,7 @@ export function OptionButton<T extends string>({
         isSelected
           ? 'border-2 border-[#ff5555] bg-[#fef2f2] text-[#2b2520] ring-2 ring-[#ff8585]/50 translate-x-[1px] translate-y-[1px]'
           : isActive
-          ? 'border-2 border-[#2b2520] bg-[#fffef9] text-[#2b2520] hover:bg-[#fff9e6] hover:-translate-y-0.5 cursor-pointer active:translate-x-[1px] active:translate-y-[1px]'
+          ? 'border-2 border-line-control bg-[#fffef9] text-[#2b2520] hover:bg-[#fff9e6] hover:-translate-y-0.5 cursor-pointer active:translate-x-[1px] active:translate-y-[1px]'
           : 'border-2 border-[#d8d0c2] bg-[#f5efe3] text-[#a89f91] cursor-not-allowed'
       } ${className}`}
     >

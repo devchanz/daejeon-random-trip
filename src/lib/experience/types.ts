@@ -6,7 +6,20 @@ export type { RerollRewardState, RerollSessionState };
 /**
  * Supported experience phases in the setup and recommendation flow.
  */
-export type ExperiencePhase = 'q1' | 'q2' | 'ready' | 'spinning' | 'result';
+export type ExperiencePhase = 'intro' | 'q1' | 'q2' | 'ready' | 'spinning' | 'result';
+
+/**
+ * State on initial load, before the user has intentionally started the
+ * experience. Renders inside the SAME SetupArea card footprint Q1/Q2/READY/
+ * SPINNING already use (see SetupArea.tsx) -- INTRO is not a separate
+ * section, only a different content branch of that one fixed panel.
+ */
+export interface IntroExperienceState {
+  phase: 'intro';
+  duration?: undefined;
+  preference?: undefined;
+  result?: undefined;
+}
 
 /**
  * State when user is at Question 1 (Duration selection).
@@ -62,6 +75,7 @@ export interface ResultExperienceState {
  * Discriminated union of all valid core experience states.
  */
 export type ExperienceState =
+  | IntroExperienceState
   | Q1ExperienceState
   | Q2ExperienceState
   | ReadyExperienceState
@@ -72,6 +86,7 @@ export type ExperienceState =
  * Actions that drive experience state transitions.
  */
 export type ExperienceAction =
+  | { type: 'START_INTRO' }
   | { type: 'SELECT_DURATION'; duration: DurationType }
   | { type: 'SELECT_PREFERENCE'; preference: PreferenceType }
   | { type: 'START_SPIN' }

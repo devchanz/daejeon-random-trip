@@ -3,7 +3,9 @@ import { visualAsset, type VisualAssetKey } from '../../config/visualAssets';
 
 /**
  * Builds the `--skin-m` / `--skin-d` custom properties consumed by the
- * `.skin-band` / `.skin-canvas` / `.skin-strip` utilities in globals.css.
+ * `.skin-canvas` utility in globals.css (Result's header/body/action bands,
+ * and the Route Guide mission shell -- the one Route Guide asset still
+ * shipped as a raster after its Phase 4 DOM/CSS rebuild).
  *
  * Two things this preserves at once:
  *  - Asset paths still resolve through `visualAsset()`, so the registry stays the

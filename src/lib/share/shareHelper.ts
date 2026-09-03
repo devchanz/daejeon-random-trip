@@ -4,6 +4,8 @@
  * Web Share API invocation with AbortError guard, and clipboard fallback.
  */
 
+import { buildShareTitle, buildShareText } from '../../content/share';
+
 export interface ShareContentParams {
   title: string;
   stopCount: number;
@@ -20,10 +22,7 @@ export type ShareExecutionResult =
  * Formats user-facing share title.
  */
 export function formatShareTitle(routeTitle: string): string {
-  const cleanTitle = routeTitle.trim();
-  return cleanTitle.length > 0
-    ? `대전 랜덤 여행 코스 | ${cleanTitle}`
-    : '대전 랜덤 여행 코스';
+  return buildShareTitle(routeTitle.trim());
 }
 
 /**
@@ -32,7 +31,7 @@ export function formatShareTitle(routeTitle: string): string {
 export function formatShareText(routeTitle: string, stopCount: number): string {
   const cleanTitle = routeTitle.trim();
   const countLabel = stopCount > 0 ? `총 ${stopCount}곳` : '추천';
-  return `🎰 친구가 뽑은 대전 랜덤 여행 코스 도착!\n📍 ${cleanTitle}\n✨ ${countLabel} 여행 코스를 확인해보세요.`;
+  return buildShareText(cleanTitle, countLabel);
 }
 
 /**

@@ -2,6 +2,7 @@ import React from 'react';
 import type { EditorialItem } from '../../data/editorial';
 import { visualAsset, VISUAL_ASSET_META } from '../../config/visualAssets';
 import { FittedAsset } from '../common';
+import { EDITORIAL_EMPTY_STATE } from '../../content/sidebar';
 
 export interface EditorialSpotlightCardProps {
   /** The item to feature. `null` renders an explicit empty state. */
@@ -57,13 +58,13 @@ export function EditorialSpotlightCard({
         alt={item.title}
         width={bannerMeta?.w}
         height={bannerMeta?.h}
-        className="h-auto w-full rounded-xl border border-[#2b2520] select-none"
+        className="h-auto w-full rounded-xl border border-line-soft select-none"
       />
 
       {item.tags && item.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1.5 text-xs font-bold text-[#6b6257]">
           {item.tags.map((tag) => (
-            <span key={tag} className="rounded-md border border-[#e8dfd0] bg-[#faf6ee] px-2 py-0.5">
+            <span key={tag} className="rounded-md border border-line-soft bg-[#faf6ee] px-2 py-0.5">
               {tag}
             </span>
           ))}
@@ -75,7 +76,7 @@ export function EditorialSpotlightCard({
   return (
     <section
       aria-label={heading}
-      className={`relative overflow-visible rounded-2xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-5 ${className}`}
+      className={`relative overflow-visible rounded-2xl border-2 border-line-soft bg-[#fffef9] p-4 sm:p-5 ${className}`}
     >
       {/* Perched mascot, straddling the card's top-right corner. Anchored to the OUTER
           edge so it stays as far as possible from the centre column's character artwork.
@@ -107,7 +108,7 @@ export function EditorialSpotlightCard({
 
       {/* Compact header. Tightened from pb-2.5/mb-3 and absorbs the item badge on the
           right, replacing what used to be a separate full-height title row. */}
-      <div className="mb-2.5 flex items-center justify-between border-b-2 border-[#2b2520] pb-2">
+      <div className="mb-2.5 flex items-center justify-between border-b-2 border-line-soft pb-2">
         <div className="flex items-center gap-1.5">
           {/* FittedAsset applies the star's opaque-fit compensation: uncompensated at 16px it
               rendered only ~12.4px of artwork. At a 20px box the visible star is a true 20px,
@@ -123,7 +124,7 @@ export function EditorialSpotlightCard({
         </div>
 
         {item?.badge && (
-          <span className="rounded-md border border-[#2b2520] bg-[#ff5555] px-2 py-0.5 text-[10px] font-black text-white">
+          <span className="rounded-md border border-line-soft bg-[#ff5555] px-2 py-0.5 text-[10px] font-black text-white">
             {item.badge}
           </span>
         )}
@@ -131,7 +132,7 @@ export function EditorialSpotlightCard({
 
       {item === null ? (
         <p className="py-3 text-center text-xs font-bold text-[#8c8273]">
-          지금은 소개할 콘텐츠가 없어요
+          {EDITORIAL_EMPTY_STATE}
         </p>
       ) : item.href ? (
         <a

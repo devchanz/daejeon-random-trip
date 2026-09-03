@@ -3,7 +3,7 @@
 ## 1. Overview & Objective
 This specification defines the Google Analytics 4 (GA4) telemetry plan for the Daejeon Random Trip MVP. It measures user progression across the three growth loops:
 1. **Core Conversion**: Setup → Spin → Result Card → Route Guide → Outbound Map Click.
-2. **Participation & Reward**: Result Card → Visitor Log → Reroll Unlock → Second Spin.
+2. **Participation & Reward**: Result Card → Memory Log → Reroll Unlock → Second Spin. *(User-facing name; ADR-034 in `docs/DECISIONS.md`. Event names below (`guestbook_*`) are unrenamed technical identifiers, unaffected by the copy rename.)*
 3. **Referral Loop**: Result Card → Share Snapshot → `/r/[shareCode]` → New User Slot Spin.
 
 > **Today's Pick is not a growth loop.** It is a simple Right Rail editorial banner (ADR-015, revised) with no detail page, Q2 seeding, or Slot funnel. Banner-click/impression tracking, if desired, is **TBD** and deferred until the banner's actual implementation is designed — no events are currently defined for it (see §3.4).
@@ -65,8 +65,8 @@ flowchart TD
 ### 3.2 Participation & Reroll Events
 | Event Name | Trigger Condition | Intended Parameters |
 | :--- | :--- | :--- |
-| `reroll_offer_click` | User clicks `“랜덤 로그 남기고 1회 더 뽑기”` on Result Card | `route_id` |
-| `guestbook_composer_open`| Visitor Log composer modal/section becomes active | `route_id` |
+| `reroll_offer_click` | User clicks the unified `“다시 뽑기”` CTA on Result Card while the reward is `locked` (opens the Memory Log composer) | `route_id` |
+| `guestbook_composer_open`| Memory Log composer modal/section becomes active | `route_id` |
 | `guestbook_submit` | User submits a visitor log entry | `route_id`, `zone_id`, `avatar_id` |
 | `reroll_unlocked` | Server DB insertion succeeds and 1 reroll is awarded | `route_id` |
 | `route_reroll` | User triggers second spin using the reward reroll | `route_id`, `reroll_count` (`1`) |
@@ -109,8 +109,8 @@ Banner-click or impression tracking, if desired, is **TBD** and deferred until t
 - `map_service` (`'naver'` / `'kakao'` / `'generic'`)
 
 ### ⛔ Strict PII & Free-Text Prohibition
-- **NEVER** transmit Visitor Log nicknames.
-- **NEVER** transmit Visitor Log message strings or arbitrary user free-text inputs.
+- **NEVER** transmit Memory Log nicknames.
+- **NEVER** transmit Memory Log message strings or arbitrary user free-text inputs.
 - **NEVER** transmit user-specific `share_code` strings to prevent high-cardinality dimension bloat.
 - **NEVER** transmit IP addresses, emails, phone numbers, or personal identifiers as custom parameters or user properties.
 - Parameter whitelisting and input sanitization are strictly enforced in `src/lib/analytics/` prior to dispatching events to `gtag`.
@@ -207,4 +207,5 @@ All dashboard views rely **strictly** on the events, dimensions, and parameters 
   - **None** of the custom events in the §3 Event Catalog are instrumented — all of §3.1–3.3 (`quick_setup_start` through `shared_route_slot_click`) remain spec only, and `src/lib/analytics/` does not exist yet.
   - The Campaign & Funnel Analysis Dashboard (§8) is not built.
   - Today's Pick banner tracking remains TBD per §3.4.
+  - **Not accounted for above**: `feat/product-visual-polish` added a new INTRO phase ahead of Q1 (`docs/DECISIONS.md` ADR-032) and renamed Random Log's user-facing copy to Memory Log (ADR-034). Neither change added or renamed any event in this spec — `quick_setup_start` still conceptually maps to "first Setup interaction," now reached only after the user presses INTRO's `여행 시작하기` CTA, and no `trip_start_click`-style INTRO-specific event exists yet. This is a **spec gap to resolve during instrumentation**, not an implemented behavior — see `docs/PROJECT_STATE.md` §D for the current framing.
 - **Next step**: implement `src/lib/analytics/` event dispatchers against §3's Event Catalog, enforcing §4's parameter whitelist, then re-verify each event in GA4 DebugView per §7 before any paid campaign launch.

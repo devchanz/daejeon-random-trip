@@ -26,11 +26,11 @@ export function RandomLogList({
 
   if (entries.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-[#d8d0c2] bg-[#faf6ee] p-10 text-center">
+      <div className="flex flex-col items-center gap-2 rounded-2xl border-2 border-dashed border-line-soft bg-[#faf6ee] p-10 text-center">
         <span className="text-3xl" role="img" aria-label="Empty">
           🍀
         </span>
-        <p className="text-sm font-bold text-[#6b6257]">아직 랜덤 로그가 없어요</p>
+        <p className="text-sm font-bold text-[#6b6257]">아직 메모리 로그가 없어요</p>
       </div>
     );
   }
@@ -49,7 +49,7 @@ export function RandomLogList({
       const data = await response.json().catch(() => null);
 
       if (!response.ok || !data?.success) {
-        setErrorMessage(data?.error ?? '랜덤 로그를 더 불러오지 못했습니다.');
+        setErrorMessage(data?.error ?? '메모리 로그를 더 불러오지 못했습니다.');
         return;
       }
 
@@ -84,7 +84,7 @@ export function RandomLogList({
           type="button"
           onClick={handleLoadMore}
           disabled={isLoading}
-          className={`mx-auto rounded-xl border-2 border-[#2b2520] px-6 py-2.5 text-xs font-black transition-all ${
+          className={`mx-auto rounded-xl border-2 border-line-control px-6 py-2.5 text-xs font-black transition-all ${
             isLoading
               ? 'cursor-wait bg-[#faf6ee] text-[#a89f91]'
               : 'cursor-pointer bg-[#fffef9] text-[#2b2520] hover:bg-[#faf6ee]'

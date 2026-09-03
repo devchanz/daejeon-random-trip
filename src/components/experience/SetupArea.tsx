@@ -12,16 +12,28 @@ import { selectDuration, selectPreference } from '../../lib/experience';
 import { OptionButton } from './OptionButton';
 import { FittedAsset } from '../common';
 import type { VisualAssetKey } from '../../config/visualAssets';
+import { DURATION_LABELS, PREFERENCE_LABELS } from '../../content/labels';
+import {
+  SETUP_AREA_ARIA_LABEL,
+  SETUP_HEADER,
+  STEP_LABELS,
+  Q1_COPY,
+  Q2_COPY,
+  READY_COPY,
+  SPINNING_COPY,
+} from '../../content/setup';
 
 interface SetupAreaProps {
   state: ExperienceState;
   dispatch: React.Dispatch<ExperienceAction>;
 }
 
-export const DURATION_DISPLAY_LABELS: Record<DurationType, string> = {
-  half: '반나절',
-  full: '하루종일',
-};
+/**
+ * Re-exported from the canonical src/content/labels.ts source of truth
+ * (kept under this name so existing importers, e.g. result/ResultSummary.tsx,
+ * need no edit).
+ */
+export const DURATION_DISPLAY_LABELS: Record<DurationType, string> = DURATION_LABELS;
 
 /** Emoji fallbacks, retained behind the production artwork below. */
 export const DURATION_ICONS: Record<DurationType, string> = {
@@ -39,12 +51,8 @@ export const DURATION_ICON_ASSETS: Record<DurationType, VisualAssetKey> = {
   full: 'setup.duration.fullDay',
 };
 
-export const PREFERENCE_DISPLAY_LABELS: Record<PreferenceType, string> = {
-  anything: '아무거나',
-  food: '먹방',
-  walk: '산책',
-  photo: '사진',
-};
+/** Re-exported from the canonical src/content/labels.ts source of truth. */
+export const PREFERENCE_DISPLAY_LABELS: Record<PreferenceType, string> = PREFERENCE_LABELS;
 
 /** Emoji fallbacks, retained behind the production artwork below. */
 export const PREFERENCE_ICONS: Record<PreferenceType, string> = {
@@ -64,6 +72,7 @@ export const PREFERENCE_ICON_ASSETS: Record<PreferenceType, VisualAssetKey> = {
 
 export function SetupArea({ state, dispatch }: SetupAreaProps) {
   const currentPhase = state.phase;
+  const isIntro = currentPhase === 'intro';
   const isQ1Active = currentPhase === 'q1';
   const isQ2Active = currentPhase === 'q2';
   const isReady = currentPhase === 'ready';
@@ -77,28 +86,30 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
     dispatch(selectPreference(preference));
   };
 
-  const stepLabel = isQ1Active
-    ? 'STEP 1/2'
-    : isQ2Active
-    ? 'STEP 2/2'
-    : isReady
-    ? 'READY'
-    : isSpinningOrResult
-    ? 'SPINNING'
-    : 'READY';
+  // Phase 7 final copy: READY and SPINNING/RESULT no longer show a
+  // parenthetical step label at all (previously "(READY)"/"(SPINNING)") --
+  // only INTRO/Q1/Q2 still show one. SPINNING/RESULT additionally swaps the
+  // header's BASE text to SETUP_HEADER.spinningTitle rather than just
+  // dropping a suffix. See the header render below.
+  const showStepParenthetical = isIntro || isQ1Active || isQ2Active;
+  // Only the genuine "STEP n/2" metadata (Q1/Q2) gets the de-bolded
+  // treatment -- INTRO's parenthetical is unaffected, per the approved brief.
+  const isStepMetadata = isQ1Active || isQ2Active;
+  const stepLabel = isIntro ? STEP_LABELS.intro : isQ1Active ? STEP_LABELS.q1 : STEP_LABELS.q2;
+  const headerTitleText = isSpinningOrResult ? SETUP_HEADER.spinningTitle : SETUP_HEADER.titlePrefix;
 
   return (
     <section
-      aria-label="여행 조건 설정 (Setup Area)"
-      className="relative w-full rounded-2xl sm:rounded-3xl border-2 border-[#2b2520] bg-[#fffef9] p-4 sm:p-6 overflow-hidden h-[var(--hero-setup-h)] flex flex-col justify-between"
+      aria-label={SETUP_AREA_ARIA_LABEL}
+      className="relative w-full rounded-2xl sm:rounded-3xl border-2 border-line-soft bg-[#fffef9] p-4 sm:p-6 overflow-hidden h-[var(--hero-setup-h)] flex flex-col justify-between"
     >
       <div className="flex flex-col gap-2.5 sm:gap-3.5">
         {/* Header Bar: Step Status Indicator */}
-        <div className="flex items-center justify-between border-b-2 border-[#2b2520] pb-2 sm:pb-2.5">
+        <div className="flex items-center justify-between border-b-2 border-line-soft pb-2 sm:pb-2.5">
           {/* Split deliberately: this line mixes two typography categories. The Korean
               belongs to the user-facing set (DOS Gothic, inherited), while `STEP n/2`
               is a retro English pixel label and stays on font-mono with its siblings
-              (MY PROFILE, VISITOR LOG, TOTAL VISIT). Previously the whole string was
+              (MY PROFILE, MEMORY LOG, TOTAL VISIT). Previously the whole string was
               font-mono, so the Korean was silently falling back to a system font --
               Geist Mono has no Hangul. */}
           <div className="flex items-center gap-1.5 text-xs sm:text-sm font-black text-[#2b2520]">
@@ -113,27 +124,47 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
               className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0"
             />
             <span>
-              오늘의 여행 준비 (<span className="font-mono">{stepLabel}</span>)
+              {headerTitleText}
+              {showStepParenthetical && (
+                <>
+                  {' '}
+                  (
+                  <span className={`font-mono ${isStepMetadata ? 'font-normal' : ''}`}>
+                    {stepLabel}
+                  </span>
+                  )
+                </>
+              )}
             </span>
           </div>
 
           {/* Decorative header ornament (✨) removed; the label itself is retained. */}
           <div className="flex items-center gap-1 text-xs font-bold text-[#8c8273]">
-            <span>조건 선택</span>
+            <span>{SETUP_HEADER.caption}</span>
           </div>
         </div>
 
         {/* Dynamic Question Area: Strict Height Lock (128px on mobile, 92px on desktop) */}
         <div className="flex flex-col justify-center h-[128px] sm:h-[92px]">
+          {/* INTRO: renders nothing here on purpose. The Phase 5 visual
+              correction moved the entry gate OUT of this fixed footprint and
+              into IntroGate.tsx, a translucent overlay MainExperience layers
+              on top of this whole card (see MainExperience.tsx) -- this box
+              stays empty (but still full height, so geometry is untouched)
+              and is faintly visible underneath that overlay's warm veil,
+              which is exactly the "hero still recognizable underneath"
+              effect the brief asked for. The persistent header row above
+              (STEP_LABELS.intro, SETUP_HEADER) still renders normally. */}
+
           {/* Q1: Duration Selection */}
           {isQ1Active && (
             <div className="flex flex-col gap-2 sm:gap-2.5">
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-sm sm:text-base xl:text-lg font-black text-[#2b2520]">
                   <span className="inline-flex h-6 w-8 items-center justify-center rounded-md bg-[#ff5555] text-xs font-black text-white">
-                    Q1
+                    {Q1_COPY.badge}
                   </span>
-                  <span>대전에서 얼마나 놀까? ✨</span>
+                  <span>{Q1_COPY.question}</span>
                 </span>
               </div>
 
@@ -161,9 +192,9 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2 text-sm sm:text-base xl:text-lg font-black text-[#2b2520]">
                   <span className="inline-flex h-6 w-8 items-center justify-center rounded-md bg-[#ff5555] text-xs font-black text-white">
-                    Q2
+                    {Q2_COPY.badge}
                   </span>
-                  <span>여행 스타일을 선택해 주세요 ✨</span>
+                  <span>{Q2_COPY.question}</span>
                 </span>
               </div>
 
@@ -207,12 +238,12 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
               <div className="flex items-center gap-2 text-xs sm:text-sm font-black text-[#065f46]">
                 <span className="inline-block h-2 w-2 rounded-full bg-[#10b981] motion-safe:animate-pulse" />
                 <span>
-                  조건 선택 완료: {DURATION_DISPLAY_LABELS[state.duration]} &middot;{' '}
+                  {READY_COPY.summaryPrefix}: {DURATION_DISPLAY_LABELS[state.duration]} &middot;{' '}
                   {PREFERENCE_DISPLAY_LABELS[state.preference]}
                 </span>
               </div>
               <span className="text-[11px] sm:text-xs font-bold text-[#047857]">
-                아래 슬롯머신의 &ldquo;여행 뽑기!&rdquo; 버튼을 눌러보세요!
+                {READY_COPY.hint}
               </span>
             </div>
           )}
@@ -232,12 +263,12 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
               <div className="flex items-center gap-2 text-sm sm:text-[15px] font-bold text-[#0369a1]">
                 <span className="inline-block h-2 w-2 rounded-full bg-[#38bdf8] motion-safe:animate-spin" />
                 <span>
-                  선택 조건: {DURATION_DISPLAY_LABELS[state.duration]} &middot;{' '}
+                  {SPINNING_COPY.summaryPrefix}: {DURATION_DISPLAY_LABELS[state.duration]} &middot;{' '}
                   {PREFERENCE_DISPLAY_LABELS[state.preference]}
                 </span>
               </div>
               <span className="text-xs sm:text-[13px] font-normal text-[#0284c7]">
-                🎰 대전 추천 코스를 뽑고 있어요!
+                {SPINNING_COPY.hint}
               </span>
             </div>
           )}

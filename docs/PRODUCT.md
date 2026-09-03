@@ -7,7 +7,7 @@
 - **Four Value Pillars**: Every feature must contribute to at least one of the following:
   1. **Spin Conversion**: Quick progression through Q1/Q2 into slot spin.
   2. **Real Travel Intent**: Guiding the user from a coherent route result to tangible travel actions via Route Guide and map links.
-  3. **Participation & Social Proof**: Lowering psychological barriers via Visitor Logs and rewarding participation with a 1-time reroll unlock.
+  3. **Participation & Social Proof**: Lowering psychological barriers via Memory Logs and rewarding participation with a 1-time reroll unlock. *(User-facing name; the underlying architecture is still `RandomLog*` — see `docs/DECISIONS.md` ADR-034.)*
   4. **Referral Acquisition**: Organic virality through immutable route snapshots shared directly with friends (`/r/[shareCode]`).
 
 ---
@@ -44,7 +44,7 @@ flowchart LR
    Landing (Q1/Q2) ──► Slot Spin ──► Result Card ──► Route Guide ──► Outbound Map Action
 
 2. PARTICIPATION & REWARD LOOP
-   Result Card ──► Visitor Log Composer ──► Server Validation & DB Save ──► Reroll Unlocked ──► Second Spin
+   Result Card ──► Memory Log Composer ──► Server Validation & DB Save ──► Reroll Unlocked ──► Second Spin
 
 3. REFERRAL LOOP
    Result Card ──► Share Route ──► /r/[shareCode] ──► Friend Reads ──► "나도 여행 뽑아보기" ──► New Landing User
@@ -70,7 +70,7 @@ flowchart LR
     - `Route Guide` (In-app itinerary breakdown viewed upon clicking `“이 코스로 가보기”`).
   - **RIGHT SIDEBAR (Content Discovery & Social Proof)**:
     - `TODAY’S PICK`: Editorial banner featuring rotating pixel artwork; no detail page. The label is presentation copy only — the underlying surface is deliberately feature-name-agnostic and may be renamed without code changes (ADR-028).
-    - `VISITOR LOG`: Preview showing the latest ~3 visible Visitor Log entries with a link to `/guestbook`.
+    - `MEMORY LOG`: Preview showing the latest ~3 visible Memory Log entries with a link to `/random-log`. *(User-facing name; ADR-034. Technical routes/components remain `/random-log` / `RandomLog*`.)*
 - **Brand Wordmark**: The landing hero renders the production brand logo artwork, whose wordmark reads **“오늘 대전 갈래!”**. This supersedes the earlier text-rendered “대전 갈래..?” and the wording still shown in the historical Figma landing reference. Site metadata (`대전 랜덤 여행 | DAEJEON RANDOM TRIP`) is unaffected.
 
 ---
@@ -78,6 +78,7 @@ flowchart LR
 ## 5. Interaction & Experience Contracts
 
 ### 5.1 Spin & Result Reveal Sequence
+0. **INTRO** *(added `feat/product-visual-polish`, ADR-032)*: a soft entry gate — translucent veil + a ticket-style card (`★ ENTRY TICKET ★` / `대전 랜덤 여행, 시작해볼까요? ✨` / `여행 시작하기`) — layered over the same Setup card region Q1 uses, at an identical footprint on every breakpoint. The user must intentionally press the CTA to proceed; INTRO never auto-advances.
 1. **Q1 (Duration)**: Local Daejeon travel time (`Half Day` / `Full Day` — time spent in Daejeon).
 2. **Q2 (Preference)**: Travel vibe (`Anything` / `Food` / `Walk` / `Photo`).
 3. **READY**: Idle placeholder reels; primary CTA activates `“여행 뽑기!”`.
@@ -97,7 +98,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 2. **Referral (Secondary)**: `“내 루트 공유하기”`
    - Generates an immutable snapshot in `shared_routes`, generates a short lookup code (`/r/[shareCode]`), and triggers Web Share API (with clipboard copy fallback).
 3. **Participation / Reward (Tertiary)**: `“다시 뽑기”`
-   - One unified CTA driven by the reroll reward state: while `locked`, it opens the Visitor Log composer in-flow (successful server validation and DB save unlocks 1 reward reroll); once `available`, the same CTA executes the reroll directly; once `consumed`, the CTA is not shown (hidden, not disabled).
+   - One unified CTA driven by the reroll reward state: while `locked`, it opens the Memory Log composer in-flow (successful server validation and DB save unlocks 1 reward reroll); once `available`, the same CTA executes the reroll directly; once `consumed`, the CTA is not shown (hidden, not disabled).
    - There is no separate, always-present "leave a Random Log" row in the Result Card body — participation is reached solely through this one action.
 
 **Result Card content composition**: The route stops render in a fixed four-cell grid (2×2 desktop, 1-column ×4 mobile). Half-day routes (3 stops) fill the fourth cell with an "Explore More" banner (`“조금 더 놀다 갈래?”`) rather than leaving it empty or stretching STOP 3 — this banner is presentation-only, is never a domain stop, and carries no place data. Its downstream destination is not yet decided; until it is, the banner renders as a non-interactive prompt. An optional **Bonus Quest** mission line, drawn from a small curated pool of generic playful prompts (not per-place data, not a recommendation axis), may also appear.
@@ -114,11 +115,11 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
   - **STOP Timeline**: Place name, category, estimated stay time, inter-stop transit mode & time, playful tips/cautions, and individual outbound map links (`mapLinks` for Naver / Kakao Map).
 - **Explicit Exclusions**: Embedded map SDKs, real-time GPS turn-by-turn navigation, real-time wait times, and place-swapping customization are omitted to prevent decision fatigue.
 
-### 6.2 Guestbook / Visitor Log & 1-Time Reroll Reward
-- **Visitor Log Role**: Delivers social proof and incentivizes participation.
-- **Composer UX**: Opens exclusively within the Result Card flow, via the unified `“다시 뽑기”` CTA while the reroll reward is `locked`. `/guestbook` serves as the dedicated social proof archive and full log stream (read-only archive, no standalone composer on `/guestbook`).
+### 6.2 Guestbook / Memory Log & 1-Time Reroll Reward
+- **Memory Log Role**: Delivers social proof and incentivizes participation. *(User-facing name, ADR-034; the underlying architecture/DB table is still `guestbook_entries`, and the technical component family is still `RandomLog*`.)*
+- **Composer UX**: Opens exclusively within the Result Card flow, via the unified `“다시 뽑기”` CTA while the reroll reward is `locked`. `/random-log` serves as the dedicated social proof archive and full log stream (read-only archive, no standalone composer there).
 - **Input Fields & Constraints**:
-  - **Avatar**: Selectable Kkumssi Family avatar (mandatory; shared asset IDs across preview and `/guestbook`).
+  - **Avatar**: Selectable Kkumssi Family avatar (mandatory; shared asset IDs across preview and `/random-log`).
   - **Nickname**: 2–12 characters (sanitized).
   - **Message**: Max 50 characters (one-liner, sanitized).
   - **Route Info**: Automatically attached route reference metadata from active `RouteResult` (`route_id`, `zone_id`, `duration_type`, `preference_type`).
@@ -140,9 +141,10 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
   - **Primary CTA**: `“나도 여행 뽑아보기”` (Redirects to Main Landing to acquire new user).
   - **Secondary CTA**: `“이 코스 그대로 가보기”` (Opens Route Guide).
   - **SEO & Fallback**: Marked `noindex` by default. Invalid/missing codes present a friendly fallback with `“내가 새 여행 뽑기”`.
-- **Open Graph Protocol**:
-  - Referral MVP sequence: 1. DB snapshot save, 2. `/r/[shareCode]`, 3. Web Share + copy fallback, 4. Default OG meta tags.
-  - Dynamic OG image generation is a high-priority non-blocking enhancement within MVP scope.
+- **Open Graph Protocol** (final, `feat/product-visual-polish`, ADR-035):
+  - Referral MVP sequence: 1. DB snapshot save, 2. `/r/[shareCode]`, 3. Web Share + copy fallback, 4. OG/Twitter meta tags with a static brand image.
+  - A single **static** (not dynamically generated) verified 1200×630 opaque brand image (`public/og-daejeon-random-trip.png`) is wired into both the root landing metadata and every `/r/[shareCode]` branch, with `twitter.card: summary_large_image`. Dynamic per-route OG image generation was considered and explicitly not pursued — the shared-route metadata instead withholds route detail entirely (see next bullet) rather than illustrating it.
+  - **Mystery link-preview title/description**: a valid shared route's pre-click preview intentionally does **not** reveal the drawn zone/dong or the itinerary. Title: `` `??동 · {반나절|하루종일} | 대전 랜덤 여행` `` (`??동` is a fixed placeholder, never a real zone). Description: the fixed line `어디로 갈지는 링크를 열어 확인해보세요 👀`. Once the recipient actually opens the link, the real zone/itinerary render normally — only the pre-click metadata withholds it.
 
 ### 6.4 Editorial Rail (Right Rail Banner, labelled "TODAY'S PICK") — Revised Scope (ADR-015, superseded by ADR-028)
 - **Concept**: A simple Right Rail editorial / visual banner surface. It is **not** a detail-page flow, a discovery funnel, or a Q2-seeding mechanism.
@@ -164,7 +166,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 - Stationary slot machine animation with output slit peek cue.
 - Centered focus Result Card overlay with 3-action hierarchy.
 - In-app Route Guide with duration calculations and outbound place map links.
-- Visitor Log (Landing preview + `/guestbook` read-only archive + in-flow composer with Kkumssi family avatars).
+- Memory Log (Landing preview + `/random-log` read-only archive + in-flow composer with Kkumssi family avatars).
 - 1-Time Reroll Reward unlocked via successful server validation and guestbook DB submission.
 - Referral Share with server snapshot storage and dedicated `/r/[shareCode]` page.
 - Today's Pick Right Rail editorial banner (6 rotating pixel-art variants — 5 evergreen + 1 date-bound; optional external hyperlink; no detail page, no Q2 seeding).

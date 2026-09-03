@@ -30,8 +30,8 @@ export function CharacterSelector({ avatars, selectedId, onSelect }: CharacterSe
       {/* Selected character hero preview -- hierarchy comes from the large avatar
           and name, not a colored background block; a light divider is enough
           to read this as its own section above the picker grid. */}
-      <div className="flex items-center gap-3.5 border-b border-[#e4dcce] pb-3.5">
-        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-[#2b2520] bg-white text-5xl sm:h-28 sm:w-28 sm:text-6xl">
+      <div className="flex items-center gap-3.5 border-b border-line-soft pb-3.5">
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-line-soft bg-white text-5xl sm:h-28 sm:w-28 sm:text-6xl">
           {selected.imageSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={selected.imageSrc} alt="" className="h-full w-full object-contain" />
@@ -60,14 +60,14 @@ export function CharacterSelector({ avatars, selectedId, onSelect }: CharacterSe
               aria-pressed={isSelected}
               aria-label={avatar.name}
               onClick={() => onSelect(avatar.id)}
-              className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 p-1.5 transition-all hover:scale-105 sm:p-2 ${
+              className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 p-1.5 transition-all hover:scale-105 sm:p-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#2b2520] ${
                 isSelected
-                  ? 'border-[#2b2520] bg-[#ffeaa7] shadow-retro-xs ring-2 ring-[#ffb800]'
-                  : 'border-[#d8d0c2] bg-[#fffef9] hover:bg-[#faf6ee]'
+                  ? 'border-[#ed8b99] bg-[#fff4f6]'
+                  : 'border-line-control bg-[#fffef9] hover:bg-[#faf6ee]'
               }`}
             >
               <span className="relative flex h-11 w-11 items-center justify-center sm:h-12 sm:w-12">
-                <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-[#2b2520]/40 bg-white text-xl sm:text-2xl">
+                <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-line-soft bg-white text-xl sm:text-2xl">
                   {avatar.imageSrc ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={avatar.imageSrc} alt="" className="h-full w-full object-contain" />
@@ -78,7 +78,7 @@ export function CharacterSelector({ avatars, selectedId, onSelect }: CharacterSe
                 {isSelected && (
                   <span
                     aria-hidden="true"
-                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-[#2b2520] bg-[#10b981] text-[9px] font-black text-white"
+                    className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border border-white bg-[#10b981] text-[9px] font-black text-white"
                   >
                     ✓
                   </span>

@@ -19,7 +19,7 @@ export function RandomLogAvatarBadge({ avatarId, className = '' }: RandomLogAvat
     <span
       role="img"
       aria-label={avatar.name}
-      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#2b2520] bg-white ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-line-soft bg-white ${className}`}
     >
       {avatar.imageSrc ? (
         // eslint-disable-next-line @next/next/no-img-element
