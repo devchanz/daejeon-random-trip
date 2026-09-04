@@ -9,6 +9,7 @@ import {
 } from '../../config/product';
 import type { ExperienceAction, ExperienceState } from '../../lib/experience';
 import { selectDuration, selectPreference } from '../../lib/experience';
+import { pushDataLayerEvent } from '../../lib/analytics';
 import { OptionButton } from './OptionButton';
 import { FittedAsset } from '../common';
 import type { VisualAssetKey } from '../../config/visualAssets';
@@ -79,10 +80,12 @@ export function SetupArea({ state, dispatch }: SetupAreaProps) {
   const isSpinningOrResult = currentPhase === 'spinning' || currentPhase === 'result';
 
   const handleSelectDuration = (duration: DurationType) => {
+    pushDataLayerEvent('q1_select', { duration_type: duration });
     dispatch(selectDuration(duration));
   };
 
   const handleSelectPreference = (preference: PreferenceType) => {
+    pushDataLayerEvent('q2_select', { preference_type: preference });
     dispatch(selectPreference(preference));
   };
 

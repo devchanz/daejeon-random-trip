@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { EditorialItem } from '../../data/editorial';
 import { visualAsset } from '../../config/visualAssets';
 import { FittedAsset } from '../common';
 import { EDITORIAL_EMPTY_STATE } from '../../content/sidebar';
+import { pushDataLayerEvent } from '../../lib/analytics';
 
 export interface EditorialSpotlightCardProps {
   /** The 5-item production set to browse. An empty array renders an explicit empty state. */
@@ -69,6 +70,8 @@ export function EditorialSpotlightCard({
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const suppressNextClickRef = useRef(false);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const lastViewedItemIdRef = useRef<string | null>(null);
 
   const count = items.length;
   const safeIndex = count > 0 ? ((activeIndex % count) + count) % count : 0;
@@ -78,8 +81,63 @@ export function EditorialSpotlightCard({
     if (count === 0) return;
     setActiveIndex(((nextIndex % count) + count) % count);
   };
-  const goPrev = () => goTo(safeIndex - 1);
-  const goNext = () => goTo(safeIndex + 1);
+  // goPrev/goNext compute the target index up front (rather than deferring to
+  // goTo's own modulo) so the analytics dispatch below can reference exactly
+  // the item that becomes active -- this is the single shared seam both the
+  // prev/next buttons AND swipe (handleTouchEnd, below) call through.
+  const goPrev = () => {
+    if (count === 0) return;
+    const prevIndex = ((safeIndex - 1) % count + count) % count;
+    pushDataLayerEvent('todays_daejeon_prev', {
+      editorial_id: items[prevIndex]?.id,
+      editorial_position: prevIndex + 1,
+    });
+    goTo(prevIndex);
+  };
+  const goNext = () => {
+    if (count === 0) return;
+    const nextIndex = ((safeIndex + 1) % count + count) % count;
+    pushDataLayerEvent('todays_daejeon_next', {
+      editorial_id: items[nextIndex]?.id,
+      editorial_position: nextIndex + 1,
+    });
+    goTo(nextIndex);
+  };
+
+  // todays_daejeon_view: fires as an item impression -- the initial visible
+  // banner on mount, and again for each different banner that becomes active
+  // via next/prev/swipe (all of which change `item`/`safeIndex`).
+  //
+  // DUAL-MOUNT GUARD: page.tsx renders RightSidebar (and therefore this
+  // component) twice -- once for the desktop column, once for the mobile
+  // `#mobile-right-rail` wrapper -- gated only by CSS (`hidden lg:flex` /
+  // `lg:hidden`); both instances are always mounted simultaneously. A plain
+  // mount/update effect would double-count every impression. Checking
+  // `offsetParent !== null` (the same visibility test
+  // ExperienceProvider.handleExploreMore already uses for this identical
+  // dual-mount shape) ensures only the instance actually on screen dispatches.
+  //
+  // STRICTMODE GUARD: a `lastViewedItemIdRef` comparison makes this idempotent
+  // against React StrictMode's dev-only double-invoke of this effect (mount ->
+  // cleanup -> mount again, same dependency value) -- verified by local dataLayer
+  // inspection to double-dispatch without this guard. A real re-impression of
+  // the SAME item after navigating away and back still dispatches correctly,
+  // since an intervening item change updates the ref first.
+  useEffect(() => {
+    if (!item) return;
+    // Positive check on purpose: an unattached ref (sectionRef.current === null)
+    // must also skip the dispatch, not fall through to it -- `=== null` alone
+    // would misclassify "not yet attached" as "visible".
+    if (!sectionRef.current || sectionRef.current.offsetParent === null) return;
+    if (lastViewedItemIdRef.current === item.id) return;
+
+    lastViewedItemIdRef.current = item.id;
+    pushDataLayerEvent('todays_daejeon_view', {
+      editorial_id: item.id,
+      editorial_position: safeIndex + 1,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item?.id]);
 
   const handleTouchStart = (event: React.TouchEvent) => {
     const touch = event.touches[0];
@@ -120,6 +178,17 @@ export function EditorialSpotlightCard({
     if (suppressNextClickRef.current) {
       suppressNextClickRef.current = false;
       event.preventDefault();
+      return;
+    }
+
+    // Only reached on a genuine click-through -- never for a swipe-suppressed
+    // click (handled by the branch above, which returns before this point).
+    if (item) {
+      pushDataLayerEvent('todays_daejeon_click', {
+        editorial_id: item.id,
+        editorial_position: safeIndex + 1,
+        editorial_url: item.href,
+      });
     }
   };
 
@@ -253,6 +322,7 @@ export function EditorialSpotlightCard({
 
   return (
     <section
+      ref={sectionRef}
       aria-label={heading}
       className={`relative overflow-visible rounded-2xl border-2 border-line-soft bg-[#fffef9] p-4 sm:p-5 ${className}`}
     >

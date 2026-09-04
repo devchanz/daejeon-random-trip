@@ -1,10 +1,16 @@
+'use client';
+
 import React from 'react';
 import type { RouteGuideStop } from '../../lib/guide';
 import { FittedAsset, resolveStopAssetKeyByCategory } from '../common';
 import { resolveResultAccent } from '../../config/resultAccents';
+import { pushDataLayerEvent } from '../../lib/analytics';
 
 export interface RouteGuideTimelineProps {
   stops: RouteGuideStop[];
+  /** Analytics reference only (place_map_click) -- absent for shared-route snapshots. */
+  routeId?: string;
+  zoneId?: string;
   className?: string;
 }
 
@@ -51,8 +57,14 @@ export interface RouteGuideTimelineProps {
  */
 export function RouteGuideTimeline({
   stops = [],
+  routeId,
+  zoneId,
   className = '',
 }: RouteGuideTimelineProps) {
+  const handleMapLinkClick = () => {
+    pushDataLayerEvent('place_map_click', { route_id: routeId, zone_id: zoneId });
+  };
+
   if (!stops || stops.length === 0) {
     return null;
   }
@@ -192,6 +204,7 @@ export function RouteGuideTimeline({
                         href={stop.mapLinks.naver}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={handleMapLinkClick}
                         aria-label={`${stop.name} 네이버 지도에서 길찾기 및 정보 확인 (새 창)`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-line-soft bg-[#faf6ee] hover:bg-[#f0eae0] px-2.5 py-1.5 text-[11px] font-bold text-[#2b2520] transition-all active:translate-x-[1px] active:translate-y-[1px]"
                       >
@@ -204,6 +217,7 @@ export function RouteGuideTimeline({
                         href={stop.mapLinks.kakao}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={handleMapLinkClick}
                         aria-label={`${stop.name} 카카오 맵에서 길찾기 및 정보 확인 (새 창)`}
                         className="inline-flex items-center gap-1.5 rounded-lg border border-line-soft bg-[#faf6ee] hover:bg-[#f0eae0] px-2.5 py-1.5 text-[11px] font-bold text-[#2b2520] transition-all active:translate-x-[1px] active:translate-y-[1px]"
                       >

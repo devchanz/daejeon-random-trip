@@ -7,6 +7,7 @@ import { RouteGuideModal } from '../guide';
 import { ResultArea } from './ResultArea';
 import { useExperienceEngine } from './ExperienceProvider';
 import { ResultSkinPreload } from './result';
+import { pushDataLayerEvent } from '../../lib/analytics';
 
 /**
  * ExperienceOverlays -- the SINGLE render site for every viewport-global or
@@ -64,7 +65,15 @@ export function ExperienceOverlays() {
         hasLoggedCurrentResult={engine.hasLoggedCurrentResult}
         onOpenGuestbook={() => engine.setIsGuestbookOpen(true)}
         onExecuteReroll={engine.handleExecuteReroll}
-        onOpenRouteGuide={() => engine.setIsRouteGuideOpen(true)}
+        onOpenRouteGuide={() => {
+          if (state.result) {
+            pushDataLayerEvent('route_cta', {
+              route_id: state.result.id,
+              zone_id: state.result.zoneId,
+            });
+          }
+          engine.setIsRouteGuideOpen(true);
+        }}
         onMinimize={engine.handleMinimizeResult}
         onExploreMore={engine.handleExploreMore}
         isNestedOverlayOpen={isGuestbookOpen || isRouteGuideOpen}

@@ -7,6 +7,7 @@ import type { GuestbookEntryRecord } from '../../lib/database/types';
 import { GUESTBOOK_AVATARS, DEFAULT_AVATAR_ID } from '../../config/product';
 import { CharacterSelector } from './CharacterSelector';
 import { OVERLAY_BACKDROP, OVERLAY_DIALOG, OVERLAY_STATIC_ZONE, useScrollLock } from '../common';
+import { pushDataLayerEvent } from '../../lib/analytics';
 
 export interface GuestbookComposerProps {
   routeResult: RouteResult;
@@ -147,6 +148,16 @@ export function GuestbookComposer({
 
       // Successful persistent DB save verified
       const record = data.data as GuestbookEntryRecord;
+
+      // random_log_submit: fires ONLY on a confirmed successful POST -- never
+      // on a submit attempt, client-side validation error, or failed POST.
+      // Never includes nickname/message/place names (ADR-005).
+      pushDataLayerEvent('random_log_submit', {
+        route_id: routeResult.id,
+        zone_id: routeResult.zoneId,
+        duration_type: routeResult.durationType,
+        preference_type: routeResult.preference,
+      });
 
       // 0. Snapshot the outcome BEFORE onSuccess() can change rewardEligible upstream.
       const rewardGranted = rewardEligible;

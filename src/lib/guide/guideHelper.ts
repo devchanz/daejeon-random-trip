@@ -16,6 +16,13 @@ export interface RouteGuideStop {
 
 export interface RouteGuideData {
   title: string;
+  /**
+   * Analytics reference only (place_map_click's route_id) -- present for a
+   * live-generated RouteResult, deliberately absent for a shared-route
+   * snapshot (there is no live RouteResult id to reference there; recipient-
+   * side event instrumentation is out of scope for this pass).
+   */
+  routeId?: string;
   zoneId?: string;
   zoneName?: string;
   durationType: 'half' | 'full' | string;
@@ -31,6 +38,7 @@ export interface RouteGuideData {
 export function normalizeRouteResult(result: RouteResult): RouteGuideData {
   return {
     title: result.title,
+    routeId: result.id,
     zoneId: result.zoneId,
     zoneName: result.zoneName,
     durationType: result.durationType,
