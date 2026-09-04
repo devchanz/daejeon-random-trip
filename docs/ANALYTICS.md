@@ -188,40 +188,36 @@ A Campaign & Funnel Analysis Dashboard (Looker Studio, a GA4 Custom Exploration 
 
 ## 9. Current Implementation State
 
-> Everything above this section is the **measurement contract/spec**, now matching what is actually shipped. This section is the current implementation state as of the GTM/custom-event closeout pass on top of `main` @ `6ae03c4` (`feat: add GA4 base analytics integration`), on branch `feat/analytics-tracking` (not yet merged -- see below).
+> Everything above this section is the **measurement contract/spec**. This section is the current, closed-out implementation state of the GTM/custom-event pass (`feat/analytics-tracking`, ADR-039) -- **merged to `main`, deployed to Vercel Production, container published, and production-verified**.
 
-- **Status**: GTM integration, the full 16-event custom taxonomy, first-touch UTM session preservation, and automatic shared-route UTM tagging are all implemented, and have been verified **in real GTM Preview mode** against the actual container `GTM-K9G6TQBM` (not just local `window.dataLayer` inspection). **This branch is not yet merged to `main` and has not been deployed** -- see the remaining steps below.
-- **GTM container**: `GTM-K9G6TQBM` exists and is configured (§10) -- **verified working in Preview, not yet published**. `src/app/layout.tsx` supports `NEXT_PUBLIC_GTM_ID` (§7.1). Vercel's **Production** environment already has `NEXT_PUBLIC_GTM_ID=GTM-K9G6TQBM` set, but since this branch is not yet merged/deployed, no live deployment is currently running this code or exercising that env var -- production traffic today still resolves to whatever the previously-deployed `main` build does (the pre-existing `NEXT_PUBLIC_GA_MEASUREMENT_ID` direct-GA4 loader, since that build predates this branch's mutually-exclusive loader change).
-- **Custom events -- GTM Preview verified**: `landing_view`, `todays_daejeon_view`, `intro_start`, `q1_select`, `q2_select`, `spin`, `result_view` (both an initial spin and a post-`reroll` spin), `route_cta`, `place_map_click`, `share`, `reroll`, and `random_log_submit` were driven end-to-end and confirmed firing correctly in GTM Preview, including the `GA4 Event - Product Events` tag reading each one via `{{Event}}`.
-- **Custom events -- verified via local `window.dataLayer` inspection** (not yet re-confirmed by name in GTM Preview, though they use the identical dispatcher and were exercised during implementation): `todays_daejeon_next`, `todays_daejeon_prev`, `todays_daejeon_click`, `explore_more_click`. No reason to expect different behavior in Preview -- these go through the exact same `pushDataLayerEvent`/generic-tag path as the events above -- but a quick Preview pass covering these four specifically is worth doing before publish, for completeness rather than out of any known gap.
-- **UTM session preservation**: verified in GTM Preview with real test values (`utm_source=x&utm_medium=social&utm_campaign=daejeon_random_trip_2026&utm_content=cr001_kkumdollppi`) -- first-touch attribution was captured before `landing_view` and persisted correctly onto every later product event in the session.
-- **Stale Data Layer Variable leak -- found and fixed**: GTM Preview surfaced `todays_daejeon_view`'s `editorial_position` still resolving during a later, unrelated `q1_select` (GTM's dataLayer resolves against a running merged model, so a key simply omitted from a push does not clear a prior value). Fixed in `src/lib/analytics/dataLayer.ts`: every push now explicitly resets all 9 event-specific keys to `undefined` before applying the current event's own values (§4, §7.2); UTM keys are deliberately exempt since they are session-scoped, not event-specific. **Re-verified in GTM Preview after the fix**: `q1_select` now correctly resolves `editorial_id`/`editorial_position`/every other non-UTM key as `undefined`, with `duration_type` and the 4 UTM fields intact.
-- **Shared-route UTM**: implemented (`getAttributedShareUrl`) and verified by direct URL-construction check (`/r/[shareCode]?utm_source=user_share&utm_medium=referral&utm_campaign=daejeon_random_trip_2026&utm_content=shared_route`); not yet verified against a real Supabase-backed share flow in Preview.
-- **Outstanding / not yet true**:
-  - This branch is **not merged to `main`** and **not deployed** -- Preview verification happened against local dev, not the live site.
-  - GTM is **configured but not published** -- Preview-only, per instruction for this pass.
-  - Production-environment verification (Tag Assistant / GA4 DebugView against `https://daejeon-random-trip.vercel.app/`) has not been performed -- it cannot be, until this branch is merged, deployed, and the container is published.
-  - The Campaign & Funnel Analysis Dashboard (§8, e.g. Looker Studio) is **not built**.
+- **Status**: GTM integration, the full 16-event custom taxonomy, first-touch UTM session preservation, and automatic shared-route UTM tagging are all implemented and **verified against the live production site** (not just GTM Preview / local `window.dataLayer` inspection). The branch has been merged to `main` and deployed.
+- **GTM container**: `GTM-K9G6TQBM` exists, is configured (§10), and is **published**. `src/app/layout.tsx` supports `NEXT_PUBLIC_GTM_ID` (§7.1); Vercel's **Production** environment has `NEXT_PUBLIC_GTM_ID=GTM-K9G6TQBM` set, and the deployed build is running this code.
+- **Custom events -- production Tag Assistant / GA4 DebugView verified**: `Google Tag - GA4` fires as the sole `page_view` source; `landing_view` fires; `GA4 Event - Product Events` fires correctly for the 16-event taxonomy via `{{Event}}`, including the events (`todays_daejeon_next/prev/click`, `explore_more_click`) that had only been confirmed via local `window.dataLayer` inspection or GTM Preview during implementation.
+- **UTM session preservation**: verified against production -- first-touch attribution is captured before `landing_view` and persists correctly onto every later product event in the session.
+- **Stale Data Layer Variable leak -- found in GTM Preview during implementation, fixed, and confirmed to hold in production**: `todays_daejeon_view`'s `editorial_position` was previously still resolving during a later, unrelated `q1_select` (GTM's dataLayer resolves against a running merged model, so a key simply omitted from a push does not clear a prior value). Fixed in `src/lib/analytics/dataLayer.ts`: every push explicitly resets all 9 event-specific keys to `undefined` before applying the current event's own values (§4, §7.2); UTM keys are deliberately exempt since they are session-scoped, not event-specific.
+- **Shared-route UTM**: implemented (`getAttributedShareUrl`); the URL handed to `navigator.share`/clipboard matches `/r/[shareCode]?utm_source=user_share&utm_medium=referral&utm_campaign=daejeon_random_trip_2026&utm_content=shared_route`.
+- **Still deferred, not implemented**:
+  - The Campaign & Funnel Analysis Dashboard (§8, e.g. Looker Studio) is **not built** -- next up now that real production collection has begun.
   - Shared-route recipient interaction events (`shared_route_view`, `shared_route_guide_open`, `shared_route_slot_click`) remain **deferred, not implemented** (§3).
-- **Next steps** (all explicitly out of scope for this closeout pass -- see §9.1 and PROJECT_STATE.md): merge `feat/analytics-tracking` into `main`; publish the `GTM-K9G6TQBM` container; deploy to production (the `NEXT_PUBLIC_GTM_ID` env var is already set, so no further Vercel config change is needed); run the production Tag Assistant/GA4 DebugView check; build the Looker Studio dashboard once real collection has begun.
+- **Retired event names**: `guestbook_submit`, `route_share_complete`, and the other pre-ADR-039 spec-only draft names (§3) were never implemented under those names and must not be described as current -- the shipped taxonomy is the 16-event table in §3 (`random_log_submit` and `share` are the current equivalents).
 
-### 9.1 Remaining verification checklist (production, to be performed after merge + deploy + publish)
-1. Confirm exactly **one** `page_view` fires per navigation on the live site (no double-count from a stray direct-GA4 load).
-2. Walk the Core Conversion journey (landing with UTM params → intro → Q1 → Q2 → spin → result → route CTA → map click → share → reroll) on production and confirm each of the 16 events fires exactly once, with exactly its documented parameters (§3) -- no nickname/message/place names/`share_code` in any payload.
-3. Confirm the session's UTM attribution appears on every event from `landing_view` onward, not just the first one.
-4. Browse TODAY'S DAEJEON (view → next → prev → click) at both a desktop-width and mobile-width viewport on production and confirm the hidden responsive duplicate never emits an impression.
-5. Trigger `explore_more_click` and confirm it fires before the Result minimizes.
-6. Minimize and reopen the Result Card and confirm `result_view` does **not** re-fire.
-7. Cancel a native share sheet (or force a clipboard failure) and confirm `share` does **not** fire; complete a real share and confirm it does, with the correct `share_method`.
-8. Submit a Memory Log entry and confirm `random_log_submit` fires only after a confirmed successful `POST /api/guestbook`.
-9. Generate a share link on production and confirm the URL handed to `navigator.share`/clipboard exactly matches `/r/[shareCode]?utm_source=user_share&utm_medium=referral&utm_campaign=daejeon_random_trip_2026&utm_content=shared_route`, and that opening it in a fresh session/incognito window attributes that new session to `user_share`/`referral`.
-10. Re-confirm `q1_select` (or any event) never resolves a stale `editorial_id`/`editorial_position`/other event-specific key from a preceding unrelated event -- the stale-DLV fix above should hold in production identically to Preview.
+### 9.1 Production verification checklist -- all items below have PASSED
+1. ~~Confirm exactly **one** `page_view` fires per navigation on the live site~~ -- **passed**, no double-count from a stray direct-GA4 load.
+2. ~~Walk the Core Conversion journey ... on production and confirm each of the 16 events fires exactly once~~ -- **passed**, with exactly the documented parameters (§3) -- no nickname/message/place names/`share_code` in any payload.
+3. ~~Confirm the session's UTM attribution appears on every event from `landing_view` onward~~ -- **passed**.
+4. ~~Browse TODAY'S DAEJEON (view → next → prev → click) at both a desktop-width and mobile-width viewport on production and confirm the hidden responsive duplicate never emits an impression~~ -- **passed**.
+5. ~~Trigger `explore_more_click` and confirm it fires before the Result minimizes~~ -- **passed**.
+6. ~~Minimize and reopen the Result Card and confirm `result_view` does not re-fire~~ -- **passed**.
+7. ~~Cancel a native share sheet (or force a clipboard failure) and confirm `share` does not fire; complete a real share and confirm it does, with the correct `share_method`~~ -- **passed**.
+8. ~~Submit a Memory Log entry and confirm `random_log_submit` fires only after a confirmed successful `POST /api/guestbook`~~ -- **passed**.
+9. ~~Generate a share link on production and confirm the URL handed to `navigator.share`/clipboard, and that opening it in a fresh session attributes to `user_share`/`referral`~~ -- **passed**.
+10. ~~Re-confirm `q1_select` (or any event) never resolves a stale event-specific key from a preceding unrelated event~~ -- **passed**, the stale-DLV fix holds in production identically to Preview.
 
 ---
 
-## 10. Manual GTM Setup (Configured in Preview -- Container `GTM-K9G6TQBM`, Not Yet Published)
+## 10. Manual GTM Setup (Container `GTM-K9G6TQBM` -- Published, Production-Verified)
 
-This container exists and this exact setup has been built and verified in GTM Preview mode. It is **not published** -- publishing is explicitly out of scope until this branch is merged and deployed (§9). Designed for the smallest maintainable setup: **one GA4 base tag + one generic custom-event tag**, rather than one tag per event name.
+This container exists, this exact setup was built and verified in GTM Preview mode during implementation, and it is now **published** and confirmed working against the live production site (§9/§9.1). Designed for the smallest maintainable setup: **one GA4 base tag + one generic custom-event tag**, rather than one tag per event name.
 
 ### 10.1 Variables
 - **Constant**: `CONST - GA4 Measurement ID` = `G-0LV0MFSVPK`.
@@ -243,8 +239,8 @@ A single anchored-regex trigger is deliberately preferred over 16 separate Custo
 
 This two-tag design is safe **only** because every event already goes through the same central `pushDataLayerEvent` whitelist (§3, §4) -- if a future change ever pushes a `dataLayer` event carrying a parameter this tag shouldn't forward (e.g. an unrelated third-party script), revisit whether `GA4 Event - Product Events`'s parameter mapping needs tightening or whether that event needs excluding from `CE - Product Analytics Events`'s regex.
 
-### 10.4 Preview verification performed
-- `Google Tag - GA4` fires on Initialization/All Pages; `GA4 Event - Product Events` fires once per event with the correct parameters -- confirmed in Preview for the event list in §9.
-- The stale-DLV leak (§9) was found via this exact setup, fixed in code, and re-verified in this same Preview session.
+### 10.4 Verification performed
+- `Google Tag - GA4` fires on Initialization/All Pages; `GA4 Event - Product Events` fires once per event with the correct parameters -- confirmed first in GTM Preview during implementation, then re-confirmed against the live production site after publish (§9.1).
+- The stale-DLV leak (§9) was found via this exact setup in GTM Preview, fixed in code, and confirmed to hold in production.
 - No other tag in the container sends `page_view`.
-- **Not yet done**: clicking **Publish** -- deliberately held until this branch is merged, deployed, and a production-environment check (§9.1) can follow immediately after.
+- The container has been **published**; production Tag Assistant/GA4 DebugView verification (§9.1) has been performed and passed.

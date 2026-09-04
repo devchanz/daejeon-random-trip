@@ -37,15 +37,45 @@ export class RecommendationEngineError extends Error {
 }
 
 /**
- * Filters zones that are active and contain sufficient active candidates to fulfill
- * an ordered route (at least MIN_STOPS_BY_DURATION candidates, including at least 1 meal and 1 cafe).
+ * A fixed random source used only to answer "does at least one valid, complete
+ * slot assignment exist" -- never to actually build a returned route.
+ *
+ * fillTemplateSlots' Preference-First Reservation (Strategy 1) exhaustively
+ * tries every preference-matching candidate as the reservation, and its
+ * general assignment (Strategy 2, 'anything' only) only ever fails when a
+ * slot's filtered candidate pool is empty. In both cases, whether the
+ * function returns `null` or a real assignment never depends on *which*
+ * random source is supplied -- only *which* of several equally-valid
+ * assignments comes back when more than one exists. That makes
+ * `fillTemplateSlots(...) !== null` a deterministic feasibility oracle
+ * regardless of the random function passed in, so reusing it here (instead of
+ * a second, hand-rolled feasibility check) can never drift out of sync with
+ * the real fill logic.
+ */
+const FEASIBILITY_CHECK_RANDOM = () => 0;
+
+/**
+ * Filters zones that are active, contain sufficient active candidates, and can
+ * actually produce a complete, distinct-place itinerary for the requested
+ * duration + preference -- not merely "has a matching tag somewhere".
+ *
+ * The preference check matters because a candidate can satisfy the requested
+ * preference (via `tags`) while also being the zone's *only* Meal/Cafe/
+ * Discovery-eligible candidate for its category: reserving it for the
+ * Preference slot would then starve that mandatory slot even though "a
+ * preference match exists in the zone" is technically true. `isTemplateFulfillable`
+ * proves a genuine complete combination exists, not just a lone matching tag.
  */
 export function getEligibleZones(
   zones: Zone[],
   candidates: PlaceCandidate[],
-  duration: DurationType
+  duration: DurationType,
+  preference: PreferenceType
 ): Zone[] {
   const minRequired = MIN_STOPS_BY_DURATION[duration] ?? 3;
+  const candidateTemplates = DEFAULT_ROUTE_TEMPLATES.filter(
+    (t) => t.durationType === duration
+  );
 
   return zones.filter((zone) => {
     if (!zone.active) {
@@ -63,8 +93,32 @@ export function getEligibleZones(
     const hasMeal = activeCandidatesInZone.some(isMealCandidate);
     const hasCafe = activeCandidatesInZone.some(isCafeCandidate);
 
-    return hasMeal && hasCafe;
+    if (!hasMeal || !hasCafe) {
+      return false;
+    }
+
+    // At least one of this duration's ordered templates (the 4-stop primary,
+    // or its 3-stop graceful fallback) must be fully fillable for the
+    // requested preference -- matching exactly what generateRoute will later
+    // attempt, in the same primary-then-fallback order.
+    return candidateTemplates.some((template) =>
+      isTemplateFulfillable(template, activeCandidatesInZone, preference)
+    );
   });
+}
+
+/**
+ * Deterministically answers "can this template's slots be completely filled,
+ * without place duplication, honoring the requested preference, using only
+ * this candidate pool" -- see FEASIBILITY_CHECK_RANDOM for why this is safe
+ * to answer by calling the real fill function with a throwaway random source.
+ */
+function isTemplateFulfillable(
+  template: RouteTemplate,
+  zoneCandidates: PlaceCandidate[],
+  preference: PreferenceType
+): boolean {
+  return fillTemplateSlots(template, zoneCandidates, preference, FEASIBILITY_CHECK_RANDOM) !== null;
 }
 
 /**
@@ -144,15 +198,29 @@ function selectCandidateForStandardSlot(
  * Attempts to fill all slots of an ordered route template without place duplication.
  *
  * Assignment Strategy:
- * 1. Preference-First Reservation: When a specific preference (not 'anything') is requested,
- *    we first identify candidates matching that preference. For each candidate (randomly shuffled),
- *    we reserve it for the 'preference' slot and attempt to fill the remaining non-preference slots
- *    (meal, cafe, discovery) from the remaining pool.
- *    This ensures that earlier slots (like discovery) never preemptively consume the only
- *    preference-matching candidate in the zone.
- * 2. Graceful Fallback: If preference is 'anything', or no candidate matches the specific preference,
- *    or no preference-first combination can satisfy all other required slots, we fall back to filling
- *    all standard slots first and assigning any remaining unassigned candidate to the preference slot.
+ * 1. Preference-First Reservation: When a specific preference (not 'anything') is
+ *    requested, every candidate matching that preference is tried, in turn, as the
+ *    reservation for the 'preference' slot, while the remaining slots (meal, cafe,
+ *    discovery) are filled from the rest of the pool. Because Meal/Cafe/Discovery
+ *    are mutually-exclusive by category (isMealCandidate/isCafeCandidate/
+ *    isDiscoveryCandidate never overlap -- see roles.ts), fixing one reservation
+ *    candidate never has a downstream ordering effect on the other slots: once a
+ *    reservation is picked, either every other slot's pool is non-empty or it
+ *    isn't, regardless of *which* item within each pool eventually gets chosen.
+ *    That makes exhaustively trying every reservation candidate (not just the
+ *    first shuffled one) a complete search of this template's small solution
+ *    space -- if any valid combination exists, this loop finds one, rather than
+ *    failing on a single unlucky greedy pick.
+ * 2. General Assignment: used only for 'anything' (or a template with no
+ *    preference slot), where every candidate satisfies the request by definition.
+ *    Standard slots are filled first, then any distinct leftover candidate fills
+ *    Preference -- a legitimate fulfillment, not a fallback hiding an unmet request.
+ *
+ * If a specific preference cannot be honored by any reservation, this returns
+ * `null` rather than silently substituting an unrelated candidate into the
+ * Preference slot. Callers (generateRoute) either retry a smaller fallback
+ * template or surface RecommendationEngineError -- the Preference slot is never
+ * filled with a non-matching place while still being reported as fulfilled.
  *
  * Output Guarantee:
  * The returned array ALWAYS preserves the exact display order defined by template.slots
@@ -167,7 +235,6 @@ function fillTemplateSlots(
   const hasPreferenceSlot = template.slots.includes('preference');
   const isSpecificPreference = preference !== 'anything';
 
-  // Strategy 1: Preference-First Assignment
   if (hasPreferenceSlot && isSpecificPreference) {
     const prefCandidates = shuffleArray(
       zoneCandidates.filter((c) => matchesPreference(c, preference)),
@@ -205,9 +272,16 @@ function fillTemplateSlots(
         return template.slots.map((slot) => assignment[slot]!);
       }
     }
+
+    // Exhausted every preference-matching candidate without a feasible
+    // combination -- this template cannot honor the requested preference in
+    // this zone. Never fall back to an unrelated candidate; let the caller
+    // decide (smaller fallback template, or RecommendationEngineError).
+    return null;
   }
 
-  // Strategy 2: General / Fallback Assignment (for 'anything' or when specific pref candidates are unavailable)
+  // General Assignment -- reached only when preference === 'anything' (or a
+  // template defines no preference slot at all).
   const usedPlaceIds = new Set<string>();
   const assignment: Partial<Record<RouteSlot, PlaceCandidate>> = {};
 
@@ -228,19 +302,15 @@ function fillTemplateSlots(
     assignment[slot] = chosen;
   }
 
-  // Fill preference slot from remaining available pool
+  // Fill preference slot from remaining available pool. 'anything' imposes no
+  // constraint, so any distinct leftover candidate is a genuine fulfillment.
   if (hasPreferenceSlot) {
     const availablePool = zoneCandidates.filter((c) => !usedPlaceIds.has(c.id));
     if (availablePool.length === 0) {
       return null;
     }
 
-    const prefMatches = availablePool.filter((c) => matchesPreference(c, preference));
-    const chosen =
-      prefMatches.length > 0
-        ? pickRandomItem(prefMatches, random)
-        : pickRandomItem(availablePool, random);
-
+    const chosen = pickRandomItem(availablePool, random);
     usedPlaceIds.add(chosen.id);
     assignment.preference = chosen;
   }
@@ -267,10 +337,12 @@ function generateRouteId(random: () => number): string {
  *
  * Core Flow:
  * 1. Validate inputs (durationType, preference, zone/candidate pools)
- * 2. Select an eligible Zone (active, >= 3 candidates, has meal and cafe)
+ * 2. Select an eligible Zone (active, >= 3 candidates, has meal and cafe, and can
+ *    actually fulfill the requested preference end-to-end -- see getEligibleZones)
  * 3. Select an Ordered Route Template matching duration
  * 4. Fill ordered slots without duplicate places
- * 5. Full-day fallback: If 4-stop primary fails, gracefully fall back to 3-stop template preserving Preference
+ * 5. Full-day fallback: If 4-stop primary fails, gracefully fall back to 3-stop template
+ *    preserving Preference
  * 6. Return validated RouteResult
  */
 export function generateRoute(options: GenerateRouteOptions): RouteResult {
@@ -297,10 +369,10 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
   }
 
   // 1. Find eligible zones
-  const eligibleZones = getEligibleZones(zones, candidates, durationType);
+  const eligibleZones = getEligibleZones(zones, candidates, durationType, preference);
   if (eligibleZones.length === 0) {
     throw new RecommendationEngineError(
-      `No eligible active zones found with sufficient candidates for duration: ${durationType}`
+      `No eligible active zones found for duration "${durationType}" and preference "${preference}"`
     );
   }
 
@@ -350,7 +422,7 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
 
   if (!selectedCandidates) {
     throw new RecommendationEngineError(
-      `Insufficient matching candidates to fulfill route template "${template.id}" in zone ${selectedZone.id}`
+      `Insufficient matching candidates to fulfill route template "${template.id}" in zone ${selectedZone.id} for preference "${preference}"`
     );
   }
 

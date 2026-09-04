@@ -12,170 +12,17 @@ export const CANDIDATE_ROLES: readonly CandidateRole[] = [
 ] as const;
 
 /**
- * Keyword identifiers for role classification based on candidate tags and category.
- */
-const ROLE_KEYWORDS: Record<CandidateRole, readonly string[]> = {
-  anchor: [
-    'anchor',
-    'landmark',
-    'attraction',
-    'market',
-    'culture',
-    'highlight',
-    'hub',
-    'main',
-    'heritage',
-  ],
-  meal: [
-    'meal',
-    'food',
-    'cafe',
-    'restaurant',
-    'dining',
-    'bakery',
-    'dessert',
-    'snack',
-    'coffee',
-    'bistro',
-    'lunch',
-    'dinner',
-  ],
-  discovery: [
-    'discovery',
-    'walk',
-    'photo',
-    'experience',
-    'shopping',
-    'park',
-    'culture',
-    'hidden',
-    'gem',
-    'street',
-    'promenade',
-    'exhibition',
-    'nature',
-    'craft',
-  ],
-  'stay-extender': [
-    'stay-extender',
-    'stay_extender',
-    'stayextender',
-    'night',
-    'evening',
-    'sunset',
-    'dessert',
-    'bar',
-    'pub',
-    'lounge',
-    'leisure',
-    'nightview',
-    'night-view',
-    'nightscape',
-  ],
-};
-
-/**
- * Keyword identifiers for travel preferences to match candidate tags and category.
- */
-const PREFERENCE_KEYWORDS: Record<Exclude<PreferenceType, 'anything'>, readonly string[]> = {
-  food: [
-    'food',
-    'meal',
-    'cafe',
-    'restaurant',
-    'dining',
-    'bakery',
-    'dessert',
-    'snack',
-    'coffee',
-    'bistro',
-    'taste',
-    'gourmet',
-    'market',
-  ],
-  walk: [
-    'walk',
-    'park',
-    'promenade',
-    'trail',
-    'nature',
-    'outdoor',
-    'stroll',
-    'river',
-    'forest',
-    'green',
-    'alley',
-  ],
-  photo: [
-    'photo',
-    'view',
-    'scenery',
-    'viewpoint',
-    'aesthetic',
-    'spot',
-    'architecture',
-    'retro',
-    'exhibition',
-    'gallery',
-    'sunset',
-    'nightview',
-    'landmark',
-  ],
-};
-
-/**
- * Checks if a candidate matches the given conceptual role.
- * Prioritizes explicitly verified candidate.roles if present;
- * falls back to category/tags keyword inference when roles are absent.
- */
-export function matchesRole(candidate: PlaceCandidate, role: CandidateRole): boolean {
-  if (candidate.roles && candidate.roles.length > 0) {
-    return candidate.roles.includes(role);
-  }
-
-  const normalizedCategory = (candidate.category ?? '').toLowerCase().trim();
-  const normalizedTags = (candidate.tags ?? []).map((t) => t.toLowerCase().trim());
-  const keywords = ROLE_KEYWORDS[role];
-
-  if (keywords.some((kw) => normalizedCategory.includes(kw))) {
-    return true;
-  }
-
-  return normalizedTags.some((tag) => keywords.some((kw) => tag.includes(kw)));
-}
-
-/**
- * Checks if a candidate matches the user's travel preference.
- * 'anything' matches all candidates.
- */
-export function matchesPreference(
-  candidate: PlaceCandidate,
-  preference: PreferenceType
-): boolean {
-  if (preference === 'anything') {
-    return true;
-  }
-
-  const normalizedCategory = (candidate.category ?? '').toLowerCase().trim();
-  const normalizedTags = (candidate.tags ?? []).map((t) => t.toLowerCase().trim());
-  const keywords = PREFERENCE_KEYWORDS[preference];
-
-  if (!keywords) {
-    return true;
-  }
-
-  if (keywords.some((kw) => normalizedCategory.includes(kw))) {
-    return true;
-  }
-
-  return normalizedTags.some((tag) => keywords.some((kw) => tag.includes(kw)));
-}
-
-/**
  * Canonical meal candidate check.
+ * Strictly adheres to PlaceCandidate.category === "식사".
+ *
+ * Deliberately does NOT also accept a 카페·디저트 place, even though every cafe
+ * carries a "food" preference tag. Route-slot/category identity and Q2-preference
+ * suitability are two separate concepts (see matchesPreference below): a cafe can
+ * be a valid `food`-preference match without ever being eligible for the Meal
+ * slot, which isCafeCandidate already reserves exclusively.
  */
 export function isMealCandidate(candidate: PlaceCandidate): boolean {
-  return candidate.category === '식사' || matchesRole(candidate, 'meal');
+  return candidate.category === '식사';
 }
 
 /**
@@ -187,12 +34,41 @@ export function isCafeCandidate(candidate: PlaceCandidate): boolean {
 }
 
 /**
- * Canonical discovery candidate check.
+ * Canonical discovery/activity candidate check.
+ * Strictly adheres to PlaceCandidate.category being one of the two activity
+ * categories -- "볼거리·문화·체험" (sights/culture/experience) or "산책·야간"
+ * (walk/night view).
+ *
+ * Deliberately never inferred from `tags`: tags encode Q2-preference
+ * suitability (food/walk/photo), not route-slot role, and reusing them here
+ * would let an unrelated food/photo-tagged 카페·디저트 place quietly satisfy
+ * the Discovery slot.
  */
 export function isDiscoveryCandidate(candidate: PlaceCandidate): boolean {
   return (
-    candidate.category === '볼거리·문화·체험' ||
-    matchesRole(candidate, 'discovery') ||
-    matchesRole(candidate, 'anchor')
+    candidate.category === '볼거리·문화·체험' || candidate.category === '산책·야간'
   );
+}
+
+/**
+ * Checks if a candidate satisfies the user's explicit Q2 travel preference.
+ *
+ * 'anything' matches every candidate (no constraint). Otherwise this is a
+ * plain membership check against PlaceCandidate.tags for the exact preference
+ * token -- Q2-preference suitability is explicit data on the candidate
+ * (`tags`), never derived from `category` or route-slot role. This is
+ * deliberately separate from isMealCandidate/isCafeCandidate/isDiscoveryCandidate
+ * above: a single place (e.g. a 카페·디저트 with a scenic hook) can be a valid
+ * `photo` preference match while never being eligible for the Meal/Discovery
+ * route slot, and vice versa.
+ */
+export function matchesPreference(
+  candidate: PlaceCandidate,
+  preference: PreferenceType
+): boolean {
+  if (preference === 'anything') {
+    return true;
+  }
+
+  return candidate.tags.includes(preference);
 }

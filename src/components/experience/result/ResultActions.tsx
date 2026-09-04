@@ -258,14 +258,19 @@ export function ResultActions({
       return null;
     }
     const handleClick = rerollReward === 'locked' ? onOpenGuestbook : onExecuteReroll;
+    // Approved copy split, Human Browser E2E: the 'available' state (the CTA
+    // that actually executes the reroll) reads "한 번 더 뽑기"; the 'locked'
+    // state (opens the Memory Log composer) keeps "다시 뽑기". Confirmed to
+    // fit the existing fixed button artwork with no geometry/asset change.
+    const label = rerollReward === 'available' ? '한 번 더 뽑기' : '다시 뽑기';
     return (
       <button
         type="button"
         onClick={handleClick}
-        aria-label="다시 뽑기"
+        aria-label={label}
         className={`${ACTION_BASE} ${ACTION_LABEL} ${skin.wells.reroll} cursor-pointer ${ON_WELL_LIGHT}`}
       >
-        다시 뽑기
+        {label}
       </button>
     );
   };
