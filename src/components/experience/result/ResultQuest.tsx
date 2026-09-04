@@ -55,10 +55,13 @@ export function ResultQuest({
 
       {/* Scroll container stays the flex-1 min-h-0 zone (P0); the compositional
           raster lives INSIDE it so a short viewport scrolls the canvas rather than
-          shrinking the Result. It carries the measured paper colour so the surface
-          is continuous from the canvas straight into the painted action band --
-          BONUS QUEST now flows directly into the action wells, with no standalone
-          Random Log row and no spacer left where it used to be.
+          shrinking the Result. The measured paper colour is painted by
+          ResultBodySkinCanvas's own inner fill layer (inset to match the
+          raster's own geometry per state/breakpoint), not here -- this wrapper
+          is left transparent so it never bleeds paper colour past whichever
+          card silhouette the active raster actually draws. BONUS QUEST flows
+          directly into the action wells, with no standalone Random Log row and
+          no spacer left where it used to be.
 
           `scrollbar-hidden` removes only the scrollbar's rendering -- `overflow-y-auto`
           is untouched, so wheel, trackpad, touch and keyboard scrolling all still
@@ -78,7 +81,6 @@ export function ResultQuest({
       <div className="relative flex min-h-0 flex-1 flex-col">
         <div
           ref={scrollRef}
-          style={{ backgroundColor: RESULT_BODY_PAPER }}
           className="scrollbar-hidden flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-none"
         >
           {/* Each child registers against the painted composition by measured

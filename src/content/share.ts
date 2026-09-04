@@ -20,10 +20,20 @@ export function buildShareTitle(cleanTitle: string): string {
  * as the text body's own first line on purpose: some share targets ignore
  * `navigator.share`'s `title` field entirely and render only `text`, so the
  * hook line must not depend on `title` surviving. Exact spacing is part of
- * the approved payload -- all 4 lines are CONSECUTIVE, no blank line anywhere
- * (a previous revision had an unintended blank line before the CTA line).
+ * the approved payload -- there is EXACTLY ONE blank line, between the third
+ * line and the CTA line (a prior revision removed this blank line; that
+ * removal is superseded -- the blank line is the current, approved copy).
+ * Expressed as an array + join rather than one template string so the blank
+ * line is an explicit `''` entry, not an easy-to-miss `\n\n` inside a longer
+ * literal.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- signature kept so shareHelper.ts's call site needs no change
 export function buildShareText(cleanTitle: string, countLabel: string): string {
-  return '우리 대전여행 갈래?\n코스는 이미 뽑아놨어 🎲\n네 취향 코스도 궁금해\n👉 바로 뽑고 공유하기';
+  return [
+    '우리 대전여행 갈래?',
+    '코스는 이미 뽑아놨어 🎲',
+    '네 취향 코스도 궁금해',
+    '',
+    '👉 바로 뽑고 공유하기',
+  ].join('\n');
 }

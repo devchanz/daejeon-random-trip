@@ -32,6 +32,7 @@ flowchart LR
 - **Stop Count & Sequence Policy**:
   - **Half-Day (`half`)**: Fixed **exactly 3 stops** (`Meal → Cafe → Preference`). (2-stop routes are deprecated).
   - **Full-Day (`full`)**: **3–4 stops** (primary **4 stops**: `Meal → Cafe → Discovery → Preference`; graceful fallback to **3 stops**: `Meal → Cafe → Preference`, omitting Discovery while preserving the user's selected Preference).
+- **Route-slot category vs. Q2-preference suitability — two separate axes**: which place fills the Meal/Cafe/Discovery slot is decided strictly by the place's own category (`식사` / `카페·디저트` / `볼거리·문화·체험` or `산책·야간`); whether a place satisfies the user's explicit Q2 preference (food/walk/photo) is decided independently, from the place's own tag data. A place's category never implies a preference match, and a preference match never implies a route-slot role — a `카페·디저트` place, for example, can be a valid `photo`-preference match without ever being eligible to fill the Meal slot. If no zone can produce a complete, distinct-place route honoring an explicit Q2 preference, that zone is not offered for that request rather than the engine silently substituting an unrelated place.
 - **Duration Budgeting**: Numeric minute bounds remain unconfigured (TBD) pending transit modeling and verified candidate place data. In provisional MVP data, `estimatedTotalMinutes` represents place stay duration.
 
 
@@ -97,8 +98,7 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
    - Transitions directly to the in-app **Route Guide** for structured itinerary guidance.
 2. **Referral (Secondary)**: `“내 루트 공유하기”`
    - Generates an immutable snapshot in `shared_routes`, generates a short lookup code (`/r/[shareCode]`), and triggers Web Share API (with clipboard copy fallback).
-3. **Participation / Reward (Tertiary)**: `“다시 뽑기”`
-   - One unified CTA driven by the reroll reward state: while `locked`, it opens the Memory Log composer in-flow (successful server validation and DB save unlocks 1 reward reroll); once `available`, the same CTA executes the reroll directly; once `consumed`, the CTA is not shown (hidden, not disabled).
+3. **Participation / Reward (Tertiary)**: one unified CTA slot, same position/geometry throughout, driven by the reroll reward state — only the copy and behavior change: while `locked`, it reads `“다시 뽑기”` and opens the Memory Log composer in-flow (successful server validation and DB save unlocks 1 reward reroll); once `available`, it reads `“한 번 더 뽑기”` and executes the reroll directly; once `consumed`, the CTA is not shown (hidden, not disabled).
    - There is no separate, always-present "leave a Random Log" row in the Result Card body — participation is reached solely through this one action.
 
 **Result Card content composition**: The route stops render in a fixed four-cell grid (2×2 desktop, 1-column ×4 mobile). Half-day routes (3 stops) fill the fourth cell with an "Explore More" banner (`“조금 더 놀다 갈래?”`) rather than leaving it empty or stretching STOP 3 — this banner is presentation-only, is never a domain stop, and carries no place data. Its CTA (`“대전 더 둘러보기”`, a lightweight text link, visually subordinate to the primary `“이 코스로 가보기”` action) minimizes the Result and scrolls to TODAY'S DAEJEON (§6.4) — it never discards the generated route. An optional **Bonus Quest** mission line, drawn from a curated pool of short generic playful prompts (not per-place data, not a recommendation axis), may also appear.
@@ -211,5 +211,5 @@ The Result Card displays the route title (e.g., `“오늘은 대흥동 먹방 �
 - **Setup Funnel Progression**: User progression through Q1/Q2 to READY produces clear completion and drop-off metrics in GA4.
 - **Recommendation & Spin Experience**: The recommendation engine and slot animation deliver a coherent itinerary with acceptable perceived latency without blocking runtime delays.
 - **Primary Proxy Conversion**: Clicks on outbound map links within the in-app Route Guide (`place_map_click`) serve as the primary proxy conversion indicating high travel intent. TODAY'S DAEJEON banner-click tracking is TBD/deferred pending an analytics-lane decision (real destinations now exist as of ADR-038).
-- **Participation & Referral Loops**: Visitor log submissions (`guestbook_submit`) and route sharing completions (`route_share_complete`) operate seamlessly with zero PII or free-text leakage into analytics.
+- **Participation & Referral Loops**: Memory Log submissions (`random_log_submit`) and route sharing completions (`share`) operate seamlessly with zero PII or free-text leakage into analytics.
 - **Honest Metric Evaluation**: Map clicks represent high-intent interest and are not conflated with guaranteed physical travel attendance.
