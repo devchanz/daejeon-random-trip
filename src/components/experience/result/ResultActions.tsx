@@ -6,11 +6,12 @@ import type { RerollRewardState } from '../../../lib/experience';
 import {
   formatShareTitle,
   formatShareText,
-  getShareUrl,
+  getAttributedShareUrl,
   triggerShare,
 } from '../../../lib/share';
 import { skinBandStyle } from '../../common';
 import { resolveResultSkin } from './resultSkin';
+import { pushDataLayerEvent } from '../../../lib/analytics';
 
 export interface ResultActionsProps {
   result: RouteResult;
@@ -158,13 +159,28 @@ export function ResultActions({
 
     const shareTitle = formatShareTitle(result.title);
     const shareText = formatShareText(result.title, stops.length);
-    const shareUrl = getShareUrl(activeShareCode);
+    // Attributed link (adds the fixed user_share/referral/shared_route tag) --
+    // never the bare getShareUrl -- so a friend who opens this link is
+    // measurable as second-generation viral traffic, not conflated with the
+    // original campaign visitor.
+    const shareUrl = getAttributedShareUrl(activeShareCode);
 
     const shareResult = await triggerShare({
       title: shareTitle,
       text: shareText,
       url: shareUrl,
     });
+
+    // `share` counts only a genuinely completed share -- native Web Share
+    // actually sent, or the clipboard fallback actually copied. A canceled
+    // share sheet or a copy failure must never count.
+    if (shareResult.status === 'shared' || shareResult.status === 'copied') {
+      pushDataLayerEvent('share', {
+        route_id: result.id,
+        zone_id: result.zoneId,
+        share_method: shareResult.status === 'shared' ? 'native_share' : 'clipboard',
+      });
+    }
 
     if (shareResult.status === 'copied') {
       setShareState({

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import localFont from "next/font/local";
-import { GoogleAnalytics } from "@next/third-parties/google";
+import { GoogleAnalytics, GoogleTagManager } from "@next/third-parties/google";
 import { getSiteOrigin } from "../lib/share";
 import "./globals.css";
 
@@ -94,7 +94,33 @@ export const metadata: Metadata = {
   },
 };
 
+const gtmContainerId = process.env.NEXT_PUBLIC_GTM_ID;
 const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
+/**
+ * Mutually-exclusive GA4 loader strategy (GTM rollout/rollback safety):
+ *
+ *   NEXT_PUBLIC_GTM_ID set            -> GoogleTagManager ONLY.
+ *   NEXT_PUBLIC_GTM_ID unset,
+ *     NEXT_PUBLIC_GA_MEASUREMENT_ID set -> GoogleAnalytics fallback (unchanged
+ *                                          behavior from the pre-GTM state).
+ *   Neither set                       -> neither loader renders.
+ *
+ * GoogleTagManager and GoogleAnalytics must NEVER both render: each injects
+ * its own independent gtag.js and calls `gtag('config', ...)`, and GA4 does
+ * not deduplicate across separate config calls -- rendering both would fire
+ * two `page_view` hits per navigation to the same property. Once GTM owns
+ * page_view (via its own GA4 Configuration tag, configured in the GTM UI --
+ * not in this file), the direct `<GoogleAnalytics>` component must not also
+ * render. `NEXT_PUBLIC_GA_MEASUREMENT_ID` is deliberately left supported as
+ * a fallback/rollback path -- removing `NEXT_PUBLIC_GTM_ID` from Vercel env
+ * instantly reverts to the pre-GTM direct-GA4 loader with no code change.
+ */
+const analyticsLoader = gtmContainerId
+  ? { kind: 'gtm' as const, id: gtmContainerId }
+  : gaMeasurementId
+    ? { kind: 'ga' as const, id: gaMeasurementId }
+    : null;
 
 export default function RootLayout({
   children,
@@ -107,7 +133,8 @@ export default function RootLayout({
       className={`${dosGothic.variable} ${geistSans.variable} ${geistMono.variable} min-h-full antialiased`}
     >
       <body className="min-h-screen flex flex-col bg-[#fdfbf7] text-[#2b2520]">{children}</body>
-      {gaMeasurementId ? <GoogleAnalytics gaId={gaMeasurementId} /> : null}
+      {analyticsLoader?.kind === 'gtm' ? <GoogleTagManager gtmId={analyticsLoader.id} /> : null}
+      {analyticsLoader?.kind === 'ga' ? <GoogleAnalytics gaId={analyticsLoader.id} /> : null}
     </html>
   );
 }

@@ -228,7 +228,11 @@ export function RouteGuideModal({
             )}
 
             {/* Ordered Stop Timeline */}
-            <RouteGuideTimeline stops={guideData.stops} />
+            <RouteGuideTimeline
+              stops={guideData.stops}
+              routeId={guideData.routeId}
+              zoneId={guideData.zoneId}
+            />
           </div>
         </div>
 

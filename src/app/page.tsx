@@ -10,6 +10,7 @@ import { ZONES, PLACE_CANDIDATES } from '../data';
 import { MOBILE_SLOT_FRAME_HEIGHT } from '../components/experience/slotGeometry';
 import { BgmProvider } from '../lib/audio/bgmContext';
 import { VisitBeacon } from '../components/analytics/VisitBeacon';
+import { AnalyticsBootstrap } from '../components/analytics/AnalyticsBootstrap';
 
 // Mobile hero short-height viewport budget: the height left for the brand logo
 // once the chrome, Setup card, Setup<->Slot gap and the Slot chassis have each
@@ -47,6 +48,12 @@ export default function Home() {
           (not inside LeftSidebar, which mounts twice for the desktop/mobile
           responsive stages) so a real visit is never double-counted. */}
       <VisitBeacon />
+
+      {/* Single page-level analytics entry point: captures first-touch UTM
+          attribution then dispatches landing_view, in that order. Mounted
+          once here (not inside a responsively dual-mounted tree) for the
+          same reason as VisitBeacon above. */}
+      <AnalyticsBootstrap />
 
       {/* 1. Retro OS & Browser Chrome Header */}
       <Header />

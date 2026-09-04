@@ -31,6 +31,7 @@ import {
 } from '../../lib/random';
 import type { GuestbookEntryRecord } from '../../lib/database/types';
 import { MOTION_TIMINGS, getMotionTimings, usePrefersReducedMotion } from './motionConfig';
+import { pushDataLayerEvent } from '../../lib/analytics';
 
 export interface ExperienceProviderProps {
   children: React.ReactNode;
@@ -287,10 +288,28 @@ export function ExperienceProvider({
     const timings = getMotionTimings(prefersReducedMotion);
     const run = peekRunRef.current;
     const deadline = Date.now() + timings.OUTPUT_PEEK_TO_CARD_MS;
+    // Scoped to this effect instance (one per peek run): guarantees result_view
+    // dispatches at most once per run even though `reconcile` may itself run
+    // twice (the timer AND a post-deadline visibilitychange reconciliation).
+    let resultViewDispatched = false;
 
     const reconcile = () => {
       if (peekRunRef.current !== run) return; // guard 1: superseded run
       setRevealStage((prev) => (prev === 'peek' ? 'revealed' : prev)); // guard 2: idempotent no-op
+
+      // result_view: fires exactly once per genuine peek -> revealed
+      // transition -- never on ResultArea's own render/reopen-from-minimized
+      // (that path never re-enters 'peek', so this effect never re-runs for it).
+      if (!resultViewDispatched && state.result) {
+        resultViewDispatched = true;
+        pushDataLayerEvent('result_view', {
+          route_id: state.result.id,
+          zone_id: state.result.zoneId,
+          stop_count: state.result.stops?.length,
+          duration_type: state.duration,
+          preference_type: state.preference,
+        });
+      }
     };
 
     const revealTimer = setTimeout(reconcile, timings.OUTPUT_PEEK_TO_CARD_MS);
@@ -310,6 +329,14 @@ export function ExperienceProvider({
       clearTimeout(revealTimer);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
+    // `state` is intentionally omitted: this effect must re-run ONLY on the
+    // peek/reduced-motion transitions above, never on every state change
+    // during an active peek run. By the time `revealStage` flips to 'peek'
+    // (the dependency that actually re-triggers this effect), `completeSpin`
+    // has already been dispatched in the same batch, so the closure's
+    // `state.result`/`state.duration`/`state.preference` are already the
+    // fresh post-spin values -- see the spin effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [revealStage, prefersReducedMotion]);
 
   // On minimize (결과 접기), move focus onto whichever Hero's reopen affordance is
@@ -330,6 +357,7 @@ export function ExperienceProvider({
   // this call by its own exit-transition duration, so by the time it fires
   // the overlay has already faded/scaled out.
   const handleStartIntro = () => {
+    pushDataLayerEvent('intro_start');
     dispatch(startIntro());
   };
 
@@ -363,6 +391,13 @@ export function ExperienceProvider({
       setSpinningStoppedReelCount(0);
       setIsLeverActive(true);
       setRevealStage('hidden');
+
+      // spin: the initial valid route-generation spin only -- the rewarded
+      // reroll dispatches its own separate `reroll` event below, never this one.
+      pushDataLayerEvent('spin', {
+        duration_type: state.duration,
+        preference_type: state.preference,
+      });
 
       // 3. Dispatch START_SPIN to initiate spinning presentation
       dispatch(startSpin());
@@ -420,6 +455,14 @@ export function ExperienceProvider({
       setSpinningStoppedReelCount(0);
       setIsLeverActive(true);
       setRevealStage('hidden');
+
+      // reroll: fires instead of (never alongside) `spin` for this action --
+      // referenced against the result being left behind, since result_view
+      // will separately fire once the NEW result is revealed.
+      pushDataLayerEvent('reroll', {
+        route_id: state.result.id,
+        zone_id: state.result.zoneId,
+      });
 
       dispatch(startSpin());
       onSpinStart?.();
@@ -479,6 +522,12 @@ export function ExperienceProvider({
   // like it dual-mounts MainExperience, so at most one marked wrapper has a
   // non-null offsetParent at a time.
   const handleExploreMore = () => {
+    // Fired first, before any minimize/scroll side effect below.
+    pushDataLayerEvent('explore_more_click', {
+      route_id: state.result?.id,
+      zone_id: state.result?.zoneId,
+    });
+
     if (revealStage === 'revealed') {
       setRevealStage('minimized');
     }
