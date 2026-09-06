@@ -6,6 +6,7 @@ import { visualAsset } from '../../config/visualAssets';
 import { FittedAsset } from '../common';
 import { EDITORIAL_EMPTY_STATE } from '../../content/sidebar';
 import { pushDataLayerEvent } from '../../lib/analytics';
+import { usePrefersReducedMotion } from '../experience/motionConfig';
 
 export interface EditorialSpotlightCardProps {
   /** The 5-item production set to browse. An empty array renders an explicit empty state. */
@@ -24,9 +25,31 @@ export interface EditorialSpotlightCardProps {
 const SWIPE_THRESHOLD_PX = 40;
 
 /**
- * Editorial banner carousel shell -- manual prev/next over a small, fixed, curated set
+ * Dwell time before the carousel advances on its own. Long enough to read a
+ * banner's baked-in copy, short enough that a passive visitor sees more than one
+ * of the five.
+ */
+const AUTO_ADVANCE_INTERVAL_MS = 10_000;
+
+/**
+ * Fraction of the card that must be inside the viewport before it counts as
+ * exposed -- the gate for BOTH auto-advance and the impression event. Half the
+ * card is a deliberate middle ground: a 1px sliver at the edge of the fold is
+ * not an impression, and requiring the whole card would never fire on a short
+ * viewport.
+ */
+const EXPOSURE_RATIO = 0.5;
+
+/**
+ * Editorial banner carousel shell -- prev/next over a small, fixed, curated set
  * (currently 5 production banners; see src/data/editorial.ts). One banner visible at a
- * time, no autoplay, no library.
+ * time, no library.
+ *
+ * Advance is both manual (buttons/swipe) and automatic on a ~10s timer (ADR-042,
+ * revising ADR-028/ADR-038's original manual-only contract). The automatic path is
+ * deliberately NOT the same seam as the manual one -- see goPrev/goNext below and
+ * the auto-advance effect for why that separation is what keeps the
+ * todays_daejeon_next/prev interaction events honest.
  *
  * Composition is intentionally minimal -- compact header, banner, optional tags -- because
  * the rail's problem was vertical space, not missing content:
@@ -67,6 +90,19 @@ export function EditorialSpotlightCard({
   className = '',
 }: EditorialSpotlightCardProps) {
   const [activeIndex, setActiveIndex] = useState(0);
+  // Auto-advance suspension. `isInteracting` covers hover + focus-within (the
+  // reader is looking at / operating this card); `isTabHidden` covers the tab
+  // being backgrounded, so a page left open in another tab does not silently
+  // cycle through banners (and fire their impressions) unseen.
+  const [isInteracting, setIsInteracting] = useState(false);
+  const [isTabHidden, setIsTabHidden] = useState(false);
+  // Whether THIS mount's card is genuinely on screen. Both the desktop and the
+  // mobile rail are permanently mounted (page.tsx gates them with CSS only), and
+  // even the displayed one spends most of a session scrolled far out of view --
+  // so "mounted" is not "seen". Drives both the auto-advance scheduler and the
+  // impression event; see the observer effect below.
+  const [isExposed, setIsExposed] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
   const touchStartXRef = useRef<number | null>(null);
   const touchStartYRef = useRef<number | null>(null);
   const suppressNextClickRef = useRef(false);
@@ -115,7 +151,10 @@ export function EditorialSpotlightCard({
   // mount/update effect would double-count every impression. Checking
   // `offsetParent !== null` (the same visibility test
   // ExperienceProvider.handleExploreMore already uses for this identical
-  // dual-mount shape) ensures only the instance actually on screen dispatches.
+  // dual-mount shape) ensures only the DISPLAYED instance dispatches -- and
+  // since ADR-047 the `isExposed` gate below additionally requires that
+  // displayed instance to actually be in the viewport, because "displayed" and
+  // "seen" are not the same thing on a rail that sits below the fold.
   //
   // STRICTMODE GUARD: a `lastViewedItemIdRef` comparison makes this idempotent
   // against React StrictMode's dev-only double-invoke of this effect (mount ->
@@ -129,6 +168,11 @@ export function EditorialSpotlightCard({
     // must also skip the dispatch, not fall through to it -- `=== null` alone
     // would misclassify "not yet attached" as "visible".
     if (!sectionRef.current || sectionRef.current.offsetParent === null) return;
+    // VIEWPORT GATE (ADR-047): an impression means the banner was actually on
+    // screen, not merely mounted. `isExposed` is a dependency as well as a
+    // guard, so a card that mounts below the fold dispatches its impression the
+    // moment it is scrolled to -- not at mount, and not never.
+    if (!isExposed) return;
     if (lastViewedItemIdRef.current === item.id) return;
 
     lastViewedItemIdRef.current = item.id;
@@ -137,7 +181,82 @@ export function EditorialSpotlightCard({
       editorial_position: safeIndex + 1,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [item?.id]);
+  }, [item?.id, isExposed]);
+
+  // VIEWPORT EXPOSURE (ADR-047). One IntersectionObserver on this card, at a 50%
+  // threshold -- "at least half the card is on screen" is the bar for both
+  // advancing it and counting an impression.
+  //
+  // This is what makes the dual mount safe. The hidden responsive mount lives in
+  // a `display:none` subtree, generates no box, and therefore never intersects,
+  // so it can never schedule a timer or dispatch a view -- and the *displayed*
+  // mount stops doing both while it is scrolled off screen, which on mobile (the
+  // rail sits below the whole hero) is most of a session. `offsetParent` alone
+  // could only answer the first half of that.
+  //
+  // Fails OPEN if IntersectionObserver is unavailable: the carousel keeps its
+  // pre-ADR-047 behaviour rather than silently freezing.
+  useEffect(() => {
+    const element = sectionRef.current;
+    if (!element) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsExposed(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsExposed(entry.isIntersecting && entry.intersectionRatio >= EXPOSURE_RATIO),
+      { threshold: [0, EXPOSURE_RATIO] }
+    );
+    observer.observe(element);
+
+    return () => observer.disconnect();
+  }, []);
+
+  // Tab visibility, tracked as state (not read ad hoc inside the timer) so the
+  // auto-advance effect below re-evaluates -- and therefore tears its timer down
+  // and rebuilds it with a full fresh interval -- the moment visibility flips.
+  // Same `visibilitychange` pattern ExperienceProvider's peek reconciliation uses.
+  useEffect(() => {
+    const syncVisibility = () => setIsTabHidden(document.visibilityState === 'hidden');
+    syncVisibility();
+    document.addEventListener('visibilitychange', syncVisibility);
+    return () => document.removeEventListener('visibilitychange', syncVisibility);
+  }, []);
+
+  // AUTO-ADVANCE (ADR-042).
+  //
+  // ANALYTICS BOUNDARY: this advances via the plain setter, never goNext() --
+  // todays_daejeon_next/prev are *interaction* events and must stay strictly
+  // manual (buttons + swipe), so an unattended page can never manufacture them.
+  // todays_daejeon_view still fires from the impression effect above, because an
+  // auto-shown banner genuinely was shown -- and, since ADR-047, only while the
+  // card is actually on screen. No taxonomy or parameter change.
+  //
+  // ONE TIMER, NO STALE CLOSURES: a single setTimeout keyed on `safeIndex` -- any
+  // manual prev/next/swipe changes that index, which tears this effect down and
+  // schedules a fresh full interval, so "manual interaction resets the timer" is
+  // structural rather than a second explicit reset path. The functional updater
+  // never reads a captured index.
+  //
+  // NOTHING ADVANCES UNSEEN (ADR-047): the timer is scheduled only while this
+  // mount is the displayed responsive one AND at least half of it is in the
+  // viewport AND the tab is visible AND it is not hovered/focused AND reduced
+  // motion is off. Every one of those is a dependency, so losing any of them
+  // clears the timer and regaining it starts a fresh full interval rather than
+  // resuming a partial one.
+  useEffect(() => {
+    if (count <= 1) return;
+    if (!isExposed || isInteracting || isTabHidden || prefersReducedMotion) return;
+
+    const timer = setTimeout(() => {
+      setActiveIndex((prev) => (prev + 1) % count);
+    }, AUTO_ADVANCE_INTERVAL_MS);
+
+    return () => clearTimeout(timer);
+  }, [safeIndex, count, isExposed, isInteracting, isTabHidden, prefersReducedMotion]);
 
   const handleTouchStart = (event: React.TouchEvent) => {
     const touch = event.touches[0];
@@ -324,6 +443,15 @@ export function EditorialSpotlightCard({
     <section
       ref={sectionRef}
       aria-label={heading}
+      // Auto-advance pause surface. Hover covers pointer users mid-read; the
+      // capture-phase focus handlers give focus-within semantics without a CSS
+      // pseudo-class, covering keyboard users on the prev/next buttons and the
+      // banner link (every focusable descendant this card has). Presentation is
+      // untouched -- these are behaviour-only handlers on the existing element.
+      onMouseEnter={() => setIsInteracting(true)}
+      onMouseLeave={() => setIsInteracting(false)}
+      onFocusCapture={() => setIsInteracting(true)}
+      onBlurCapture={() => setIsInteracting(false)}
       className={`relative overflow-visible rounded-2xl border-2 border-line-soft bg-[#fffef9] p-4 sm:p-5 ${className}`}
     >
       {/* Perched mascot, straddling the card's top-right corner. Anchored to the OUTER

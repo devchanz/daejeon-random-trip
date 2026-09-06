@@ -1,5 +1,8 @@
 import type { DurationType } from './product';
 import type { RouteStop } from '../lib/random/types';
+// Canonical duration copy -- see src/content/labels.ts. Not duplicated here, so a
+// wording change (e.g. the 반일 -> 반나절 correction) can never land in one place only.
+import { DURATION_COURSE_LABELS } from '../content/labels';
 
 /**
  * Duration budget policy definition for a specific travel duration type.
@@ -18,10 +21,10 @@ export interface DurationBudgetPolicy {
  */
 export const DURATION_BUDGET_POLICIES: Record<DurationType, DurationBudgetPolicy> = {
   half: {
-    displayLabel: '반일 코스',
+    displayLabel: DURATION_COURSE_LABELS.half,
   },
   full: {
-    displayLabel: '당일 코스',
+    displayLabel: DURATION_COURSE_LABELS.full,
   },
 };
 

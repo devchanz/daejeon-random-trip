@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { BGM_TRACK_SRC } from '../../config/audio';
+import { BGM_DEFAULT_VOLUME, BGM_TRACK_SRC } from '../../config/audio';
 
 export interface BgmContextValue {
   /** Derived from the audio element's own `play`/`pause` events -- never assumed. */
@@ -27,11 +27,21 @@ const BgmContext = createContext<BgmContextValue | null>(null);
 export function BgmProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasStartedRef = useRef(false);
+  // Latches the one-time default-volume application below. There is no `volume`
+  // content attribute in HTML, so the initial level has to be set imperatively --
+  // and it must be set ONCE, never re-asserted, or it would silently stomp a
+  // volume the user (or a future volume control) had already chosen.
+  const hasAppliedDefaultVolumeRef = useRef(false);
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    if (!hasAppliedDefaultVolumeRef.current) {
+      hasAppliedDefaultVolumeRef.current = true;
+      audio.volume = BGM_DEFAULT_VOLUME;
+    }
 
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);

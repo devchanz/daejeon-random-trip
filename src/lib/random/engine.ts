@@ -1,6 +1,7 @@
 import { SUPPORTED_PREFERENCES, type DurationType, type PreferenceType } from '../../config/product';
 import { calculateTotalDurationMinutes } from '../../config/durationBudget';
 import { BONUS_QUEST_MISSIONS } from '../../config/missions';
+import { formatRouteTitle } from '../../content/labels';
 import type {
   Zone,
   PlaceCandidate,
@@ -448,7 +449,10 @@ export function generateRoute(options: GenerateRouteOptions): RouteResult {
 
   // 8. Construct final RouteResult with estimated duration calculation
   const estimatedTotalMinutes = calculateTotalDurationMinutes(stops);
-  const title = `${selectedZone.name} ${durationType === 'half' ? '반일' : '당일'} 코스`;
+  // Title copy comes from the canonical label module (src/content/labels.ts) --
+  // never an inline duration word here, which is how the title ended up saying
+  // `반일`/`당일` while every duration chip beside it said `반나절`/`하루종일`.
+  const title = formatRouteTitle(selectedZone.name, durationType);
 
   return {
     id: generateRouteId(random),

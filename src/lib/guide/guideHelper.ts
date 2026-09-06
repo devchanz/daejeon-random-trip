@@ -1,5 +1,6 @@
 import type { RouteResult, RouteStop, SharedRouteStopSnapshot } from '../random/types';
 import type { SharedRouteRecord } from '../database/types';
+import { normalizeRouteTitle } from '../../content/labels';
 
 export interface RouteGuideStop {
   order: number;
@@ -37,7 +38,9 @@ export interface RouteGuideData {
  */
 export function normalizeRouteResult(result: RouteResult): RouteGuideData {
   return {
-    title: result.title,
+    // No-op for anything generated after the canonical-title pass; see
+    // normalizeRouteTitle for why the repair lives at display time.
+    title: normalizeRouteTitle(result.title),
     routeId: result.id,
     zoneId: result.zoneId,
     zoneName: result.zoneName,
@@ -62,7 +65,9 @@ export function normalizeRouteResult(result: RouteResult): RouteGuideData {
  */
 export function normalizeSharedRouteRecord(record: SharedRouteRecord): RouteGuideData {
   return {
-    title: record.title,
+    // Snapshots are immutable (ADR-014) and older ones carry the legacy
+    // `반일`/`당일` wording -- repaired for display only, never rewritten in the DB.
+    title: normalizeRouteTitle(record.title),
     zoneId: record.zone_id,
     durationType: record.duration_type,
     preferenceType: record.preference_type,

@@ -4,7 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import { SetupArea } from './SetupArea';
 import { SlotAnchor } from './SlotAnchor';
 import { IntroGate } from './IntroGate';
-import { useExperienceEngine } from './ExperienceProvider';
+import { HERO_EXPERIENCE_ATTR, useExperienceEngine } from './ExperienceProvider';
 
 export interface MainExperienceProps {
   className?: string;
@@ -57,7 +57,15 @@ export function MainExperience({ className = '' }: MainExperienceProps) {
   return (
     <div
       data-testid="main-experience"
-      className={`relative z-30 flex w-full flex-col items-center gap-[var(--hero-stage-gap)] ${className}`}
+      // Scroll landmark for the Memory Log action's `코스 뽑기` (see
+      // ExperienceProvider's HERO_EXPERIENCE_ATTR / handleScrollToHero). Both
+      // Hero mounts carry it; only the visible one is ever resolved.
+      // `tabIndex={-1}` + `outline-none` mirror page.tsx's rail wrappers: the
+      // handler moves focus onto the container so a screen reader lands here,
+      // with no visible focus ring and no change to the tab order.
+      {...{ [HERO_EXPERIENCE_ATTR]: '' }}
+      tabIndex={-1}
+      className={`relative z-30 flex w-full flex-col items-center gap-[var(--hero-stage-gap)] outline-none ${className}`}
     >
       {/* 1+2. Setup Area (Q1 -> Q2 -> READY) + Slot Anchor, wrapped in a
           `display:contents` group so `inert` can suspend BOTH while the

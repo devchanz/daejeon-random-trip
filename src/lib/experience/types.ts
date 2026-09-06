@@ -90,4 +90,11 @@ export type ExperienceAction =
   | { type: 'SELECT_DURATION'; duration: DurationType }
   | { type: 'SELECT_PREFERENCE'; preference: PreferenceType }
   | { type: 'START_SPIN' }
-  | { type: 'COMPLETE_SPIN'; result: RouteResult };
+  | { type: 'COMPLETE_SPIN'; result: RouteResult }
+  /**
+   * Rehydrates this browser tab's previously generated route after a navigation
+   * away from `/` and back (see src/lib/experience/tripSession.ts). NOT a
+   * generation: no spin ran, nothing was recommended, and no analytics event
+   * accompanies it.
+   */
+  | { type: 'RESTORE_RESULT'; result: RouteResult };

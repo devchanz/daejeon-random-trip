@@ -156,7 +156,7 @@ interface SharedRouteStopSnapshot {
 ## 3. Persistent Database Models (Supabase)
 
 ### 3.1 `guestbook_entries` Table
-Stores Random Log entries submitted exclusively from the Result Card composer flow (writing requires an active generated Result; there is no landing-page write entry point). Powers three public, ungated read surfaces — the Right Rail preview, the `/random-log` board, and the `/random-log/[id]` detail route — and unlocks the 1-time Reroll Reward on a user's first eligible submission (ADR-011, ADR-025).
+Stores Random Log entries submitted from the one shared composer, reachable from the Result Card CTA or from the landing page's Memory Log write affordance (ADR-042/ADR-045). Writing still requires an active generated Result in either case — the strip is an entry point, not a way to post without a route. Powers three public, ungated read surfaces — the Right Rail preview, the `/random-log` board, and the `/random-log/[id]` detail route — and unlocks the 1-time Reroll Reward on a user's first eligible submission (ADR-011, ADR-025).
 
 | Column | Type | Nullable | Description |
 | :--- | :--- | :--- | :--- |
@@ -265,12 +265,12 @@ interface RerollSessionState {
 Writing eligibility ("has *this* Result already been logged") and reroll reward eligibility ("has this *session* claimed its one reroll") are two independent questions, tracked in two independent places:
 
 ```typescript
-// MainExperience.tsx — plain component state, NOT part of RerollSessionState
-// and NOT backed by sessionStorage:
+// ExperienceProvider.tsx — plain component state, NOT part of RerollSessionState.
+// Mirrored into the tab-scoped trip session (ADR-043) so it survives a navigation:
 const [loggedRouteIds, setLoggedRouteIds] = useState<Set<string>>(() => new Set());
 ```
 
-- **Not persisted anywhere** — not `sessionStorage`, not a DB column, not a uniqueness constraint. `state.result` (the active `RouteResult`) is itself never persisted across a reload (the experience reducer always seeds fresh from `INITIAL_EXPERIENCE_STATE`), so there is nothing meaningful to write about after a refresh in the first place.
+- **Never a DB column and never a uniqueness constraint** — it stays a client-side answer. It is, however, mirrored into the tab-scoped trip session alongside the active `RouteResult` (`src/lib/experience/tripSession.ts`, ADR-043): both used to be memory-only, which meant walking from `/` to `/random-log` and back silently forgot the route *and* whether it had already been logged. The mirror is `sessionStorage`-only and dies with the tab.
 - **Keyed on `RouteResult.id`** (written to `guestbook_entries.route_id` on submission), which is guaranteed fresh per `generateRoute()` call — including every reroll — so a reroll always produces a Result that can be logged again.
 - **A client UX guardrail, not a security boundary.** `POST /api/guestbook` remains directly callable with any client-supplied `route_id`; this is unchanged by, and not improved by, the once-per-Result rule. Real abuse prevention (rate limiting, auth, a reward ledger) is explicitly out of scope for this MVP — see ADR-025.
 - Submitting a log always attempts to unlock the reroll via the unchanged `unlockRerollReward` (§5 above), which already refuses to re-unlock once `consumed` — so logging a later Result can never grant a second reward, with no additional guard needed here.

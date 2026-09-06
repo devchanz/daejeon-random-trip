@@ -1,5 +1,5 @@
 import React from 'react';
-import { RandomLogRightRailPreview } from '../random-log';
+import { MemoryLogHeaderAction, RandomLogRightRailPreview } from '../random-log';
 import { EditorialSpotlightCard } from '../editorial';
 import { getActiveEditorialItems } from '../../data/editorial';
 import { FittedAsset } from '../common';
@@ -50,6 +50,18 @@ export function RightSidebar({ className = '' }: { className?: string }) {
               {VISITOR_LOG_COPY.heading}
             </h2>
           </div>
+
+          {/* Write affordance (ADR-042's behaviour, ADR-045's shape): ONE compact
+              state-aware action, inline in this header row opposite the heading,
+              where the row's existing `justify-between` already reserved the
+              space (the editorial card's badge sits in the same slot). It
+              replaces a full-width strip that cost the rail ~100px and pushed the
+              landing's lower artwork out of frame.
+
+              A Client Component inside this Server Component -- it reads the
+              shared experience engine, which is why it can only live on `/`,
+              this rail's only mount, inside ExperienceProvider. */}
+          <MemoryLogHeaderAction />
         </div>
 
         <RandomLogRightRailPreview />

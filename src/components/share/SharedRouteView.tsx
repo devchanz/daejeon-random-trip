@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { SharedRouteRecord } from '../../lib/database/types';
 import { normalizeSharedRouteRecord } from '../../lib/guide';
 import { RouteGuideModal } from '../guide';
-import { getDurationLabel, getPreferenceLabel } from '../../content/labels';
+import { getDurationLabel, getPreferenceLabel, normalizeRouteTitle } from '../../content/labels';
 import { FittedAsset, resolveStopAssetKeyByCategory } from '../common';
 import { resolveResultAccent } from '../../config/resultAccents';
 
@@ -107,8 +107,12 @@ export function SharedRouteView({ record, className = '' }: SharedRouteViewProps
               <p className="text-xs font-black text-[#ff5555] uppercase tracking-wide">
                 누군가 대전 여행을 보냈어요! 💌
               </p>
+              {/* Snapshots persisted before the canonical-title pass carry the
+                  legacy `반일`/`당일` wording, which would contradict the duration
+                  chip rendered directly below -- repaired for display only, the
+                  stored snapshot is never rewritten. */}
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-[#2b2520] break-words">
-                {record.title}
+                {normalizeRouteTitle(record.title)}
               </h1>
             </div>
 

@@ -38,6 +38,10 @@ export function completeSpin(result: RouteResult): ExperienceAction {
   return { type: 'COMPLETE_SPIN', result };
 }
 
+export function restoreResult(result: RouteResult): ExperienceAction {
+  return { type: 'RESTORE_RESULT', result };
+}
+
 /**
  * Pure reducer function for experience state transitions.
  * Guarantees strictly defined forward transitions and rejects invalid state jumps safely.
@@ -48,6 +52,8 @@ export function completeSpin(result: RouteResult): ExperienceAction {
  * - q2 + SELECT_PREFERENCE -> ready
  * - ready + START_SPIN -> spinning
  * - spinning + COMPLETE_SPIN -> result
+ *
+ * Plus one non-forward, restoration-only entry: intro + RESTORE_RESULT -> result.
  */
 export function experienceReducer(
   state: ExperienceState,
@@ -99,6 +105,27 @@ export function experienceReducer(
           phase: 'result',
           duration: state.duration,
           preference: state.preference,
+          result: action.result,
+        };
+      }
+      return state;
+    }
+
+    case 'RESTORE_RESULT': {
+      // Accepted ONLY from a pristine INTRO state -- i.e. this provider instance's
+      // very first render after mounting, before the user has touched anything.
+      // That single guard makes restoration idempotent (a repeated dispatch, e.g.
+      // React StrictMode's double-invoked mount effect, is a no-op) and makes it
+      // structurally impossible for a late/stale restore to overwrite a live
+      // selection, an in-flight spin, or a newer Result.
+      if (state.phase === 'intro') {
+        return {
+          phase: 'result',
+          // Derived from the route itself rather than persisted separately -- the
+          // RouteResult already carries the conditions it was generated under, so
+          // the two can never disagree.
+          duration: action.result.durationType,
+          preference: action.result.preference,
           result: action.result,
         };
       }
