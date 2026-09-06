@@ -80,3 +80,55 @@ export const VISITOR_LOG_COPY = {
 
 /** EditorialSpotlightCard's own empty-state copy (item === null). */
 export const EDITORIAL_EMPTY_STATE = '지금은 소개할 콘텐츠가 없어요';
+
+/**
+ * Memory Log write affordance (ADR-042, reshaped by ADR-045). Memory Log has
+ * always been readable before a route exists, but the composer's only entry
+ * point was the Result Card -- so a reader browsing the log had no way to learn
+ * that writing was possible at all.
+ *
+ * Two surfaces, two shapes, one behaviour set: `rail` is the compact action that
+ * lives INSIDE the right rail's MEMORY LOG header (the full-width strip that
+ * first shipped there cost the rail ~100px and broke the landing's lower
+ * composition); the rest is the `/random-log` board's roomier write row.
+ *
+ * The `board*` entries are the /random-log variants. That route still renders
+ * outside ExperienceProvider (it has no engine, no composer of its own), but
+ * since ADR-043 the tab's trip is persisted, so the board CAN read it and stop
+ * telling a reader who already has a course to go draw one. `board` is the
+ * no-route case; `boardLoggedReroll` / `boardLoggedDone` cover an already-logged
+ * route, where the board deliberately routes back to the travel screen rather
+ * than restating a reroll it cannot execute (the reward engine lives on `/`).
+ */
+export const MEMORY_LOG_WRITE_COPY = {
+  /**
+   * Right-rail MEMORY LOG header action (ADR-045). Labels are abbreviated for a
+   * ~260-360px column and a ~28px inline control, so each carries a fuller
+   * `aria` phrasing -- the visible text is the compromise, the accessible name
+   * is not. `glyph` is decorative only (aria-hidden at the render site).
+   */
+  rail: {
+    noRoute: { cta: '코스 뽑기', aria: '코스 뽑으러 이동하기', glyph: '🎲' },
+    unlogged: { cta: '기록하기', aria: '내가 뽑은 코스 기록하기', glyph: '✏️' },
+    logged: { cta: '다시 뽑기', aria: '코스 한 번 더 뽑기', glyph: '🎲' },
+  },
+  unlogged: {
+    title: '내가 뽑은 코스를 기록해볼까요?',
+    body: '오늘의 대전 코스에 한 줄을 남겨보세요.',
+    cta: '내 코스 기록하기',
+  },
+  board: {
+    title: '나도 메모리를 남겨볼까요?',
+    body: '여행 화면에서 나만의 코스를 뽑은 뒤 기록을 남길 수 있어요.',
+    cta: '코스 뽑으러 가기',
+  },
+  boardLoggedReroll: {
+    title: '메모리가 기록됐어요!',
+    body: '한 번 더 뽑고 싶다면 여행 화면에서 이어갈 수 있어요.',
+    cta: '여행 화면으로 가기',
+  },
+  boardLoggedDone: {
+    title: '메모리가 기록됐어요!',
+    body: '오늘의 기록이 메모리 로그에 남았어요. 고마워요!',
+  },
+} as const;

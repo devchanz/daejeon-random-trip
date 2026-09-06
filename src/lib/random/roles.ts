@@ -72,3 +72,35 @@ export function matchesPreference(
 
   return candidate.tags.includes(preference);
 }
+
+/**
+ * Checks whether a candidate may fill the ordered route's **Preference slot**.
+ *
+ * This is route-slot eligibility, deliberately narrower than -- and layered on
+ * top of -- the general preference/tag axis above. `matchesPreference` is
+ * unchanged and remains the answer to "does this place suit the user's Q2
+ * preference at all"; this function additionally answers "may it be the
+ * Preference *stop* of a generated route".
+ *
+ * Only `food` (먹방) is narrowed. Every 카페·디저트 record in the dataset also
+ * carries the `food` tag, so a plain tag match let the Preference stop be a
+ * second cafe immediately after the Cafe stop (Half: 식사 -> 카페·디저트 ->
+ * 카페·디저트), which does not deliver 먹방's product promise of an extra meal.
+ * Requiring `isMealCandidate` here makes the food Preference stop a second,
+ * distinct `식사` place. `walk`, `photo`, and `anything` are untouched and pass
+ * straight through the tag axis.
+ */
+export function isPreferenceSlotCandidate(
+  candidate: PlaceCandidate,
+  preference: PreferenceType
+): boolean {
+  if (!matchesPreference(candidate, preference)) {
+    return false;
+  }
+
+  if (preference === 'food') {
+    return isMealCandidate(candidate);
+  }
+
+  return true;
+}

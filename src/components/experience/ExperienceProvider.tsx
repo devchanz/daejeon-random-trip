@@ -14,6 +14,7 @@ import {
   startIntro,
   startSpin,
   completeSpin,
+  restoreResult,
   type ExperienceAction,
   type ExperienceState,
   createInitialRerollState,
@@ -21,6 +22,9 @@ import {
   unlockRerollReward,
   consumeRerollReward,
   type RerollSessionState,
+  readTripSession,
+  saveTripSession,
+  consumeComposeHandoff,
 } from '../../lib/experience';
 import {
   generateRoute,
@@ -69,6 +73,7 @@ export interface ExperienceEngine {
   handleMinimizeResult: () => void;
   handleReopenResult: () => void;
   handleExploreMore: () => void;
+  handleScrollToHero: () => void;
 }
 
 /**
@@ -83,6 +88,16 @@ export interface ExperienceEngine {
  * visibility, rather than re-encoding that rule a second time here.
  */
 export const TODAYS_DAEJEON_RAIL_ATTR = 'data-today-daejeon-rail';
+
+/**
+ * Marker on the hero (`MainExperience`) root -- the counterpart of
+ * TODAYS_DAEJEON_RAIL_ATTR, for the opposite direction of travel: the Memory Log
+ * write affordance's `코스 뽑기` sends a reader who has no route yet back up into the
+ * existing Q1/Q2/Spin flow. `MainExperience` dual-mounts exactly like the rail
+ * does, so "which one is visible" is resolved the same way (offsetParent at
+ * click time), never by re-encoding the `lg:` breakpoint a second time.
+ */
+export const HERO_EXPERIENCE_ATTR = 'data-hero-experience';
 
 const ExperienceContext = createContext<ExperienceEngine | null>(null);
 
@@ -146,8 +161,9 @@ export function ExperienceProvider({
   // machine above. Writing eligibility is "does the *current Result* have a log yet",
   // reward eligibility is "has this *session* claimed its one reroll"; conflating the
   // two is what previously made the composer unreachable once the reward was consumed.
-  // Not persisted: state.result itself is never persisted (the reducer always seeds
-  // from INITIAL_EXPERIENCE_STATE), so after a reload there is no Result to write about.
+  // Mirrored into this tab's trip session together with state.result (ADR-043,
+  // tripSession.ts) -- both used to be memory-only, so leaving `/` for
+  // /random-log and coming back forgot the route AND whether it had been logged.
   const [loggedRouteIds, setLoggedRouteIds] = useState<Set<string>>(() => new Set());
 
   // Presentation-only engine state
@@ -176,6 +192,66 @@ export function ExperienceProvider({
   // focus whichever one is actually visible/focusable (the other is inside a
   // `display:none` ancestor, so focusing it is a documented no-op).
   const reopenButtonRefs = useRef<Set<HTMLButtonElement>>(new Set());
+
+  // Previous revealStage, so the minimize-focus effect below can tell a genuine
+  // 결과 접기 from a session restore that simply starts out minimized.
+  const previousRevealStageRef = useRef(revealStage);
+
+  // TRIP RESTORE (tab-session scoped -- see src/lib/experience/tripSession.ts).
+  //
+  // This provider is mounted only on `/`, so walking to `/random-log` and back
+  // unmounts the reducer and forgets the route the reader just generated -- and
+  // with it whether that route had been logged, which the Memory Log write
+  // affordance (ADR-042) depends on. Restoring here rebuilds exactly that, and nothing else.
+  //
+  // NOT A GENERATION: no route is recommended, no spin runs, revealStage never
+  // enters 'peek', and NO analytics is dispatched -- `spin`/`reroll` live in
+  // their own handlers and `result_view` fires only from the peek->revealed
+  // transition below, which this path never triggers. A restored trip is the
+  // same trip, not a new conversion.
+  //
+  // Comes back MINIMIZED, not revealed: the reader navigated back to the page,
+  // they did not ask for the Result Card to be thrown at them. The existing
+  // "내 여행 티켓 다시 보기" affordance (SlotAnchor's helper band) is how they
+  // reopen it -- unchanged, and the same control a manual 결과 접기 leaves behind.
+  //
+  // Runs once on mount, after paint, exactly like the rerollState sync above, so
+  // SSR and the first client render both still produce the pristine INTRO markup
+  // (no hydration mismatch). RESTORE_RESULT is additionally guarded to the
+  // 'intro' phase in the reducer, so a StrictMode double-invoke cannot double-apply.
+  useEffect(() => {
+    // Read (and strip) the handoff marker first, unconditionally, so a `/`
+    // arrival with no restorable trip still leaves a clean address bar.
+    const requestedComposer = consumeComposeHandoff();
+
+    const restored = readTripSession();
+    if (!restored) return;
+
+    dispatch(restoreResult(restored.result));
+    /* eslint-disable react-hooks/set-state-in-effect */
+    setLoggedRouteIds(new Set(restored.loggedRouteIds));
+    setRevealStage('minimized');
+
+    // COMPOSER HANDOFF from /random-log's `기록 남기기` (ADR-044): open the ONE
+    // existing composer against the just-restored route -- no second composer,
+    // no second submit path, and no analytics (only a confirmed submission ever
+    // dispatches random_log_submit, from inside GuestbookComposer as before).
+    // Ignored when that route has already been logged, so a hand-edited or
+    // re-shared URL can never reopen the composer for an entry that exists.
+    if (requestedComposer && !restored.loggedRouteIds.includes(restored.result.id)) {
+      setIsGuestbookOpen(true);
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []);
+
+  // TRIP PERSIST. Writes whenever the current Result changes (initial spin and
+  // every reroll alike -- route B replaces route A) or its logged status changes.
+  // Never writes an empty trip, so the pre-restore first render cannot clobber
+  // what the restore effect above is about to read.
+  useEffect(() => {
+    if (state.phase !== 'result' || !state.result) return;
+    saveTripSession(state.result, Array.from(loggedRouteIds));
+  }, [state.phase, state.result, loggedRouteIds]);
 
   // Derived stopped reel count: 3 when in result, spinningStoppedReelCount when spinning, 0 otherwise
   const stoppedReelCount =
@@ -345,11 +421,21 @@ export function ExperienceProvider({
   // calling it on every registered button is therefore safe (at most one has any
   // effect). ResultArea's own card unmounts its focus target (display:none), so
   // without this, focus would fall to <body>.
+  //
+  // Only a real 결과 접기 ('revealed' -> 'minimized') moves focus. A restored trip
+  // (see the restore effect above) *starts* at 'minimized' without any user
+  // action, and focusing the reopen button there would steal focus -- and scroll
+  // the page to the Slot -- the moment the reader lands back on `/`.
   useEffect(() => {
-    if (revealStage === 'minimized') {
-      for (const button of reopenButtonRefs.current) {
-        button.focus();
-      }
+    const previousStage = previousRevealStageRef.current;
+    previousRevealStageRef.current = revealStage;
+
+    if (revealStage !== 'minimized' || previousStage !== 'revealed') {
+      return;
+    }
+
+    for (const button of reopenButtonRefs.current) {
+      button.focus();
     }
   }, [revealStage]);
 
@@ -515,6 +601,32 @@ export function ExperienceProvider({
     }
   };
 
+  // Scrolls to whichever mount of a dual-mounted, attribute-marked landmark is
+  // actually on screen. Shared by handleExploreMore (-> rail) and
+  // handleScrollToHero (-> hero); page.tsx dual-mounts both landmarks with pure
+  // CSS, so at most one of each has a non-null offsetParent at any time.
+  const scrollToVisibleMarked = (markerAttr: string) => {
+    if (typeof window === 'undefined') return;
+
+    requestAnimationFrame(() => {
+      const marked = Array.from(document.querySelectorAll<HTMLElement>(`[${markerAttr}]`));
+      const visible = marked.find((el) => el.offsetParent !== null);
+      if (!visible) return;
+
+      visible.scrollIntoView({
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+
+      // Optional a11y landing: move focus onto the visible wrapper itself
+      // (tabIndex={-1} + outline-none, see page.tsx / MainExperience) -- the same
+      // "focus the container, not the first control" pattern ResultArea's own
+      // dialog already uses, so a screen reader announces the section without
+      // a visible focus ring appearing around it.
+      visible.focus();
+    });
+  };
+
   // ExploreMore (half-day 4th cell, "대전 더 둘러보기"): minimizes Result --
   // never resets/discards it, same non-destructive contract as 결과 접기 above
   // -- then scrolls to whichever TODAY'S DAEJEON rail wrapper is currently
@@ -532,31 +644,19 @@ export function ExperienceProvider({
       setRevealStage('minimized');
     }
 
-    if (typeof window === 'undefined') return;
+    // Deferred one frame (inside scrollToVisibleMarked): the Result overlay's
+    // display:none (from the minimize above) must actually apply before
+    // scrollIntoView measures layout, otherwise a still-scroll-locked/overlay-
+    // obscured document can resolve a stale target position.
+    scrollToVisibleMarked(TODAYS_DAEJEON_RAIL_ATTR);
+  };
 
-    // Deferred one frame: the Result overlay's display:none (from the
-    // minimize above) must actually apply before scrollIntoView measures
-    // layout, otherwise a still-scroll-locked/overlay-obscured document can
-    // resolve a stale target position.
-    requestAnimationFrame(() => {
-      const candidates = Array.from(
-        document.querySelectorAll<HTMLElement>(`[${TODAYS_DAEJEON_RAIL_ATTR}]`)
-      );
-      const visibleRail = candidates.find((el) => el.offsetParent !== null);
-      if (!visibleRail) return;
-
-      visibleRail.scrollIntoView({
-        behavior: prefersReducedMotion ? 'auto' : 'smooth',
-        block: 'start',
-      });
-
-      // Optional a11y landing: move focus onto the visible rail wrapper itself
-      // (tabIndex={-1} + outline-none on the wrapper, see page.tsx) -- the same
-      // "focus the container, not the first control" pattern ResultArea's own
-      // dialog already uses, so a screen reader announces the section without
-      // a visible focus ring appearing around it.
-      visibleRail.focus();
-    });
+  // Memory Log action's `코스 뽑기` / post-log `다시 뽑기`: brings the hero back on
+  // screen so the Setup card (or the spin that was just started) is actually
+  // visible. Deliberately fires NO analytics -- it is a scroll, not an
+  // `intro_start`, and it never touches phase, Result, or reward state.
+  const handleScrollToHero = () => {
+    scrollToVisibleMarked(HERO_EXPERIENCE_ATTR);
   };
 
   const engine: ExperienceEngine = {
@@ -583,6 +683,7 @@ export function ExperienceProvider({
     handleMinimizeResult,
     handleReopenResult,
     handleExploreMore,
+    handleScrollToHero,
   };
 
   return <ExperienceContext.Provider value={engine}>{children}</ExperienceContext.Provider>;

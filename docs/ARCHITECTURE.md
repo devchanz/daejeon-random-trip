@@ -91,8 +91,10 @@ The data architecture strictly separates ephemeral session computations from per
 │ - Product Policies (Duration budgets, reroll limits, weights)            │
 ├──────────────────────────────────────────────────────────────────────────┤
 │ CLIENT / ANONYMOUS SESSION TIER (sessionStorage / Browser Session)       │
-│ - Q1 Duration & Q2 Preference State                                      │
 │ - Active RouteResult (Variable 1–4 stops, duration calculation)          │
+│   + whether it has been logged — tab-scoped trip session (ADR-043).      │
+│   Q1/Q2 are NOT persisted separately: a restored session derives its     │
+│   duration/preference from the stored RouteResult itself.                │
 │ - In-App Route Guide State                                               │
 │ - Reroll Reward State (locked → available → consumed)                    │
 │   (Maintained across tab refreshes during active session; no user login) │
@@ -255,7 +257,7 @@ sequenceDiagram
 - Managed entirely in static data (`src/data/editorial.ts`) without dynamic server-side CMS dependencies.
 - **Feature-name-agnostic by construction.** The surface is currently labelled "TODAY'S PICK", but that string lives *only* in the `heading` prop passed from `RightSidebar` — never in a type, file path, id, or asset key. Renaming the feature must stay a one-string change.
 - `EditorialItem` carries a required `kind` (`spot | theme | event | experience | campaign`). Different kinds share **one** presentation shell (`EditorialSpotlightCard`); `kind` describes an item and must not fork the layout into per-kind variants or tabs.
-- Selection filters by validity window first (`activeFrom` inclusive, `activeUntil` **exclusive**), then rotates deterministically by Asia/Seoul date. Deterministic-per-date is required: server and client must derive the same item, so no hydration mismatch and no autoplay.
+- Selection filters by validity window first (`activeFrom` inclusive, `activeUntil` **exclusive**); every eligible item is then browsable in seed order (ADR-038 replaced the original deterministic-per-Asia/Seoul-date rotation with a manual carousel, and ADR-042 added ~10s auto-advance on top of it). The first rendered item is still index 0 on both server and client, so there is no hydration mismatch; advancing is a client-only effect.
 - A banner may optionally hyperlink (`href`, `external`) to a site related to the featured artwork/place/theme. No internal route or Q2 state is touched. No `href` is seeded in the current pass.
 - `src/data/picks.ts` (`TodaysPickItem`, `TODAYS_PICKS = []`) is retained but referenced by no UI. The editorial rail deliberately does **not** reuse it: that model sits behind the recommendation-engine boundary and is shaped for a `/pick/[slug]` page that does not exist.
 

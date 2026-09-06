@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Header } from '../../components/layout/Header';
 import { Footer } from '../../components/layout/Footer';
 import { getRecentGuestbookEntries } from '../../lib/database/guestbook';
-import { RandomLogList } from '../../components/random-log';
+import { MemoryLogBoardWriteStrip, RandomLogList } from '../../components/random-log';
 
 const PAGE_SIZE = 20;
 
@@ -55,6 +55,13 @@ export default async function RandomLogPage() {
             대전 여행을 뽑아본 사람들이 남긴 메모리 로그예요.
           </p>
         </div>
+
+        {/* Write affordance (ADR-042), board variant -- trip-aware since ADR-044.
+            This page still renders outside ExperienceProvider and still has no
+            composer of its own; it only READS the tab's persisted trip
+            (sessionStorage) to choose its copy and CTA, and hands off to the one
+            existing composer on `/`. See MemoryLogBoardWriteStrip. */}
+        <MemoryLogBoardWriteStrip className="mb-5" />
 
         {!result.success ? (
           <div
