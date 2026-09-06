@@ -14,7 +14,7 @@ import {
   isMealCandidate,
   isCafeCandidate,
   isDiscoveryCandidate,
-  matchesPreference,
+  isPreferenceSlotCandidate,
 } from './roles';
 import { selectRouteTemplate, DEFAULT_ROUTE_TEMPLATES } from './templates';
 
@@ -199,14 +199,21 @@ function selectCandidateForStandardSlot(
  *
  * Assignment Strategy:
  * 1. Preference-First Reservation: When a specific preference (not 'anything') is
- *    requested, every candidate matching that preference is tried, in turn, as the
- *    reservation for the 'preference' slot, while the remaining slots (meal, cafe,
- *    discovery) are filled from the rest of the pool. Because Meal/Cafe/Discovery
- *    are mutually-exclusive by category (isMealCandidate/isCafeCandidate/
- *    isDiscoveryCandidate never overlap -- see roles.ts), fixing one reservation
- *    candidate never has a downstream ordering effect on the other slots: once a
- *    reservation is picked, either every other slot's pool is non-empty or it
- *    isn't, regardless of *which* item within each pool eventually gets chosen.
+ *    requested, every candidate *eligible for the Preference slot* is tried, in
+ *    turn, as the reservation for it, while the remaining slots (meal, cafe,
+ *    discovery) are filled from the rest of the pool. Slot eligibility is
+ *    isPreferenceSlotCandidate, not the bare tag match -- for 'food' that
+ *    additionally requires the 식사 category, so the Preference stop is a second
+ *    real meal rather than a second cafe (see roles.ts). Because Meal/Cafe/
+ *    Discovery are mutually-exclusive by category (isMealCandidate/
+ *    isCafeCandidate/isDiscoveryCandidate never overlap -- see roles.ts), fixing
+ *    one reservation candidate never has a downstream ordering effect on the
+ *    other slots: once a reservation is picked, either every other slot's pool is
+ *    non-empty or it isn't, regardless of *which* item within each pool
+ *    eventually gets chosen. That stays true when the reservation is itself
+ *    slot-role-eligible (a 'food' reservation competes with the Meal slot for the
+ *    식사 pool) -- it removes exactly one place from exactly one category pool,
+ *    so feasibility still turns only on whether each remaining pool is non-empty.
  *    That makes exhaustively trying every reservation candidate (not just the
  *    first shuffled one) a complete search of this template's small solution
  *    space -- if any valid combination exists, this loop finds one, rather than
@@ -237,7 +244,7 @@ function fillTemplateSlots(
 
   if (hasPreferenceSlot && isSpecificPreference) {
     const prefCandidates = shuffleArray(
-      zoneCandidates.filter((c) => matchesPreference(c, preference)),
+      zoneCandidates.filter((c) => isPreferenceSlotCandidate(c, preference)),
       random
     );
 
