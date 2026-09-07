@@ -25,11 +25,11 @@ export interface EditorialSpotlightCardProps {
 const SWIPE_THRESHOLD_PX = 40;
 
 /**
- * Dwell time before the carousel advances on its own. Long enough to read a
- * banner's baked-in copy, short enough that a passive visitor sees more than one
- * of the five.
+ * Dwell time before the carousel advances on its own. Deliberately brisk -- the
+ * rail is a discovery surface, so a passive visitor cycles the whole set rather
+ * than settling on one; hover/focus pauses whichever banner is being read.
  */
-const AUTO_ADVANCE_INTERVAL_MS = 10_000;
+const AUTO_ADVANCE_INTERVAL_MS = 2_000;
 
 /**
  * Fraction of the card that must be inside the viewport before it counts as
@@ -45,7 +45,7 @@ const EXPOSURE_RATIO = 0.5;
  * (currently 5 production banners; see src/data/editorial.ts). One banner visible at a
  * time, no library.
  *
- * Advance is both manual (buttons/swipe) and automatic on a ~10s timer (ADR-042,
+ * Advance is both manual (buttons/swipe) and automatic on a ~2s timer (ADR-042,
  * revising ADR-028/ADR-038's original manual-only contract). The automatic path is
  * deliberately NOT the same seam as the manual one -- see goPrev/goNext below and
  * the auto-advance effect for why that separation is what keeps the
